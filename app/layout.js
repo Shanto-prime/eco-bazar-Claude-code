@@ -1,0 +1,45 @@
+import { Poppins } from "next/font/google";
+import "./globals.css";
+import { CartProvider } from "../lib/CartContext";
+import Toast from "../components/Toast";
+import TopBar from "../components/TopBar";
+import Header from "../components/Header";
+import PrimaryNav from "../components/PrimaryNav";
+import Newsletter from "../components/Newsletter";
+import Footer from "../components/Footer";
+
+const poppins = Poppins({
+  variable: "--font-poppins",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+export const metadata = {
+  title: "Ecobazar — Organic Food Store",
+  description: "Fresh & healthy organic food, delivered to your door.",
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en" className={`${poppins.variable} antialiased`}>
+      <head>
+        {/* Font Awesome icons used across the UI */}
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        />
+      </head>
+      <body className="min-h-screen flex flex-col">
+        <CartProvider>
+          <TopBar />
+          <Header />
+          <PrimaryNav />
+          <main className="flex-1">{children}</main>
+          <Newsletter />
+          <Footer />
+          <Toast />
+        </CartProvider>
+      </body>
+    </html>
+  );
+}

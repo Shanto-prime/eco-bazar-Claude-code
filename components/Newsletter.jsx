@@ -1,0 +1,55 @@
+"use client";
+
+// components/Newsletter.jsx — bottom-of-page subscribe band.
+// Validates the email, fires a toast, and clears the field.
+
+import { useState } from "react";
+import { useCart } from "../lib/CartContext";
+
+export default function Newsletter() {
+  const { showToast } = useCart();
+  const [email, setEmail] = useState("");
+
+  const submit = (e) => {
+    e.preventDefault();
+    const v = email.trim();
+    if (!v || !/^\S+@\S+\.\S+$/.test(v)) {
+      showToast("Please enter a valid email", "error");
+      return;
+    }
+    showToast(`Subscribed! We'll email tips to ${v}.`);
+    setEmail("");
+  };
+
+  return (
+    <section className="bg-eco-bg py-10">
+      <div className="max-w-[1320px] mx-auto px-6 flex flex-col md:flex-row items-center gap-6">
+        <div className="flex-1">
+          <div className="text-xl font-bold">Subscribe to our Newsletter</div>
+          <div className="text-sm text-gray-500">
+            Get fresh organic-food tips, recipes and discount codes — straight to your inbox.
+          </div>
+        </div>
+        <form onSubmit={submit} className="flex-1 flex bg-white rounded-full overflow-hidden w-full md:w-auto">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Your email address"
+            className="flex-1 px-5 py-3 outline-none text-sm"
+            required
+          />
+          <button type="submit" className="bg-eco-green text-white px-8 font-medium hover:bg-emerald-600">
+            Subscribe
+          </button>
+        </form>
+        <div className="flex gap-2">
+          <a href="#" className="w-9 h-9 rounded-full bg-eco-green text-white grid place-items-center"><i className="fa-brands fa-facebook-f" /></a>
+          <a href="#" className="w-9 h-9 rounded-full bg-gray-100 grid place-items-center hover:bg-eco-green hover:text-white"><i className="fa-brands fa-twitter" /></a>
+          <a href="#" className="w-9 h-9 rounded-full bg-gray-100 grid place-items-center hover:bg-eco-green hover:text-white"><i className="fa-brands fa-pinterest" /></a>
+          <a href="#" className="w-9 h-9 rounded-full bg-gray-100 grid place-items-center hover:bg-eco-green hover:text-white"><i className="fa-brands fa-instagram" /></a>
+        </div>
+      </div>
+    </section>
+  );
+}

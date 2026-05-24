@@ -1,0 +1,324 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Ecobazar — globals.css
+   ----------------------------------------------------------------
+   Tailwind v4 is configured via @import "tailwindcss" above.
+   Below this header are:
+     1) Theme tokens exposed to Tailwind via @theme inline
+     2) Brand helper classes (text-eco-green, bg-eco-green, ...)
+     3) Custom component styles that Tailwind utilities can't
+        express cleanly. Every block is documented with the page
+        and section it belongs to (ported from the static HTML
+        build's site/css/styles.css).
+   ============================================================ */
+
+:root {
+  --eco-green: #00B207;
+  --eco-green-dark: #008A05;
+  --eco-green-light: #EDF2EE;
+  --eco-dark: #002603;
+  --eco-footer: #1a2424;
+  --eco-text-muted: #4D4D4D;
+  --eco-border: #E6E6E6;
+  --eco-bg: #F7F7F7;
+  --background: #ffffff;
+  --foreground: #1a1a1a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-eco-green: var(--eco-green);
+  --color-eco-green-dark: var(--eco-green-dark);
+  --color-eco-footer: var(--eco-footer);
+  --color-eco-bg: var(--eco-bg);
+  --color-eco-dark: var(--eco-dark);
+}
+
+/* ------------------------------------------------------------
+   GLOBAL — All pages
+   Section: Body / Typography
+   ------------------------------------------------------------ */
+body {
+  font-family: 'Poppins', 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+               'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--foreground);
+  background: var(--background);
+  font-size: 15px;
+}
+
+/* ------------------------------------------------------------
+   GLOBAL — All pages
+   Section: Brand helper classes (used everywhere)
+   ------------------------------------------------------------ */
+.text-eco-green   { color: var(--eco-green); }
+.bg-eco-green     { background-color: var(--eco-green); }
+.bg-eco-green:hover { background-color: var(--eco-green-dark); }
+.border-eco-green { border-color: var(--eco-green); }
+.bg-eco-footer    { background-color: var(--eco-footer); }
+.bg-eco-bg        { background-color: var(--eco-bg); }
+.text-eco-dark    { color: var(--eco-dark); }
+
+/* ------------------------------------------------------------
+   GLOBAL — All pages
+   Section: Top utility bar (above main header)
+   ------------------------------------------------------------ */
+.topbar {
+  background: #1a2424;
+  color: #b3b3b3;
+  font-size: 12px;
+  padding: 8px 0;
+}
+.topbar a, .topbar select { color: #b3b3b3; background: transparent; }
+
+/* ------------------------------------------------------------
+   GLOBAL — Interior pages (Shop / Product / Cart / Checkout / Contact)
+   Section: Breadcrumb header strip (dark vegetable banner)
+   ------------------------------------------------------------ */
+.breadcrumb-strip {
+  background:
+    linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)),
+    url("/images/veg-strip.jpg") center/cover no-repeat;
+  padding: 28px 0;
+  color: #fff;
+}
+
+/* ------------------------------------------------------------
+   GLOBAL — Footer
+   Section: Footer link hover
+   ------------------------------------------------------------ */
+.footer-link { color: #b3b3b3; }
+.footer-link:hover { color: var(--eco-green); }
+
+/* ------------------------------------------------------------
+   app/page.js (Home), shop, product
+   Section: Product card hover (lift + cart button color swap)
+   ------------------------------------------------------------ */
+.product-card { transition: box-shadow .25s ease, transform .25s ease; }
+.product-card:hover { box-shadow: 0 10px 30px rgba(0,0,0,.10); transform: translateY(-3px); }
+.product-card .add-btn { transition: background .2s ease, color .2s ease; }
+.product-card:hover .add-btn { background: var(--eco-green); color: #fff; }
+
+/* ------------------------------------------------------------
+   app/page.js (Home)
+   Section: Category tile — active "dashed green" state
+   ------------------------------------------------------------ */
+.cat-tile.active {
+  border: 1px dashed var(--eco-green);
+  border-radius: 6px;
+}
+
+/* ------------------------------------------------------------
+   app/page.js (Home)
+   Section: Hot Deals countdown
+   ------------------------------------------------------------ */
+.countdown { display: inline-flex; gap: 8px; }
+.countdown .unit { text-align: center; min-width: 42px; }
+.countdown .unit .num { font-weight: 700; font-size: 1.125rem; color: #1a1a1a; }
+.countdown .unit .lbl { font-size: 10px; color: #808080; letter-spacing: 1px; }
+.countdown .sep { color: var(--eco-green); font-weight: 700; line-height: 28px; }
+
+/* ------------------------------------------------------------
+   app/page.js (Home)
+   Section: Testimonial decorative quote mark
+   ------------------------------------------------------------ */
+.quote-mark::before {
+  content: "\201C";
+  color: var(--eco-green);
+  font-size: 2.5rem;
+  font-family: Georgia, serif;
+  line-height: 0.8;
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* ------------------------------------------------------------
+   app/shop/page.js
+   Section: Sidebar — custom range slider (price filter)
+   ------------------------------------------------------------ */
+.price-range {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: #E6E6E6;
+  outline: none;
+}
+.price-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--eco-green);
+  cursor: pointer;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px var(--eco-green);
+}
+.price-range::-moz-range-thumb {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--eco-green);
+  cursor: pointer;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px var(--eco-green);
+}
+
+/* ------------------------------------------------------------
+   app/shop/page.js
+   Section: Brand-green checkbox & radio
+   ------------------------------------------------------------ */
+.eco-check { accent-color: var(--eco-green); width: 16px; height: 16px; }
+
+/* ------------------------------------------------------------
+   app/product/[slug]/page.js
+   Section: Quantity stepper
+   ------------------------------------------------------------ */
+.qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--eco-border);
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #fff;
+}
+.qty-stepper button {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--eco-bg);
+  color: #1a1a1a;
+  font-weight: 600;
+  line-height: 1;
+}
+.qty-stepper input {
+  width: 36px;
+  text-align: center;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------
+   app/product/[slug]/page.js
+   Section: Tab strip (Description / Additional / Feedback)
+   ------------------------------------------------------------ */
+.pd-tabs { display: flex; gap: 32px; border-bottom: 1px solid var(--eco-border); }
+.pd-tab {
+  padding: 12px 0;
+  color: #4D4D4D;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.pd-tab.active {
+  color: var(--eco-green);
+  border-bottom-color: var(--eco-green);
+}
+
+/* ------------------------------------------------------------
+   app/cart/page.js & app/checkout/page.js
+   Section: Form input cosmetic
+   ------------------------------------------------------------ */
+.eco-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--eco-border);
+  border-radius: 4px;
+  font-size: 14px;
+  color: #1a1a1a;
+  background: #fff;
+}
+.eco-input:focus { outline: none; border-color: var(--eco-green); }
+
+/* ------------------------------------------------------------
+   app/contact/page.js
+   Section: Map placeholder pattern
+   ------------------------------------------------------------ */
+.map-placeholder {
+  background:
+    linear-gradient(135deg, #F0F4F1 25%, transparent 25%) -10px 0/20px 20px,
+    linear-gradient(225deg, #F0F4F1 25%, transparent 25%) -10px 0/20px 20px,
+    linear-gradient(315deg, #F0F4F1 25%, transparent 25%) 0 0/20px 20px,
+    linear-gradient(45deg, #F0F4F1 25%, transparent 25%) 0 0/20px 20px,
+    #E8EFE9;
+  color: #4D4D4D;
+}
+
+/* ------------------------------------------------------------
+   GLOBAL — Toast notification fade-in animation
+   ------------------------------------------------------------ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ------------------------------------------------------------
+   GLOBAL — Mobile drawer slide animations
+   (PrimaryNav drawer slides in from the left; Shop filter
+   drawer slides in from the right.)
+   ------------------------------------------------------------ */
+@keyframes slideInLeft  { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes slideInRight { from { transform: translateX( 100%); } to { transform: translateX(0); } }
+
+/* ------------------------------------------------------------
+   GLOBAL — Hide scrollbars on inline horizontal scrollers
+   (used by the product gallery thumbnail strip and the product
+   detail tab bar).
+   ------------------------------------------------------------ */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ------------------------------------------------------------
+   product/[slug] — ProductGallery
+   Section: Main stage navigation buttons + thumbnail scroll
+   buttons. The thumbnail strip itself uses Tailwind utilities
+   (overflow-x-auto + snap-x), so no rule needed here for that.
+   ------------------------------------------------------------ */
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px; height: 38px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.9);
+  color: #1a1a1a;
+  display: grid; place-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  transition: background .15s ease, transform .15s ease;
+  z-index: 2;
+}
+.gallery-nav:hover { background: var(--eco-green); color: #fff; transform: translateY(-50%) scale(1.05); }
+
+.thumb-scroll {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px; height: 32px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--eco-border);
+  color: #4D4D4D;
+  display: grid; place-items: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  z-index: 2;
+}
+.thumb-scroll:hover { border-color: var(--eco-green); color: var(--eco-green); }
+
+/* ------------------------------------------------------------
+   product/[slug] — ProductGallery
+   Section: Disable accidental text-selection while swiping the
+   main image on touch devices.
+   ------------------------------------------------------------ */
+.gallery-stage,
+.gallery-stage * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+/* Two utilities mirroring Tailwind's missing line-clamp at this version. */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-none { display: block; -webkit-line-clamp: unset; -webkit-box-orient: unset; overflow: visible; }

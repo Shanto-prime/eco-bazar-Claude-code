@@ -38,22 +38,22 @@ export default function ContactPage() {
     <>
       <Breadcrumb items={[{ label: "Contact" }]} />
 
-      <section className="max-w-[1320px] mx-auto px-6 py-10 grid grid-cols-12 gap-8">
-        <aside className="col-span-12 lg:col-span-4 space-y-6">
+      <section className="max-w-[1320px] mx-auto px-4 sm:px-6 py-8 sm:py-10 grid grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
+        <aside className="col-span-12 lg:col-span-4 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4 sm:gap-6">
           {cards.map((c, i) => (
-            <div key={i} className="border border-gray-200 rounded-md p-6 flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-green-50 grid place-items-center text-eco-green">
+            <div key={i} className="border border-gray-200 rounded-md p-4 sm:p-6 flex items-start gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-green-50 grid place-items-center text-eco-green shrink-0">
                 <i className={`fa-solid ${c.icon}`} />
               </div>
-              <div className="text-sm leading-relaxed whitespace-pre-line">{c.text}</div>
+              <div className="text-sm leading-relaxed whitespace-pre-line min-w-0 break-words">{c.text}</div>
             </div>
           ))}
         </aside>
 
-        <div className="col-span-12 lg:col-span-8 border border-gray-200 rounded-md p-8">
-          <h2 className="text-2xl font-bold">Just Say Hello!</h2>
+        <div className="col-span-12 lg:col-span-8 border border-gray-200 rounded-md p-4 sm:p-6 lg:p-8">
+          <h2 className="text-xl sm:text-2xl font-bold">Just Say Hello!</h2>
           <p className="text-sm text-gray-500 mt-1">Pellentesque eu nibh eget mauris congue mattis mattis nec tellus.</p>
-          <form onSubmit={submit} noValidate className="grid grid-cols-2 gap-4 mt-6">
+          <form onSubmit={submit} noValidate className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
             <div>
               <input className={`eco-input ${errors.name ? "border-red-500" : ""}`} value={form.name} onChange={set("name")} placeholder="Your name" />
               {errors.name && <div className="text-xs text-red-500 mt-1">{errors.name}</div>}
@@ -62,15 +62,15 @@ export default function ContactPage() {
               <input className={`eco-input ${errors.email ? "border-red-500" : ""}`} value={form.email} onChange={set("email")} placeholder="you@example.com" />
               {errors.email && <div className="text-xs text-red-500 mt-1">{errors.email}</div>}
             </div>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <input className={`eco-input ${errors.subject ? "border-red-500" : "border-eco-green"}`} value={form.subject} onChange={set("subject")} placeholder="Subject" />
               {errors.subject && <div className="text-xs text-red-500 mt-1">{errors.subject}</div>}
             </div>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <textarea className={`eco-input ${errors.message ? "border-red-500" : ""}`} rows={5} value={form.message} onChange={set("message")} placeholder="Your message" />
               {errors.message && <div className="text-xs text-red-500 mt-1">{errors.message}</div>}
             </div>
-            <button type="submit" className="col-span-2 md:col-span-1 px-8 py-3 rounded-full bg-eco-green text-white font-medium hover:bg-emerald-600">
+            <button type="submit" className="sm:col-span-2 md:col-span-1 px-8 py-3 rounded-full bg-eco-green text-white font-medium hover:bg-emerald-600 min-h-[44px]">
               Send Message <i className="fa-solid fa-arrow-right ml-1" />
             </button>
           </form>
@@ -78,7 +78,7 @@ export default function ContactPage() {
       </section>
 
       <section>
-        <div className="map-placeholder h-80 grid place-items-center">
+        <div className="map-placeholder h-60 sm:h-80 grid place-items-center">
           <div className="text-center">
             <i className="fa-solid fa-map-location-dot text-4xl text-eco-green mb-2" />
             <div className="font-semibold">Our Store Location</div>

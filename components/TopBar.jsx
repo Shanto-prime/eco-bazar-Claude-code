@@ -17,9 +17,11 @@ export default function TopBar() {
         <div className="flex items-center gap-3 sm:gap-4">
           <select className="bg-transparent text-[12px] hidden sm:inline"><option>Eng</option></select>
           <select className="bg-transparent text-[12px] hidden sm:inline"><option>USD</option></select>
-          <Link href="/signin" className="hover:text-white">Sign In</Link>
+          <Link href="/login" className="hover:text-white">Log In</Link>
           <span>/</span>
-          <Link href="/signup" className="hover:text-white">Sign Up</Link>
+          <Link href="/register" className="hover:text-white">Sign Up</Link>
+          <span className="hidden sm:inline">/</span>
+          <Link href="/dashboard" className="hidden sm:inline hover:text-white">Dashboard</Link>
         </div>
       </div>
     </div>

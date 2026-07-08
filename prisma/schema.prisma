@@ -1,13 +1,25 @@
 // prisma/schema.prisma
-// Database schema for Ecobazar. Run `npx prisma migrate dev --name init`
-// after changing this file to update your local DB.
+// Database schema for Ecobazar.
+// Run `npx prisma migrate dev --name init-mysql` after changing this file to
+// update your local DB.
+//
+// Notes on MySQL specifics
+//   • String columns default to VARCHAR(191) on MySQL. We add `@db.Text` to any
+//     field that may exceed that (descriptions, addresses, OAuth tokens, audit
+//     payloads, review bodies, free-form notes).
+//   • Enums are emitted as MySQL `ENUM(...)` columns.
+//   • `Decimal(10, 2)` works natively on MySQL.
+//   • `Json` works on MySQL 5.7+ / 8+.
+//   • The default `utf8mb4_unicode_ci` collation is case-insensitive, so
+//     `contains` queries don't need Prisma's `mode: "insensitive"` flag
+//     (which is PostgreSQL-only and would throw on MySQL).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -28,14 +40,16 @@ enum Role {
 
 // User record. Auth.js (NextAuth) writes Account / Session rows linking
 // OAuth providers to this row. `passwordHash` is set only for credentials
-// (email + password) signups.
+// (username/email + password) signups. The `email` column doubles as the
+// login identifier so the seeded test users can sign in with bare usernames
+// like "admin", "mod", "customer".
 model User {
   id            String     @id @default(cuid())
   email         String     @unique
   name          String?
-  image         String?
+  image         String?    @db.Text
   emailVerified DateTime?
-  passwordHash  String?    // bcrypt — null for OAuth-only users
+  passwordHash  String?    @db.Text // bcrypt — null for OAuth-only users
   role          Role       @default(CUSTOMER)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
@@ -128,7 +142,7 @@ model Product {
 model ProductImage {
   id        String   @id @default(cuid())
   productId String
-  url       String   // e.g. "/uploads/products/abc123.jpg"
+  url       String   @db.Text
   alt       String?
   sort      Int      @default(0)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -162,11 +176,9 @@ model Order {
   user          User?         @relation(fields: [userId], references: [id])
   email         String        // captured for guest orders too
   phone         String?
-  // Billing & shipping address fields kept simple. Replace with separate
-  // Address rows later if you need an address book.
   firstName     String
   lastName      String
-  street        String
+  street        String        @db.Text
   city          String?
   state         String?
   zip           String?

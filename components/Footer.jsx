@@ -3,8 +3,8 @@ import Link from "next/link";
 
 const linkGroups = [
   { title: "My Account", links: [
-    { href: "/account",  label: "My Account" },
-    { href: "/orders",   label: "Order History" },
+    { href: "/dashboard",         label: "My Account" },
+    { href: "/dashboard/orders",  label: "Order History" },
     { href: "/cart",     label: "Shoping Cart", strong: true },
     { href: "/wishlist", label: "Wishlist" },
   ]},
@@ -17,7 +17,7 @@ const linkGroups = [
   { title: "Proxy", links: [
     { href: "/about",   label: "About" },
     { href: "/shop",    label: "Shop" },
-    { href: "/product/chinese-cabbage", label: "Product" },
+    { href: "/shop/chinese-cabbage", label: "Product" },
     { href: "/track",   label: "Track Order" },
   ]},
   { title: "Categories", links: [

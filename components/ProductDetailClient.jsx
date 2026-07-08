@@ -1,7 +1,7 @@
 "use client";
 
 // components/ProductDetailClient.jsx
-// Client island used by app/product/[slug]/page.js.
+// Client island used by app/shop/[slug]/page.js.
 // - ProductGallery handles main image, thumbnails, and hover-zoom.
 // - "See more / See less" toggles the description on mobile.
 // - Quantity stepper + Add to Cart + wishlist toggle.

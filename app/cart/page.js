@@ -59,7 +59,7 @@ export default function CartPage() {
                   <tr key={it.slug} className="border-t">
                     <td className="py-4 px-4 flex items-center gap-3">
                       <span className="text-3xl">{it.icon}</span>
-                      <Link href={`/product/${it.slug}`} className="hover:text-eco-green">{it.name}</Link>
+                      <Link href={`/shop/${it.slug}`} className="hover:text-eco-green">{it.name}</Link>
                     </td>
                     <td className="py-4 px-4">${it.price.toFixed(2)}</td>
                     <td className="py-4 px-4">
@@ -83,7 +83,7 @@ export default function CartPage() {
                   <div className="text-4xl shrink-0 self-center">{it.icon}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start gap-2">
-                      <Link href={`/product/${it.slug}`} className="font-medium hover:text-eco-green truncate">{it.name}</Link>
+                      <Link href={`/shop/${it.slug}`} className="font-medium hover:text-eco-green truncate">{it.name}</Link>
                       <button type="button" onClick={() => removeItem(it.slug)} className="text-gray-400 hover:text-red-500 -mt-1 -mr-1 p-1" aria-label={`Remove ${it.name}`}>
                         <i className="fa-solid fa-xmark" />
                       </button>

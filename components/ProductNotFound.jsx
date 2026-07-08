@@ -22,7 +22,7 @@ export default function ProductNotFound({ query, best, suggestions, popular }) {
           <p className="text-gray-500 text-sm sm:text-base mt-2">
             No product matches{" "}
             <code className="bg-eco-bg px-2 py-0.5 rounded text-eco-dark break-all">
-              /product/{query}
+              /shop/{query}
             </code>
             . It may have been renamed or moved.
           </p>
@@ -35,7 +35,7 @@ export default function ProductNotFound({ query, best, suggestions, popular }) {
               Did you mean
             </div>
             <Link
-              href={`/product/${best.slug}`}
+              href={`/shop/${best.slug}`}
               className="block bg-white border border-eco-green rounded-xl p-4 hover:shadow-lg transition flex items-center gap-4"
             >
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-md bg-eco-bg grid place-items-center text-4xl sm:text-5xl shrink-0">

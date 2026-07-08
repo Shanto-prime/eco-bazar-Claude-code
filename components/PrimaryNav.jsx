@@ -103,7 +103,10 @@ export default function PrimaryNav() {
                 <Link href="/wishlist" className="block px-5 py-3 border-b border-gray-100 text-gray-700"><i className="fa-regular fa-heart mr-2 text-eco-green" /> Wishlist</Link>
               </li>
               <li>
-                <Link href="/signin"   className="block px-5 py-3 border-b border-gray-100 text-gray-700"><i className="fa-regular fa-user mr-2 text-eco-green" /> Sign In</Link>
+                <Link href="/login"     className="block px-5 py-3 border-b border-gray-100 text-gray-700"><i className="fa-regular fa-user mr-2 text-eco-green" /> Log In</Link>
+              </li>
+              <li>
+                <Link href="/dashboard" className="block px-5 py-3 border-b border-gray-100 text-gray-700"><i className="fa-solid fa-gauge-high mr-2 text-eco-green" /> Dashboard</Link>
               </li>
             </ul>
 

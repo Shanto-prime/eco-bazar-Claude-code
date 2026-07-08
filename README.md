@@ -1,169 +1,189 @@
 # Ecobazar — Next.js App
 
-React/Next.js port of the static HTML build in `../site/`. Uses the **App
-Router**, **JavaScript** (`.js` / `.jsx`), and **Tailwind CSS v4** (with a
-small documented vanilla-CSS layer in `app/globals.css`).
+Next.js 16 (App Router) + React 19 e-commerce store for organic groceries.
+Tailwind CSS v4, Prisma + **MySQL**, NextAuth v5 (credentials + optional
+Google/Facebook), role-based `/dashboard` on a single domain.
+
+---
 
 ## Run it
 
 ```bash
 cd "D:\claude\test e com project\ecobazar-next"
 npm install
-npm run dev
+
+cp .env.example .env.local        # fill in DATABASE_URL + NEXTAUTH_SECRET
+
+# MySQL — fresh schema. Delete prisma/migrations (if any) before running:
+npx prisma migrate dev --name init-mysql
+
+# Seed three test users + 10 starter products:
+npx prisma db seed                # (or: npm run db:seed)
+
+npm run dev                       # http://localhost:3000
 ```
 
-Then open `http://localhost:3000`.
+### Test accounts
 
-> Heads-up: the project was scaffolded and every source file is written, but
-> `npm install` did NOT finish in the build sandbox (no npm network access).
-> One `npm install` on your machine is all that's left.
+Sign in at `/login`. The login form accepts the bare username:
 
-## Routes
+| Username   | Password   | Role      |
+|------------|------------|-----------|
+| `admin`    | `admin`    | ADMIN     |
+| `mod`      | `mod`      | MODERATOR |
+| `customer` | `customer` | CUSTOMER  |
 
-| URL                       | File                              |
-| ------------------------- | --------------------------------- |
-| `/`                       | `app/page.js`                     |
-| `/shop`                   | `app/shop/page.js`                |
-| `/product/[slug]`         | `app/product/[slug]/page.js`     |
-| `/cart`                   | `app/cart/page.js`                |
-| `/checkout`               | `app/checkout/page.js`            |
-| `/contact`                | `app/contact/page.js`             |
+When `NODE_ENV !== "production"` the login page renders a small banner
+listing these accounts so you don't have to remember them.
 
-Every product slug listed in `lib/data.js` is statically generated via
-`generateStaticParams` on the `[slug]` route.
+---
 
-## Folder layout
+## Route map
+
+| URL                       | Access                              |
+|---------------------------|-------------------------------------|
+| `/`                       | public                              |
+| `/shop`                   | public                              |
+| `/shop/[slug]`            | public — product detail             |
+| `/cart`                   | public                              |
+| `/wishlist`               | public                              |
+| `/checkout`               | public (guest checkout)             |
+| `/contact`                | public                              |
+| `/login`                  | public                              |
+| `/register`               | public                              |
+| `/unauthorized`           | public — shown when blocked         |
+| `/dashboard`              | any authenticated user (role router) |
+| `/dashboard/products`     | ADMIN + MODERATOR                   |
+| `/dashboard/orders`       | any auth user (data scoped by role) |
+| `/dashboard/reviews`      | ADMIN + MODERATOR                   |
+| `/dashboard/users`        | ADMIN only                          |
+| `/dashboard/audit-log`    | ADMIN only                          |
+
+`middleware.js` redirects unauthenticated requests to `/dashboard/*` →
+`/unauthorized?next=...`. Per-role checks happen server-side inside each
+sub-page via `requireRole(...)` from `lib/auth-helpers.js`.
+
+---
+
+## Project layout
 
 ```
 ecobazar-next/
 ├── app/
-│   ├── layout.js            ← Root layout (TopBar, Header, Nav, Newsletter, Footer)
-│   ├── page.js              ← Homepage
-│   ├── globals.css          ← Tailwind + documented custom CSS
-│   ├── shop/page.js
-│   ├── product/[slug]/page.js
+│   ├── layout.js               root chrome (TopBar/Header/Nav/Newsletter/Footer)
+│   ├── page.js                 home
+│   ├── shop/page.js            product listing
+│   ├── shop/[slug]/page.js     product detail
 │   ├── cart/page.js
 │   ├── checkout/page.js
-│   └── contact/page.js
-├── components/
-│   ├── TopBar.jsx
-│   ├── Header.jsx
-│   ├── PrimaryNav.jsx       ← client component — highlights active link
-│   ├── Breadcrumb.jsx
-│   ├── Newsletter.jsx
-│   ├── Footer.jsx
-│   ├── ProductCard.jsx
-│   ├── CategoryTile.jsx
-│   ├── NewsCard.jsx
-│   ├── TestimonialCard.jsx
-│   └── Stars.jsx
+│   ├── wishlist/page.js
+│   ├── contact/page.js
+│   ├── login/                  credentials form + optional OAuth buttons
+│   ├── register/
+│   ├── unauthorized/           shown on auth bounce
+│   ├── dashboard/              role-routed admin/mod/customer area
+│   │   ├── layout.js
+│   │   ├── page.jsx            branches on session.user.role
+│   │   ├── _components/        AdminDashboard, ModeratorDashboard, CustomerDashboard, DashboardShell
+│   │   ├── products/           ADMIN + MODERATOR
+│   │   ├── orders/             all roles, scoped server-side
+│   │   ├── reviews/            ADMIN + MODERATOR
+│   │   ├── users/              ADMIN only
+│   │   └── audit-log/          ADMIN only
+│   └── api/
+│       ├── auth/[...nextauth]
+│       ├── auth/signup
+│       └── upload              POST image upload (ADMIN + MODERATOR)
+├── components/                 shared UI
 ├── lib/
-│   └── data.js              ← Sample products / categories / news
-├── public/images/           ← 49 image files cropped from the source PDFs
-└── package.json
+│   ├── auth.js                 NextAuth v5 config + env-gated OAuth
+│   ├── auth-helpers.js         getCurrentUser / requireAuth / requireRole
+│   ├── prisma.js
+│   ├── products-db.js
+│   ├── order-actions.js        placeOrderAction (atomic inventory)
+│   ├── CartContext.jsx
+│   └── data.js                 static catalogue used by client filters
+├── prisma/
+│   ├── schema.prisma           MySQL provider
+│   └── seed.js                 admin / mod / customer + 10 products
+├── middleware.js               only protects /dashboard/*
+└── auth.js                     thin re-export of lib/auth.js
 ```
 
-## Styling
+---
 
-- **Tailwind v4** is loaded via PostCSS (`postcss.config.mjs` already
-  configured by `create-next-app`). Brand tokens are declared once in
-  `app/globals.css` via `@theme inline` so utility classes like
-  `text-eco-green`, `bg-eco-footer`, `bg-eco-bg`, `text-eco-dark` work
-  everywhere.
-- **Custom vanilla CSS** sits below the `@theme` block in `globals.css` for
-  things Tailwind can't express cleanly (range-slider thumbs, dashed-border
-  category tile, testimonial quote glyph, countdown layout, breadcrumb veg
-  strip, qty-stepper, product-detail tab underline, map placeholder pattern).
-  Every block is preceded by a comment listing the **page** and **section**
-  it belongs to.
+## Database (MySQL)
 
-## State & interactivity
+`prisma/schema.prisma` uses `provider = "mysql"`. Long string columns carry
+`@db.Text` so they don't hit the default VARCHAR(191) ceiling (descriptions,
+addresses, OAuth tokens, image URLs, review bodies, notes).
 
-Global state lives in **`lib/CartContext.jsx`** — a React Context backed by
-`useReducer`, with cart + wishlist + coupon state persisted to
-`localStorage` (key `ecobazar-cart-v1`). Every interactive component reads
-through the `useCart()` hook.
+The default MySQL collation `utf8mb4_unicode_ci` is already case-insensitive,
+so `Prisma`'s PostgreSQL-only `mode: "insensitive"` is **not** used anywhere
+in this codebase.
 
-**What works:**
+Local MySQL setup:
 
-- Cart: add from any product card / hot-deal card / product detail page;
-  update quantity; remove; clear cart; apply coupon (`ECO10`, `ECO20`,
-  `FREE5`).
-- Wishlist: heart icon on featured cards + product detail page; saved items
-  show in `/wishlist` with **Move to Cart** action.
-- Header: live cart count, total, and wishlist badge.
-- Header search: deep-links to `/shop?q=...`.
-- Shop: live filter by price range, rating, popular tag; sort by price /
-  name / latest; full-text search; pagination; **Reset all filters**.
-- Product detail: quantity stepper, working tabs (Description / Additional
-  Information / Customer Feedback), Add to Cart with chosen qty, wishlist
-  toggle.
-- Cart page: empty-state, line item totals, qty steppers, remove, coupon
-  application (try `ECO10`).
-- Checkout: required-field validation, email/phone format, place-order
-  clears cart and shows order confirmation with a fake order ID.
-- Newsletter & Contact forms: validation + success toast.
-- Testimonial slider: prev/next arrows scroll the list.
-- Hot Deals card: real countdown timer (`HH:MM:SS` tick every second).
-- Toasts: bottom-right notifications for all actions (success/info/error).
-
-## Product gallery & responsive design
-
-**ProductGallery (`components/ProductGallery.jsx`)** powers the product
-detail page. Each product carries an `images` array in `lib/data.js`. Two
-descriptor shapes are supported:
-
-```js
-// Styled placeholder (default while you don't have real photos)
-{ type: "view", emoji: "🍏", bg: "linear-gradient(...)", scale: 1.4, label: "Close-up" }
-
-// Real photograph (drop a file under public/images/products/)
-{ type: "image", src: "/images/products/apple-1.jpg", label: "Front view" }
+```bash
+# Ubuntu / Debian:
+sudo apt install mysql-server
+sudo mysql <<'SQL'
+CREATE USER 'ecobazar'@'localhost' IDENTIFIED BY 'change-this-password';
+CREATE DATABASE ecobazar CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON ecobazar.* TO 'ecobazar'@'localhost';
+SQL
 ```
 
-The component renders both through the same pipeline, so the gallery looks
-identical whether the source is a placeholder card or a real photo. What it
-does:
+`DATABASE_URL="mysql://ecobazar:change-this-password@localhost:3306/ecobazar"`
 
-- Large main stage with the active image.
-- Thumbnail strip below — click to swap, active thumb auto-scrolls into view.
-- If more than 4 thumbnails, the strip gets ← / → scroll buttons and
-  scroll-snap.
-- Desktop (hover-capable, fine-pointer devices): hovering the main image
-  magnifies the content **2× at the cursor's location**.
-- Touch / no-hover devices: tapping the main image opens a fullscreen
-  lightbox with prev/next controls.
-- Keyboard ← / → swap images when the gallery has focus; **Esc** closes the
-  lightbox.
+---
 
-## Mobile / responsive design
+## Auth — credentials + optional OAuth
 
-Every page is built mobile-first now:
+`Credentials` is always on. `Google` and `Facebook` are conditionally
+registered in `lib/auth.js` based on env vars:
 
-- **TopBar** drops the location + currency selectors on small screens, keeps
-  Sign In / Sign Up.
-- **Header** is sticky; logo + icons stay one row; search collapses into a
-  magnifier button that toggles a full-width search bar below.
-- **PrimaryNav** is a horizontal list ≥ `lg`; below that it becomes a
-  hamburger drawer (slides in from the left, dims the background, locks body
-  scroll, closes on route change).
-- **Shop sidebar** is inline ≥ `lg`; on smaller screens it's hidden behind a
-  "Filters" pill that opens a slide-in drawer from the right with the same
-  controls.
-- **Cart** uses a table on `md+` and a card stack on mobile.
-- **Checkout** form is single column on mobile; two-column from `sm` up;
-  order summary sticky on desktop and inline on mobile.
-- **Product Detail** description truncates to 3 lines on mobile with a
-  **See more / See less** toggle.
-- **Footer** drops to a single-column → 2 → 5 grid across breakpoints.
+```
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+FACEBOOK_CLIENT_ID=
+FACEBOOK_CLIENT_SECRET=
+```
 
-## Where to go next
+Empty values → provider isn't registered, button isn't rendered, no warnings.
+To enable later, fill in the IDs/secrets and restart. The login page reads
+`hasGoogle` / `hasFacebook` server-side and only renders the corresponding
+button when the env vars are set.
 
-- Swap `lib/data.js` for a real source (Sanity / Shopify / Prisma+Postgres).
-- Add cart state with React Context or Zustand and wire the "Add to Cart"
-  buttons.
-- Replace emoji product icons with real photography (drop files into
-  `public/images/products/` and add an `image` field on each product).
-- Build the remaining 21 PDF pages (Account, Blog, FAQ, 404, Wishlist, etc.)
-  — their static HTML stubs are not yet built, the source PDFs live in
-  `../` (project root).
+The session uses the JWT strategy and includes `id` + `role` on
+`session.user`, so middleware and server components can read the role
+without a DB hit.
+
+---
+
+## What's still TODO
+
+Marked with `// TODO:` comments in the code:
+
+- Full customer order history (filters, detail view)
+- Full admin order management (status edits, refunds, search)
+- Full admin user management (role change, ban, password reset trigger)
+- Review approve / reject server actions
+- Password reset email flow
+- Cart merge on login
+- Real bKash / Nagad / SSLCOMMERZ payment integration (schema fields exist)
+
+---
+
+## Useful commands
+
+```bash
+npm run dev          # dev server with hot reload
+npm run build        # production build
+npm start            # run the production build
+
+npm run db:push      # sync schema to DB (no migration history)
+npm run db:migrate   # create + apply a versioned migration
+npm run db:studio    # open Prisma Studio
+npm run db:seed      # seed the three test users + 10 products
+```

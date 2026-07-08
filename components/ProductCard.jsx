@@ -39,7 +39,7 @@ export default function ProductCard({
         </div>
       )}
 
-      <Link href={`/product/${slug}`} className="block">
+      <Link href={`/shop/${slug}`} className="block">
         <div className={`${imgClass} grid place-items-center`}>{icon}</div>
         <div className={`text-xs ${featured ? "text-eco-green font-medium" : "text-gray-500"}`}>{name}</div>
         <div className="flex items-center justify-between mt-1">

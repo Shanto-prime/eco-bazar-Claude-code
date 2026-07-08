@@ -171,7 +171,7 @@ body {
 .eco-check { accent-color: var(--eco-green); width: 16px; height: 16px; }
 
 /* ------------------------------------------------------------
-   app/product/[slug]/page.js
+   app/shop/[slug]/page.js
    Section: Quantity stepper
    ------------------------------------------------------------ */
 .qty-stepper {
@@ -200,7 +200,7 @@ body {
 }
 
 /* ------------------------------------------------------------
-   app/product/[slug]/page.js
+   app/shop/[slug]/page.js
    Section: Tab strip (Description / Additional / Feedback)
    ------------------------------------------------------------ */
 .pd-tabs { display: flex; gap: 32px; border-bottom: 1px solid var(--eco-border); }

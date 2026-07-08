@@ -3,6 +3,7 @@
 // components/HomeHotDealsCard.jsx — the big featured Hot Deals card on the
 // homepage. Has a live countdown timer and a working Add-to-Cart button.
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useCart } from "../lib/CartContext";
 import { findProductBySlug } from "../lib/data";
@@ -38,7 +39,9 @@ export default function HomeHotDealsCard() {
         <span className="bg-red-500 text-white text-xs px-2 py-1 rounded">Sale 50%</span>
         <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded">Best Sale</span>
       </div>
-      <div className="h-52 grid place-items-center text-9xl">{product.icon}</div>
+      <div className="relative h-52">
+        <Image src="/images/hotdeal-big.jpg" alt={product.name} fill className="object-contain" sizes="(min-width:1024px) 33vw, 90vw" />
+      </div>
       <button
         type="button"
         onClick={() => addItem(product, 1)}

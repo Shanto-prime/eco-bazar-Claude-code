@@ -4,12 +4,13 @@
 // Clicking the card navigates to the product page; clicking the bag icon
 // (Add to Cart) calls into CartContext without bubbling the click up.
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "../lib/CartContext";
 import Stars from "./Stars";
 
 export default function ProductCard({
-  slug, name, icon, price, oldPrice, badge, rating = 4, featured = false,
+  slug, name, icon, image, price, oldPrice, badge, rating = 4, featured = false,
   size = "md", // "md" = standard, "sm" = compact (hot deals strip)
 }) {
   const { addItem, toggleWishlist, wishlist, hydrated } = useCart();
@@ -40,7 +41,19 @@ export default function ProductCard({
       )}
 
       <Link href={`/shop/${slug}`} className="block">
-        <div className={`${imgClass} grid place-items-center`}>{icon}</div>
+        {image ? (
+          <div className={`relative ${imgClass}`}>
+            <Image
+              src={image}
+              alt={name}
+              fill
+              className="object-contain"
+              sizes={size === "sm" ? "(min-width:640px) 12vw, 40vw" : "(min-width:1024px) 18vw, 45vw"}
+            />
+          </div>
+        ) : (
+          <div className={`${imgClass} grid place-items-center`}>{icon}</div>
+        )}
         <div className={`text-xs ${featured ? "text-eco-green font-medium" : "text-gray-500"}`}>{name}</div>
         <div className="flex items-center justify-between mt-1">
           <div>

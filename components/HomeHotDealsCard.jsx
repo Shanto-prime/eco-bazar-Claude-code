@@ -8,8 +8,9 @@ import { useEffect, useState } from "react";
 import { useCart } from "../lib/CartContext";
 import { findProductBySlug } from "../lib/data";
 
-// Compute a fake "offer ends" point ~2 days out.
-const TARGET = () => Date.now() + 1000 * 60 * 60 * 15; // 47h
+// Fixed "offer ends" deadline: July 24th, 4:00 PM (local time).
+// Month is 0-indexed, so 6 = July. Adjust the year here as needed.
+const TARGET = () => new Date(2026, 6, 24, 16, 0, 0, 0).getTime();
 
 function diff(target) {
   const ms = Math.max(0, target - Date.now());

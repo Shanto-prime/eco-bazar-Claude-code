@@ -33,8 +33,8 @@ export default function NotFound() {
           Oops! page not found
         </h1>
         <p className="text-gray-500 text-sm sm:text-base mt-3 sm:mt-4 max-w-xl mx-auto">
-          Ut consequat ac tortor eu vehicula. Aenean accumsan purus eros.
-          Maecenas sagittis tortor at metus mollis.
+          We couldn&apos;t find the page you were looking for. It may have been
+          renamed or moved.
         </p>
 
         <div className="mt-6 sm:mt-8 flex flex-wrap justify-center gap-3">

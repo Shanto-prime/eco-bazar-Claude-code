@@ -9,7 +9,7 @@ import { useCart } from "../lib/CartContext";
 import { findProductBySlug } from "../lib/data";
 
 // Compute a fake "offer ends" point ~2 days out.
-const TARGET = () => Date.now() + 1000 * 60 * 60 * 47; // 47h
+const TARGET = () => Date.now() + 1000 * 60 * 60 * 15; // 47h
 
 function diff(target) {
   const ms = Math.max(0, target - Date.now());

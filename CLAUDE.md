@@ -22,7 +22,7 @@ npm run db:seed      # node prisma/seed.js — seeds 3 test users + 10 products
 
 There is **no test runner** configured. `postinstall` runs `prisma generate`, so the Prisma client is regenerated on every `npm install`.
 
-Seeded logins (sign in at `/login` with the bare username as both fields): `admin`/`admin` (ADMIN), `mod`/`mod` (MODERATOR), `customer`/`customer` (CUSTOMER). The login form lowercases the identifier and looks it up against `User.email`, so usernames *are* the email column.
+Seeded logins (sign in at `/login` with username **or** email, plus password): `admin` / `admin@ecobazar.test` / `admin` (ADMIN), `mod` / `mod@ecobazar.test` / `mod` (MODERATOR), `customer` / `customer@ecobazar.test` / `customer` (CUSTOMER). `User` has a distinct `username` (unique login handle, nullable — OAuth users have none) and a real `email` (unique, used for password reset + verification). The credentials `authorize` lowercases the identifier and matches it against `username OR email` (`findFirst`). Password reset/verification tokens live in the `VerificationToken` table (see `lib/tokens.js`); email delivery goes through `lib/mailer.js` (dev = console log). Email verification is issued at signup but **not** enforced at login.
 
 ## Authorization model (three enforcement layers)
 

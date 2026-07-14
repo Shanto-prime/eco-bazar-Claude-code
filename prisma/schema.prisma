@@ -40,11 +40,16 @@ enum Role {
 
 // User record. Auth.js (NextAuth) writes Account / Session rows linking
 // OAuth providers to this row. `passwordHash` is set only for credentials
-// (username/email + password) signups. The `email` column doubles as the
-// login identifier so the seeded test users can sign in with bare usernames
-// like "admin", "mod", "customer".
+// (username/email + password) signups.
+//
+// Identity model: credentials users have BOTH a `username` (unique login
+// handle) and a real `email` (unique, required for password reset /
+// verification). Login accepts either the username or the email plus the
+// password. `username` is nullable because OAuth-created users (Google /
+// Facebook) have an email but no username.
 model User {
   id            String     @id @default(cuid())
+  username      String?    @unique
   email         String     @unique
   name          String?
   image         String?    @db.Text

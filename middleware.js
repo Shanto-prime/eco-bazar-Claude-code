@@ -4,11 +4,15 @@
 // happen inside the matching server components via requireRole() from
 // lib/auth-helpers.js — middleware only knows "is signed in or not".
 //
-// All previous subdomain rewriting has been removed; the admin panel now
-// lives at /dashboard on the main domain.
+// Edge-safety: this middleware is built from the edge-safe ../auth.config
+// (NOT lib/auth.js), so Prisma and bcrypt never enter the middleware bundle.
+// The token it reads was minted by the Node config at sign-in.
 
 import { NextResponse } from "next/server";
-import { auth } from "./auth";
+import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
+
+const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   const url = req.nextUrl;

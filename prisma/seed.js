@@ -1,11 +1,11 @@
 // prisma/seed.js
 // Seed the MySQL database with:
-//   1. Three test users:
-//        admin    / admin    / ADMIN
-//        mod      / mod      / MODERATOR
-//        customer / customer / CUSTOMER
-//      The login identifier is stored in the `User.email` column (which is
-//      just a unique String — works for bare usernames too).
+//   1. Three test users (login with the username OR the email + password):
+//        admin    / admin@ecobazar.test    / admin    / ADMIN
+//        mod      / mod@ecobazar.test      / mod      / MODERATOR
+//        customer / customer@ecobazar.test / customer / CUSTOMER
+//      Each user now has a distinct `username` (login handle) and a real
+//      `email` (used for password reset / verification).
 //   2. The 10 starter products previously defined in lib/data.js.
 //
 // Run with:    npx prisma db seed   (or: npm run db:seed)
@@ -34,26 +34,26 @@ const DEFAULT_DESC =
   "Fresh, organically grown produce delivered to your door.";
 
 const TEST_USERS = [
-  { username: "admin",    password: "admin",    role: "ADMIN",     name: "Site Admin" },
-  { username: "mod",      password: "mod",      role: "MODERATOR", name: "Demo Moderator" },
-  { username: "customer", password: "customer", role: "CUSTOMER",  name: "Demo Customer" },
+  { username: "admin",    email: "admin@ecobazar.test",    password: "admin",    role: "ADMIN",     name: "Site Admin" },
+  { username: "mod",      email: "mod@ecobazar.test",      password: "mod",      role: "MODERATOR", name: "Demo Moderator" },
+  { username: "customer", email: "customer@ecobazar.test", password: "customer", role: "CUSTOMER",  name: "Demo Customer" },
 ];
 
 async function main() {
   // ---- Users ---------------------------------------------------------------
   const created = {};
   for (const u of TEST_USERS) {
-    const passwordHash = await bcrypt.hash(u.password, 10);
+    const passwordHash = await bcrypt.hash(u.password, 12);
     created[u.role] = await prisma.user.upsert({
-      where:  { email: u.username },
-      update: { role: u.role, passwordHash, name: u.name },
-      create: { email: u.username, name: u.name, role: u.role, passwordHash },
+      where:  { username: u.username },
+      update: { email: u.email, role: u.role, passwordHash, name: u.name },
+      create: { username: u.username, email: u.email, name: u.name, role: u.role, passwordHash },
     });
   }
 
-  console.log("• Users:");
+  console.log("• Users (username / email / password):");
   for (const u of TEST_USERS) {
-    console.log(`    ${u.username.padEnd(10)} / ${u.password.padEnd(10)}  (${u.role})`);
+    console.log(`    ${u.username.padEnd(10)} / ${u.email.padEnd(24)} / ${u.password}  (${u.role})`);
   }
 
   // ---- Products ------------------------------------------------------------

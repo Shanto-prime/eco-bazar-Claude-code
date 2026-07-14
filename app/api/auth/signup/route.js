@@ -1,40 +1,70 @@
 // app/api/auth/signup/route.js
-// Credentials sign-up. Hashes the password with bcrypt and creates the User
-// row. The `username` field doubles as the unique login identifier stored
-// in `User.email` (which is just a unique String — emails or bare usernames
-// both work).
+// Credentials sign-up. Creates a User with a distinct `username` (login handle)
+// and a real `email` (used for verification + password reset). Login later
+// accepts either identifier + password.
 //
 // On success the client calls signIn("credentials", ...) to start a session.
+// A best-effort verification email is sent (non-fatal, non-enforcing).
 
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../../../../lib/prisma";
+import { rateLimit, clientIp } from "../../../../lib/rate-limit";
+import { promoteIfFirstUser } from "../../../../lib/user-service";
+import { issueToken, appBaseUrl } from "../../../../lib/tokens";
+import { sendMail } from "../../../../lib/mailer";
 
 const Schema = z.object({
   name:     z.string().min(1).max(80),
-  username: z.string().min(2).max(80).transform((s) => s.trim().toLowerCase()),
+  username: z.string().min(2).max(30).regex(/^[A-Za-z0-9_.-]+$/, "letters, digits, . _ - only").transform((s) => s.toLowerCase()),
+  email:    z.string().max(120).email().transform((s) => s.trim().toLowerCase()),
   password: z.string().min(8).max(128),
 });
 
 export async function POST(req) {
+  // Throttle account-creation spam per IP.
+  const rl = rateLimit(`signup:${clientIp(req)}`, { limit: 5, windowMs: 60 * 60 * 1000 });
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many sign-up attempts. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } },
+    );
+  }
+
   let data;
   try { data = Schema.parse(await req.json()); }
   catch { return NextResponse.json({ error: "Invalid input." }, { status: 400 }); }
 
-  const existing = await prisma.user.findUnique({ where: { email: data.username } });
-  if (existing) return NextResponse.json({ error: "An account with this username already exists." }, { status: 409 });
+  const existing = await prisma.user.findFirst({
+    where:  { OR: [{ username: data.username }, { email: data.email }] },
+    select: { username: true, email: true },
+  });
+  if (existing) {
+    const which = existing.username === data.username ? "username" : "email";
+    return NextResponse.json({ error: `An account with this ${which} already exists.` }, { status: 409 });
+  }
 
-  const passwordHash = await bcrypt.hash(data.password, 10);
-
-  // First user gets ADMIN role so a fresh install has a privileged account.
-  const count = await prisma.user.count();
-  const role  = count === 0 ? "ADMIN" : "CUSTOMER";
+  const passwordHash = await bcrypt.hash(data.password, 12);
 
   const user = await prisma.user.create({
-    data:   { name: data.name, email: data.username, passwordHash, role },
-    select: { id: true, email: true, role: true },
+    data:   { name: data.name, username: data.username, email: data.email, passwordHash },
+    select: { id: true, username: true, email: true, role: true },
   });
 
-  return NextResponse.json({ ok: true, user });
+  // First user in the system is promoted to ADMIN (single source of truth in
+  // lib/user-service). No-op for every signup after the first.
+  const promotedRole = await promoteIfFirstUser(user.id);
+
+  // Best-effort email verification — never blocks signup or login.
+  try {
+    const token = await issueToken("verify", user.email);
+    await sendMail({
+      to:      user.email,
+      subject: "Verify your Ecobazar email",
+      text:    `Welcome to Ecobazar!\n\nConfirm your email address:\n${appBaseUrl()}/api/auth/verify?token=${token}\n\nThis link expires in 1 hour.`,
+    });
+  } catch { /* verification email is non-fatal */ }
+
+  return NextResponse.json({ ok: true, user: { ...user, role: promotedRole || user.role } });
 }

@@ -13,7 +13,7 @@ export default function RegisterForm() {
   const sp = useSearchParams();
   const next = sp.get("next") || "/dashboard";
 
-  const [form, setForm] = useState({ name: "", username: "", password: "" });
+  const [form, setForm] = useState({ name: "", username: "", email: "", password: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -66,10 +66,17 @@ export default function RegisterForm() {
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500" htmlFor="username">Username or email</label>
+            <label className="text-xs text-gray-500" htmlFor="username">Username</label>
             <input
               id="username" required value={form.username} onChange={set("username")}
-              autoComplete="username" className="eco-input" placeholder="you@example.com or username"
+              autoComplete="username" className="eco-input" placeholder="yourname"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500" htmlFor="email">Email</label>
+            <input
+              id="email" type="email" required value={form.email} onChange={set("email")}
+              autoComplete="email" className="eco-input" placeholder="you@example.com"
             />
           </div>
           <div>

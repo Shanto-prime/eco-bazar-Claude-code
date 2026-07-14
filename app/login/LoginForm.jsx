@@ -15,6 +15,14 @@ export default function LoginForm({ hasGoogle, hasFacebook }) {
   const sp = useSearchParams();
   const next = sp.get("next") || "/dashboard";
 
+  const okNotice =
+    sp.get("reset")  === "ok" ? "Your password was updated — you can log in now." :
+    sp.get("verify") === "ok" ? "Email verified — thanks!" :
+    null;
+  const warnNotice = sp.get("verify") === "invalid"
+    ? "That verification link was invalid or has expired."
+    : null;
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy]   = useState(false);
@@ -60,6 +68,18 @@ export default function LoginForm({ hasGoogle, hasFacebook }) {
           </div>
         )}
 
+        {okNotice && (
+          <div className="mb-4 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-4 py-3">
+            {okNotice}
+          </div>
+        )}
+
+        {warnNotice && (
+          <div className="mb-4 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3">
+            {warnNotice}
+          </div>
+        )}
+
         {error && (
           <div className="mb-4 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3" role="alert">
             {error}
@@ -76,7 +96,10 @@ export default function LoginForm({ hasGoogle, hasFacebook }) {
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500" htmlFor="password">Password</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-gray-500" htmlFor="password">Password</label>
+              <Link href="/forgot-password" className="text-xs text-eco-green font-medium">Forgot password?</Link>
+            </div>
             <input
               id="password" name="password" type="password" autoComplete="current-password"
               required value={password} onChange={(e) => setPassword(e.target.value)}

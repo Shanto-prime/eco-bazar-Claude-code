@@ -35,7 +35,9 @@ if (hasFacebook) {
     Facebook({
       clientId:     process.env.FACEBOOK_CLIENT_ID,
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
-      allowDangerousEmailAccountLinking: true,
+      // Facebook email is not reliably verified, so auto-linking by email is a
+      // takeover risk — keep it off. (Google, which verifies email, stays on.)
+      allowDangerousEmailAccountLinking: false,
     })
   );
 }

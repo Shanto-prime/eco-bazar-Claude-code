@@ -6,6 +6,7 @@ import ProductForm from "../../_form/ProductForm";
 import { updateProductAction, deleteProductAction } from "../../_actions";
 import { prisma } from "../../../../../lib/prisma";
 import { requireRole, isAdmin } from "../../../../../lib/auth-helpers";
+import { toDollars } from "../../../../../lib/money";
 
 export default async function EditProduct({ params }) {
   const user = await requireRole(["ADMIN", "MODERATOR"], "/dashboard/products");
@@ -45,7 +46,7 @@ export default async function EditProduct({ params }) {
         Added by <b>{product.createdBy?.name || product.createdBy?.email}</b> on {new Date(product.createdAt).toLocaleString()}
       </div>
       <ProductForm
-        product={{ ...product, price: Number(product.price), oldPrice: product.oldPrice ? Number(product.oldPrice) : null }}
+        product={{ ...product, price: toDollars(product.price), oldPrice: toDollars(product.oldPrice) }}
         action={boundUpdate}
         allowDelete={isAdmin(user)}
         onDelete={boundDelete}

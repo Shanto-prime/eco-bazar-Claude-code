@@ -12,6 +12,7 @@ import QuantityStepper from "./QuantityStepper";
 import ProductGallery from "./ProductGallery";
 import Stars from "./Stars";
 import { useCart } from "../lib/CartContext";
+import { useT } from "../lib/i18n/LanguageProvider";
 
 const TABS = ["Description", "Additional Information", "Customer Feedback"];
 
@@ -23,6 +24,7 @@ export default function ProductDetailClient({ product }) {
   const [tab, setTab]       = useState(TABS[0]);
   const [showFull, setFull] = useState(false);
   const { addItem, toggleWishlist, wishlist, hydrated } = useCart();
+  const t = useT();
   const inWishlist = hydrated && wishlist.includes(product.slug);
 
   return (
@@ -34,7 +36,7 @@ export default function ProductDetailClient({ product }) {
         </div>
 
         <div>
-          <span className="inline-block bg-green-100 text-eco-green text-xs px-3 py-1 rounded-full">In Stock</span>
+          <span className="inline-block bg-green-100 text-eco-green text-xs px-3 py-1 rounded-full">{t("common.inStock")}</span>
           <h1 className="text-2xl sm:text-3xl font-bold mt-3">{product.name}</h1>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm">
@@ -80,7 +82,7 @@ export default function ProductDetailClient({ product }) {
               onClick={() => addItem(product, qty)}
               className="flex-1 min-w-[140px] py-3 rounded-full bg-eco-green text-white font-medium hover:bg-emerald-600"
             >
-              <i className="fa-solid fa-bag-shopping mr-2" /> Add to Cart
+              <i className="fa-solid fa-bag-shopping mr-2" /> {t("common.addToCart")}
             </button>
             <button
               type="button"

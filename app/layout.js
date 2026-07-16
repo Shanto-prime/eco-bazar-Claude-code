@@ -1,6 +1,10 @@
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "../lib/CartContext";
+import { LanguageProvider } from "../lib/i18n/LanguageProvider";
+import { getLocale } from "../lib/i18n/server";
+import { ThemeProvider } from "../lib/theme/ThemeProvider";
+import { getTheme } from "../lib/theme/server";
 import Toast from "../components/Toast";
 import TopBar from "../components/TopBar";
 import Header from "../components/Header";
@@ -19,9 +23,14 @@ export const metadata = {
   description: "Fresh & healthy organic food, delivered to your door.",
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const [locale, theme] = await Promise.all([getLocale(), getTheme()]);
+
   return (
-    <html lang="en" className={`${poppins.variable} antialiased`}>
+    <html
+      lang={locale}
+      className={`${poppins.variable} antialiased ${theme === "dark" ? "dark" : ""}`}
+    >
       <head>
         {/* Font Awesome icons used across the UI */}
         <link
@@ -30,15 +39,19 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="min-h-screen flex flex-col">
-        <CartProvider>
-          <TopBar />
-          <Header />
-          <PrimaryNav />
-          <main className="flex-1">{children}</main>
-          <Newsletter />
-          <Footer />
-          <Toast />
-        </CartProvider>
+        <ThemeProvider initialTheme={theme}>
+          <LanguageProvider initialLocale={locale}>
+            <CartProvider>
+              <TopBar />
+              <Header />
+              <PrimaryNav />
+              <main className="flex-1">{children}</main>
+              <Newsletter />
+              <Footer />
+              <Toast />
+            </CartProvider>
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

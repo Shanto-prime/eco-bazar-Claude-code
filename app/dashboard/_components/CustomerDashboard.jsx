@@ -5,6 +5,7 @@
 
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
+import { formatMoney } from "../../../lib/money";
 
 export default async function CustomerDashboard({ user }) {
   // Lightweight order count — full history lives at /dashboard/orders.
@@ -68,7 +69,7 @@ export default async function CustomerDashboard({ user }) {
                     <tr key={o.id} className="border-t">
                       <td className="px-4 py-3 font-medium">{o.number}</td>
                       <td className="px-4 py-3"><StatusPill status={o.status} /></td>
-                      <td className="px-4 py-3">${Number(o.total).toFixed(2)}</td>
+                      <td className="px-4 py-3">{formatMoney(o.total)}</td>
                       <td className="px-4 py-3 text-gray-500">{new Date(o.createdAt).toLocaleDateString()}</td>
                     </tr>
                   ))}
@@ -84,7 +85,7 @@ export default async function CustomerDashboard({ user }) {
                     <StatusPill status={o.status} />
                   </div>
                   <div className="text-xs text-gray-500 mt-1">{new Date(o.createdAt).toLocaleDateString()}</div>
-                  <div className="text-sm font-semibold mt-2">${Number(o.total).toFixed(2)}</div>
+                  <div className="text-sm font-semibold mt-2">{formatMoney(o.total)}</div>
                 </div>
               ))}
             </div>

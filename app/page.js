@@ -7,24 +7,32 @@ import CategoryTile from "../components/CategoryTile";
 import NewsCard from "../components/NewsCard";
 import TestimonialsSection from "../components/TestimonialsSection";
 import HomeHotDealsCard from "../components/HomeHotDealsCard";
-import { categories, products, news, instagramTiles } from "../lib/data";
+import { categories, news, instagramTiles } from "../lib/data";
+import { listProducts } from "../lib/products-db";
+import { getT } from "../lib/i18n/server";
 
 // Reusable section heading shared across the homepage.
-function SectionHead({ title, href, center }) {
+function SectionHead({ title, href, center, viewAllText = "View All" }) {
   if (center) return <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8">{title}</h2>;
   return (
     <div className="flex justify-between items-end mb-5 sm:mb-6 gap-4">
       <h2 className="text-2xl sm:text-3xl font-bold">{title}</h2>
       {href && (
         <Link href={href} className="text-eco-green font-medium text-sm sm:text-base whitespace-nowrap">
-          View All <i className="fa-solid fa-arrow-right text-xs" />
+          {viewAllText} <i className="fa-solid fa-arrow-right text-xs" />
         </Link>
       )}
     </div>
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const { locale, t } = await getT();
+  const viewAll = t("common.viewAll");
+  // Products come from the database (so admin/moderator additions show up),
+  // localized to the active language.
+  const products = await listProducts({ take: 30, locale });
+
   return (
     <>
       {/* ============ HERO  =========================================== */}
@@ -48,10 +56,10 @@ export default function Home() {
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-6 sm:mt-8">
         <div className="border border-gray-200 rounded-xl px-4 sm:px-8 py-5 sm:py-6 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {[
-            { icon: "fa-truck",          title: "Free Shipping",         sub: "Free shipping on all your order" },
-            { icon: "fa-headset",        title: "Customer Support 24/7", sub: "Instant access to Support" },
-            { icon: "fa-shield-halved",  title: "100% Secure Payment",   sub: "We ensure your money is safe" },
-            { icon: "fa-box",            title: "Money-Back Guarantee",  sub: "30 Days Money-Back Guarantee" },
+            { icon: "fa-truck",          title: t("home.freeShipping"),   sub: t("home.freeShippingSub") },
+            { icon: "fa-headset",        title: t("home.support"),        sub: t("home.supportSub") },
+            { icon: "fa-shield-halved",  title: t("home.securePayment"),  sub: t("home.securePaymentSub") },
+            { icon: "fa-box",            title: t("home.moneyBack"),      sub: t("home.moneyBackSub") },
           ].map((s) => (
             <div key={s.title} className="flex items-center gap-3 sm:gap-4">
               <i className={`fa-solid ${s.icon} text-2xl sm:text-3xl text-eco-green`} />
@@ -66,7 +74,7 @@ export default function Home() {
 
       {/* ============ POPULAR CATEGORIES ============================== */}
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-10 sm:mt-14">
-        <SectionHead title="Popular Categories" href="/shop" />
+        <SectionHead title={t("home.popularCategories")} href="/shop" viewAllText={viewAll} />
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-5">
           {categories.map((c) => <CategoryTile key={c.slug} {...c} />)}
         </div>
@@ -74,7 +82,7 @@ export default function Home() {
 
       {/* ============ POPULAR PRODUCTS ================================ */}
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-10 sm:mt-14">
-        <SectionHead title="Popular Products" href="/shop" />
+        <SectionHead title={t("home.popularProducts")} href="/shop" viewAllText={viewAll} />
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-5">
           {products.map((p) => <ProductCard key={p.slug} {...p} />)}
         </div>
@@ -94,7 +102,7 @@ export default function Home() {
       {/* ============ HOT DEALS  ====================================== */}
       <section className="bg-eco-bg py-10 sm:py-14 mt-10 sm:mt-14">
         <div className="max-w-[1320px] mx-auto px-4 sm:px-6">
-          <SectionHead title="Hot Deals" href="/shop" />
+          <SectionHead title={t("home.hotDeals")} href="/shop" viewAllText={viewAll} />
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
             <div className="lg:col-span-4">
               <HomeHotDealsCard />
@@ -117,7 +125,7 @@ export default function Home() {
 
       {/* ============ FEATURED PRODUCTS =============================== */}
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-10 sm:mt-14">
-        <SectionHead title="Featured Products" href="/shop" />
+        <SectionHead title={t("home.featuredProducts")} href="/shop" viewAllText={viewAll} />
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-5">
           {products.slice(0, 5).map((p) => <ProductCard key={p.slug + "-feat"} {...p} />)}
         </div>
@@ -125,7 +133,7 @@ export default function Home() {
 
       {/* ============ LATEST NEWS ===================================== */}
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-10 sm:mt-14">
-        <SectionHead title="Latest News" center />
+        <SectionHead title={t("home.latestNews")} center />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
           {news.map((n) => <NewsCard key={n.id} {...n} />)}
         </div>
@@ -148,7 +156,7 @@ export default function Home() {
 
       {/* ============ INSTAGRAM ======================================= */}
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-10 sm:mt-14 mb-10 sm:mb-14">
-        <SectionHead title="Follow us on Instagram" center />
+        <SectionHead title={t("home.followInstagram")} center />
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           {instagramTiles.map((src, i) => (
             <a key={i} href="#" className="block rounded-md overflow-hidden relative aspect-square">

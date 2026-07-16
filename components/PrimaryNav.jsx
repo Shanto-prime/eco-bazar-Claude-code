@@ -6,18 +6,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useT } from "../lib/i18n/LanguageProvider";
 
 const ITEMS = [
-  { href: "/",         label: "Home",       hasChildren: false },
-  { href: "/shop",     label: "Shop",       hasChildren: true  },
-  { href: "/pages",    label: "Pages",      hasChildren: true  },
-  { href: "/blog",     label: "Blog",       hasChildren: true  },
-  { href: "/about",    label: "About Us",   hasChildren: false },
-  { href: "/contact",  label: "Contact Us", hasChildren: false },
+  { href: "/",         key: "nav.home",    hasChildren: false },
+  { href: "/shop",     key: "nav.shop",    hasChildren: true  },
+  { href: "/pages",    key: "nav.pages",   hasChildren: true  },
+  { href: "/blog",     key: "nav.blog",    hasChildren: true  },
+  { href: "/about",    key: "nav.about",   hasChildren: false },
+  { href: "/contact",  key: "nav.contact", hasChildren: false },
 ];
 
 export default function PrimaryNav() {
   const pathname = usePathname();
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   // Close on route change.
@@ -41,7 +43,7 @@ export default function PrimaryNav() {
           aria-label="Open menu"
         >
           <i className="fa-solid fa-bars text-lg" />
-          <span className="font-medium">Menu</span>
+          <span className="font-medium">{t("nav.menu")}</span>
         </button>
 
         {/* Desktop links ---------------------------------------------------- */}
@@ -52,7 +54,7 @@ export default function PrimaryNav() {
                 href={it.href}
                 className={`block px-5 py-4 hover:text-eco-green ${isActive(it.href) ? "text-eco-green font-medium" : ""}`}
               >
-                {it.label}
+                {t(it.key)}
                 {it.hasChildren && <i className="fa-solid fa-chevron-down text-[10px] ml-1" />}
               </Link>
             </li>
@@ -92,21 +94,21 @@ export default function PrimaryNav() {
                       isActive(it.href) ? "text-eco-green font-medium bg-eco-bg" : "text-gray-700"
                     }`}
                   >
-                    {it.label}
+                    {t(it.key)}
                   </Link>
                 </li>
               ))}
               <li>
-                <Link href="/cart"     className="block px-5 py-3 border-b border-gray-100 text-gray-700"><i className="fa-solid fa-bag-shopping mr-2 text-eco-green" /> Cart</Link>
+                <Link href="/cart"     className="block px-5 py-3 border-b border-gray-100 text-gray-700"><i className="fa-solid fa-bag-shopping mr-2 text-eco-green" /> {t("nav.cart")}</Link>
               </li>
               <li>
-                <Link href="/wishlist" className="block px-5 py-3 border-b border-gray-100 text-gray-700"><i className="fa-regular fa-heart mr-2 text-eco-green" /> Wishlist</Link>
+                <Link href="/wishlist" className="block px-5 py-3 border-b border-gray-100 text-gray-700"><i className="fa-regular fa-heart mr-2 text-eco-green" /> {t("nav.wishlist")}</Link>
               </li>
               <li>
-                <Link href="/login"     className="block px-5 py-3 border-b border-gray-100 text-gray-700"><i className="fa-regular fa-user mr-2 text-eco-green" /> Log In</Link>
+                <Link href="/login"     className="block px-5 py-3 border-b border-gray-100 text-gray-700"><i className="fa-regular fa-user mr-2 text-eco-green" /> {t("topbar.login")}</Link>
               </li>
               <li>
-                <Link href="/dashboard" className="block px-5 py-3 border-b border-gray-100 text-gray-700"><i className="fa-solid fa-gauge-high mr-2 text-eco-green" /> Dashboard</Link>
+                <Link href="/dashboard" className="block px-5 py-3 border-b border-gray-100 text-gray-700"><i className="fa-solid fa-gauge-high mr-2 text-eco-green" /> {t("topbar.dashboard")}</Link>
               </li>
             </ul>
 

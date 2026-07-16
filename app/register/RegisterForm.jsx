@@ -7,13 +7,15 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useT } from "../../lib/i18n/LanguageProvider";
 
 export default function RegisterForm() {
   const router = useRouter();
   const sp = useSearchParams();
+  const t = useT();
   const next = sp.get("next") || "/dashboard";
 
-  const [form, setForm] = useState({ name: "", username: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", username: "", email: "", password: "", phone: "", image: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -48,8 +50,8 @@ export default function RegisterForm() {
           <span className="text-2xl font-bold text-eco-dark">Ecobazar</span>
         </div>
 
-        <h1 className="text-xl sm:text-2xl font-bold mb-1">Create an account</h1>
-        <p className="text-sm text-gray-500 mb-5">Join Ecobazar — free, always.</p>
+        <h1 className="text-xl sm:text-2xl font-bold mb-1">{t("auth.registerTitle")}</h1>
+        <p className="text-sm text-gray-500 mb-5">{t("auth.registerSub")}</p>
 
         {error && (
           <div className="mb-4 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3" role="alert">
@@ -59,45 +61,59 @@ export default function RegisterForm() {
 
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
-            <label className="text-xs text-gray-500" htmlFor="name">Full name</label>
+            <label className="text-xs text-gray-500" htmlFor="name">{t("auth.fullName")}</label>
             <input
               id="name" required value={form.name} onChange={set("name")}
               autoComplete="name" className="eco-input" placeholder="Your name"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500" htmlFor="username">Username</label>
+            <label className="text-xs text-gray-500" htmlFor="username">{t("auth.username")}</label>
             <input
               id="username" required value={form.username} onChange={set("username")}
               autoComplete="username" className="eco-input" placeholder="yourname"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500" htmlFor="email">Email</label>
+            <label className="text-xs text-gray-500" htmlFor="email">{t("checkout.email")}</label>
             <input
               id="email" type="email" required value={form.email} onChange={set("email")}
               autoComplete="email" className="eco-input" placeholder="you@example.com"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500" htmlFor="password">Password (min 8 characters)</label>
+            <label className="text-xs text-gray-500" htmlFor="password">{t("auth.passwordHint")}</label>
             <input
               id="password" type="password" minLength={8} required
               value={form.password} onChange={set("password")}
               autoComplete="new-password" className="eco-input" placeholder="••••••••"
             />
           </div>
+          <div>
+            <label className="text-xs text-gray-500" htmlFor="phone">{t("auth.phoneOptional")}</label>
+            <input
+              id="phone" type="tel" value={form.phone} onChange={set("phone")}
+              autoComplete="tel" className="eco-input" placeholder="+1 555 123 4567"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500" htmlFor="image">{t("auth.photoOptional")}</label>
+            <input
+              id="image" type="url" value={form.image} onChange={set("image")}
+              className="eco-input" placeholder="https://example.com/me.jpg"
+            />
+          </div>
           <button
             type="submit" disabled={busy}
             className="w-full py-3 rounded-md bg-eco-green text-white font-medium hover:bg-emerald-600 disabled:opacity-60 min-h-[44px]"
           >
-            {busy ? "Creating account…" : "Create account"}
+            {busy ? t("auth.creating") : t("auth.createAccount")}
           </button>
         </form>
 
         <div className="text-sm text-center mt-6 text-gray-500">
-          Already have an account?{" "}
-          <Link href="/login" className="text-eco-green font-medium">Log in</Link>
+          {t("auth.haveAccount")}{" "}
+          <Link href="/login" className="text-eco-green font-medium">{t("auth.login")}</Link>
         </div>
       </div>
     </section>

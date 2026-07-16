@@ -7,9 +7,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "../lib/CartContext";
+import { useT } from "../lib/i18n/LanguageProvider";
 
 export default function Header() {
   const { itemCount, total, wishlist, hydrated } = useCart();
+  const t = useT();
   const router = useRouter();
   const [q, setQ] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -35,10 +37,10 @@ export default function Header() {
             <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="search" value={q} onChange={(e) => setQ(e.target.value)}
-              placeholder="Search products..."
+              placeholder={t("common.searchProducts")}
               className="w-full pl-10 pr-28 py-3 border border-gray-200 rounded-md focus:outline-none focus:border-eco-green"
             />
-            <button type="submit" className="absolute right-1 top-1 bottom-1 px-6 bg-eco-green text-white font-medium rounded">Search</button>
+            <button type="submit" className="absolute right-1 top-1 bottom-1 px-6 bg-eco-green text-white font-medium rounded">{t("common.search")}</button>
           </div>
         </form>
 
@@ -66,7 +68,7 @@ export default function Header() {
               )}
             </div>
             <div className="hidden sm:block text-xs leading-tight">
-              <div className="text-gray-500">Shopping cart:</div>
+              <div className="text-gray-500">{t("header.shoppingCart")}</div>
               <div className="font-semibold">${hydrated ? total.toFixed(2) : "0.00"}</div>
             </div>
           </Link>
@@ -81,10 +83,10 @@ export default function Header() {
             <input
               autoFocus
               type="search" value={q} onChange={(e) => setQ(e.target.value)}
-              placeholder="Search products..."
+              placeholder={t("common.searchProducts")}
               className="w-full pl-10 pr-20 py-3 border border-gray-200 rounded-md focus:outline-none focus:border-eco-green"
             />
-            <button type="submit" className="absolute right-1 top-1 bottom-1 px-4 bg-eco-green text-white font-medium rounded text-sm">Search</button>
+            <button type="submit" className="absolute right-1 top-1 bottom-1 px-4 bg-eco-green text-white font-medium rounded text-sm">{t("common.search")}</button>
           </div>
         </form>
       )}

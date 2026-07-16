@@ -9,13 +9,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Breadcrumb from "../../components/Breadcrumb";
 import ProductCard from "../../components/ProductCard";
-import { products } from "../../lib/data";
+import { useT } from "../../lib/i18n/LanguageProvider";
 
 const PER_PAGE = 9;
 
-export default function ShopClient() {
+export default function ShopClient({ products = [] }) {
   const router = useRouter();
   const sp = useSearchParams();
+  const t = useT();
 
   const [query, setQuery]   = useState(sp.get("q") || "");
   const [tag, setTag]       = useState(null);
@@ -41,7 +42,7 @@ export default function ShopClient() {
     if (sort === "price-desc") list = [...list].sort((a, b) => b.price - a.price);
     if (sort === "name")       list = [...list].sort((a, b) => a.name.localeCompare(b.name));
     return list;
-  }, [query, minPrice, maxPrice, minRating, sort]);
+  }, [products, query, minPrice, maxPrice, minRating, sort]);
 
   useEffect(() => { setPage(1); }, [query, minPrice, maxPrice, minRating, sort]);
 
@@ -64,35 +65,35 @@ export default function ShopClient() {
       <form onSubmit={onSearchSubmit} className="relative">
         <input
           value={query} onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search products..." className="eco-input pr-10 rounded-full"
+          placeholder={t("common.searchProducts")} className="eco-input pr-10 rounded-full"
         />
-        <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-eco-green" aria-label="Search">
+        <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-eco-green" aria-label={t("common.search")}>
           <i className="fa-solid fa-magnifying-glass" />
         </button>
       </form>
 
       <div>
-        <div className="font-semibold mb-3">Price range</div>
+        <div className="font-semibold mb-3">{t("shop.priceRange")}</div>
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <span>${minPrice}</span>
           <input type="range" min={0} max={100} value={maxPrice} onChange={(e) => setMax(Number(e.target.value))} className="price-range flex-1" />
-          <span>{maxPrice === 100 ? "Any" : `$${maxPrice}`}</span>
+          <span>{maxPrice === 100 ? t("shop.any") : `$${maxPrice}`}</span>
         </div>
       </div>
 
       <div>
-        <div className="font-semibold mb-3">Rating</div>
+        <div className="font-semibold mb-3">{t("shop.rating")}</div>
         <ul className="space-y-1 text-sm">
           {[5, 4, 3, 2, 1, 0].map((n) => (
             <li key={n}>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" name="r" className="eco-check" checked={minRating === n} onChange={() => setRating(n)} />
                 {n === 0 ? (
-                  <span className="text-gray-500">Any rating</span>
+                  <span className="text-gray-500">{t("shop.anyRating")}</span>
                 ) : (
                   <>
                     <span className="text-yellow-400">{"★".repeat(n)}<span className="text-gray-300">{"★".repeat(5 - n)}</span></span>
-                    <span className="text-gray-500">{n}.0 {n < 5 && "& up"}</span>
+                    <span className="text-gray-500">{n}.0 {n < 5 && t("shop.andUp")}</span>
                   </>
                 )}
               </label>
@@ -102,7 +103,7 @@ export default function ShopClient() {
       </div>
 
       <div>
-        <div className="font-semibold mb-3">Popular Tags</div>
+        <div className="font-semibold mb-3">{t("shop.popularTags")}</div>
         <div className="flex flex-wrap gap-2 text-xs">
           {["Healthy","Low fat","Vegetarian","Vitamins","Bread","Meat","Snacks"].map((t) => (
             <button
@@ -113,13 +114,13 @@ export default function ShopClient() {
         </div>
       </div>
 
-      <button type="button" onClick={resetAll} className="text-sm text-gray-500 hover:text-eco-green underline">Reset all filters</button>
+      <button type="button" onClick={resetAll} className="text-sm text-gray-500 hover:text-eco-green underline">{t("shop.resetFilters")}</button>
     </div>
   );
 
   return (
     <>
-      <Breadcrumb items={[{ label: "Shop" }]} />
+      <Breadcrumb items={[{ label: t("shop.title") }]} />
 
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 py-8 sm:py-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         {/* Desktop sidebar */}
@@ -128,18 +129,22 @@ export default function ShopClient() {
         <div className="lg:col-span-9">
           <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
             <div className="text-sm text-gray-500">
-              Showing {filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filtered.length)} of {filtered.length}
+              {t("shop.showing", {
+                from: filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1,
+                to: Math.min(page * PER_PAGE, filtered.length),
+                total: filtered.length,
+              })}
             </div>
             <div className="flex items-center gap-2 sm:gap-3 text-sm">
               <button
                 type="button" onClick={() => setShowFilters(true)}
                 className="lg:hidden flex items-center gap-2 border rounded px-3 py-2 hover:border-eco-green"
-              ><i className="fa-solid fa-sliders" /> Filters</button>
+              ><i className="fa-solid fa-sliders" /> {t("shop.filters")}</button>
               <select value={sort} onChange={(e) => setSort(e.target.value)} className="border rounded px-3 py-2">
-                <option value="latest">Latest</option>
-                <option value="price-asc">Price ↑</option>
-                <option value="price-desc">Price ↓</option>
-                <option value="name">Name A–Z</option>
+                <option value="latest">{t("shop.sortLatest")}</option>
+                <option value="price-asc">{t("shop.sortPriceAsc")}</option>
+                <option value="price-desc">{t("shop.sortPriceDesc")}</option>
+                <option value="name">{t("shop.sortName")}</option>
               </select>
             </div>
           </div>
@@ -147,7 +152,7 @@ export default function ShopClient() {
           {pageItems.length === 0 ? (
             <div className="border border-dashed border-gray-200 rounded-lg p-10 text-center text-gray-500">
               <div className="text-5xl mb-3">🤷</div>
-              No products match your filters.
+              {t("shop.noMatch")}
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
@@ -177,7 +182,7 @@ export default function ShopClient() {
           <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setShowFilters(false)} />
           <aside className="fixed top-0 right-0 bottom-0 w-80 max-w-[88vw] bg-white z-50 lg:hidden flex flex-col animate-[slideInRight_.2s_ease-out]">
             <div className="flex items-center justify-between px-5 py-4 border-b">
-              <div className="font-semibold">Filters</div>
+              <div className="font-semibold">{t("shop.filters")}</div>
               <button type="button" onClick={() => setShowFilters(false)} className="w-9 h-9 grid place-items-center" aria-label="Close filters">
                 <i className="fa-solid fa-xmark text-xl" />
               </button>
@@ -185,7 +190,7 @@ export default function ShopClient() {
             <div className="flex-1 overflow-y-auto px-5 py-4">{sidebar}</div>
             <div className="border-t p-4">
               <button type="button" onClick={() => setShowFilters(false)} className="w-full py-3 rounded-full bg-eco-green text-white font-medium">
-                Show {filtered.length} results
+                {t("shop.showResults", { count: filtered.length })}
               </button>
             </div>
           </aside>

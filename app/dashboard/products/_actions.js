@@ -14,7 +14,9 @@ import { toCents } from "../../../lib/money";
 const ProductSchema = z.object({
   slug:        z.string().min(2).max(80).regex(/^[a-z0-9-]+$/, "lowercase letters, digits, dashes only"),
   name:        z.string().min(1).max(120),
+  nameBn:        z.string().max(120).optional(),
   description: z.string().max(4000).optional(),
+  descriptionBn: z.string().max(4000).optional(),
   price:       z.coerce.number().min(0).max(99999),
   oldPrice:    z.coerce.number().min(0).max(99999).optional().or(z.literal("").transform(() => undefined)),
   stock:       z.coerce.number().int().min(0).max(999999),
@@ -46,7 +48,9 @@ function parseProduct(formData) {
   return ProductSchema.parse({
     slug:        formData.get("slug"),
     name:        formData.get("name"),
+    nameBn:        formData.get("nameBn") || undefined,
     description: formData.get("description") || undefined,
+    descriptionBn: formData.get("descriptionBn") || undefined,
     price:       formData.get("price"),
     oldPrice:    formData.get("oldPrice") || undefined,
     stock:       formData.get("stock"),
@@ -79,7 +83,9 @@ export async function createProductAction(formData) {
     data: {
       slug:        data.slug,
       name:        data.name,
+      nameBn:        data.nameBn ?? null,
       description: data.description,
+      descriptionBn: data.descriptionBn ?? null,
       price:       toCents(data.price),
       oldPrice:    data.oldPrice == null ? null : toCents(data.oldPrice),
       stock:       data.stock,
@@ -123,7 +129,9 @@ export async function updateProductAction(productId, formData) {
       data: {
         slug:        data.slug,
         name:        data.name,
+        nameBn:        data.nameBn ?? null,
         description: data.description,
+        descriptionBn: data.descriptionBn ?? null,
         price:       toCents(data.price),
         oldPrice:    data.oldPrice == null ? null : toCents(data.oldPrice),
         stock:       data.stock,

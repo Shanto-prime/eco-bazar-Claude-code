@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode: `dark:` utilities apply under a `.dark` ancestor
+   (the ThemeProvider toggles `.dark` on <html>). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ============================================================
    Ecobazar — globals.css
    ----------------------------------------------------------------
@@ -25,6 +29,64 @@
   --background: #ffffff;
   --foreground: #1a1a1a;
 }
+
+/* ============================================================
+   DARK MODE (Phase 3)
+   ----------------------------------------------------------------
+   Site-wide dark theme applied by toggling `.dark` on <html>
+   (see lib/theme/ThemeProvider + components/ThemeToggle).
+   Rather than adding dark: variants to every component, we:
+     1) flip the CSS theme variables, and
+     2) remap the dominant Tailwind surface utilities + the custom
+        component classes that hardcode light colors.
+   ============================================================ */
+.dark {
+  --eco-green-light: #12331b;
+  --eco-dark: #e8efe9;
+  --eco-text-muted: #a9b3ac;
+  --eco-border: #2a332e;
+  --eco-bg: #12181500;   /* handled below via .bg-eco-bg */
+  --background: #0e1311;
+  --foreground: #e6eae7;
+  color-scheme: dark;
+}
+.dark .bg-eco-bg { background-color: #141a17 !important; }
+
+/* Surface backgrounds (cards, panels, wells). */
+.dark .bg-white        { background-color: #151b18 !important; }
+.dark .bg-gray-50      { background-color: #121714 !important; }
+.dark .bg-gray-100     { background-color: #1b221e !important; }
+.dark .bg-gray-200     { background-color: #232b26 !important; }
+.dark .bg-green-100    { background-color: #12331b !important; }
+
+/* Text colors. */
+.dark .text-gray-400,
+.dark .text-gray-500,
+.dark .text-gray-600,
+.dark .text-gray-700,
+.dark .text-gray-800,
+.dark .text-eco-dark   { color: #b7c1bb !important; }
+.dark .text-gray-300   { color: #6b756e !important; }
+
+/* Borders & dividers. */
+.dark .border,
+.dark .border-t,
+.dark .border-b,
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300 { border-color: #2a332e !important; }
+
+/* Custom component classes that bake in light colors. */
+.dark .eco-input       { background: #151b18; color: #e6eae7; border-color: #2a332e; }
+.dark .qty-stepper     { background: #151b18; border-color: #2a332e; }
+.dark .qty-stepper button { background: #232b26; color: #e6eae7; }
+.dark .qty-stepper input  { color: #e6eae7; }
+.dark .gallery-nav     { background: rgba(30,38,33,0.92); color: #e6eae7; }
+.dark .thumb-scroll    { background: #151b18; color: #b7c1bb; border-color: #2a332e; }
+.dark .countdown .unit .num { color: #e6eae7; }
+
+/* Keep hover/active green legible on dark surfaces. */
+.dark .product-card:hover { box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 
 @theme inline {
   --color-background: var(--background);

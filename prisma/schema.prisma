@@ -134,6 +134,10 @@ model Product {
   slug        String    @unique
   name        String
   description String?
+  // Bangla (bn) translations for the storefront language toggle. Null → the
+  // English `name`/`description` is shown as a fallback. See lib/i18n.
+  nameBn        String?
+  descriptionBn String?
   // Money in INTEGER CENTS (see file header). price 1499 == $14.99.
   price       Int
   oldPrice    Int?      // original/compare-at price; the "salePrice" convention

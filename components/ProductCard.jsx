@@ -51,8 +51,12 @@ export default function ProductCard({
               sizes={size === "sm" ? "(min-width:640px) 12vw, 40vw" : "(min-width:1024px) 18vw, 45vw"}
             />
           </div>
-        ) : (
+        ) : icon ? (
           <div className={`${imgClass} grid place-items-center`}>{icon}</div>
+        ) : (
+          <div className={`${imgClass} grid place-items-center bg-gray-50 rounded text-gray-300`}>
+            <i className="fa-regular fa-image text-4xl" />
+          </div>
         )}
         <div className={`text-xs ${featured ? "text-eco-green font-medium" : "text-gray-500"}`}>{name}</div>
         <div className="flex items-center justify-between mt-1">

@@ -5,9 +5,11 @@
 
 import { useState } from "react";
 import { useCart } from "../lib/CartContext";
+import { useT } from "../lib/i18n/LanguageProvider";
 
 export default function Newsletter() {
   const { showToast } = useCart();
+  const t = useT();
   const [email, setEmail] = useState("");
 
   const submit = (e) => {
@@ -25,7 +27,7 @@ export default function Newsletter() {
     <section className="bg-eco-bg py-10">
       <div className="max-w-[1320px] mx-auto px-6 flex flex-col md:flex-row items-center gap-6">
         <div className="flex-1">
-          <div className="text-xl font-bold">Subscribe to our Newsletter</div>
+          <div className="text-xl font-bold">{t("newsletter.title")}</div>
           <div className="text-sm text-gray-500">
             Get fresh organic-food tips, recipes and discount codes — straight to your inbox.
           </div>
@@ -35,12 +37,12 @@ export default function Newsletter() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Your email address"
+            placeholder={t("newsletter.placeholder")}
             className="flex-1 px-5 py-3 outline-none text-sm"
             required
           />
           <button type="submit" className="bg-eco-green text-white px-8 font-medium hover:bg-emerald-600">
-            Subscribe
+            {t("newsletter.subscribe")}
           </button>
         </form>
         <div className="flex gap-2">

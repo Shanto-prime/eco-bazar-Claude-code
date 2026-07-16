@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
+import { formatMoney } from "../../../lib/money";
 
 export default async function DashboardProducts({ searchParams }) {
   const user = await requireRole(["ADMIN", "MODERATOR"], "/dashboard/products");
@@ -11,11 +12,12 @@ export default async function DashboardProducts({ searchParams }) {
   const q = (sp?.q || "").toString().trim();
   const lowStockOnly = sp?.lowStock === "1";
 
-  // MySQL's default collation is case-insensitive — no `mode` flag needed.
+  // MongoDB `contains` is case-sensitive by default; opt into Prisma's
+  // `mode: "insensitive"` (supported by the Mongo connector) for friendly search.
   const where = {};
   if (q) where.OR = [
-    { name: { contains: q } },
-    { slug: { contains: q } },
+    { name: { contains: q, mode: "insensitive" } },
+    { slug: { contains: q, mode: "insensitive" } },
   ];
   if (lowStockOnly)          where.stock = { lt: 5 };
   if (user.role !== "ADMIN") where.createdById = user.id;
@@ -83,7 +85,7 @@ export default async function DashboardProducts({ searchParams }) {
                       <Link href={`/dashboard/products/${p.id}/edit`} className="font-medium hover:text-eco-green">{p.name}</Link>
                       <div className="text-xs text-gray-500">/{p.slug}</div>
                     </td>
-                    <td className="px-4 py-3">${Number(p.price).toFixed(2)}</td>
+                    <td className="px-4 py-3">{formatMoney(p.price)}</td>
                     <td className="px-4 py-3">
                       <span className={p.stock < 5 ? "text-amber-600 font-semibold" : p.stock === 0 ? "text-red-500 font-semibold" : ""}>
                         {p.stock}
@@ -119,7 +121,7 @@ export default async function DashboardProducts({ searchParams }) {
                   <div className="font-medium truncate">{p.name}</div>
                   <div className="text-xs text-gray-500 truncate">/{p.slug}</div>
                   <div className="flex justify-between items-center mt-2 text-sm">
-                    <span className="font-semibold">${Number(p.price).toFixed(2)}</span>
+                    <span className="font-semibold">{formatMoney(p.price)}</span>
                     <span className={`text-xs ${p.stock < 5 ? "text-amber-600 font-semibold" : "text-gray-500"}`}>
                       Stock: {p.stock}
                     </span>

@@ -7,19 +7,22 @@
 
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
+import { formatMoney } from "../../../lib/money";
 
 export default async function AdminDashboard({ user }) {
-  const [products, lowStock, orders, pendingOrders, users, reviews] = await Promise.all([
+  const [products, lowStock, orders, pendingOrders, users, reviews, revenueAgg] = await Promise.all([
     prisma.product.count(),
     prisma.product.count({ where: { stock: { lt: 5 } } }),
     prisma.order.count(),
     prisma.order.count({ where: { status: "PENDING" } }),
     prisma.user.count(),
     prisma.review.count({ where: { approved: false } }),
+    // Real revenue = sum of order totals whose payment has settled.
+    prisma.order.aggregate({ _sum: { total: true }, where: { paymentStatus: "PAID" } }),
   ]);
 
-  // TODO: replace with real revenue aggregation (sum of total on paid orders).
-  const revenueStub = "—";
+  // `total` is stored in integer cents; formatMoney converts to a $ string.
+  const revenue = formatMoney(revenueAgg._sum.total || 0);
 
   const stats = [
     { label: "Products",            value: products,      href: "/dashboard/products",                color: "bg-eco-green" },
@@ -28,7 +31,7 @@ export default async function AdminDashboard({ user }) {
     { label: "Pending orders",      value: pendingOrders, href: "/dashboard/orders?status=PENDING",   color: "bg-purple-500" },
     { label: "Users",               value: users,         href: "/dashboard/users",                   color: "bg-gray-700" },
     { label: "Reviews to moderate", value: reviews,       href: "/dashboard/reviews",                 color: "bg-pink-500" },
-    { label: "Revenue (this month)",value: revenueStub,   href: "/dashboard/orders",                  color: "bg-emerald-600" },
+    { label: "Revenue (paid)",      value: revenue,       href: "/dashboard/orders",                  color: "bg-emerald-600" },
     { label: "Audit log",           value: "→",           href: "/dashboard/audit-log",               color: "bg-slate-700" },
   ];
 

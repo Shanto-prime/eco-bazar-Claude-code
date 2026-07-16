@@ -1,5 +1,5 @@
 // prisma/seed.js
-// Seed the MySQL database with:
+// Seed the MongoDB database with:
 //   1. Three test users (login with the username OR the email + password):
 //        admin    / admin@ecobazar.test    / admin    / ADMIN
 //        mod      / mod@ecobazar.test      / mod      / MODERATOR
@@ -15,6 +15,10 @@ const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 
 const prisma = new PrismaClient();
+
+// Prices below are written in DOLLARS for readability; the DB stores integer
+// cents (see lib/money.js), so we convert on the way in.
+const toCents = (dollars) => Math.round(Number(dollars) * 100);
 
 const PRODUCTS = [
   { slug: "green-apple",        name: "Green Apple",         price: 14.99, oldPrice: 20.99, badge: "Sale 50%", stock: 50 },
@@ -63,8 +67,8 @@ async function main() {
       where: { slug: p.slug },
       update: {
         name:     p.name,
-        price:    p.price,
-        oldPrice: p.oldPrice ?? null,
+        price:    toCents(p.price),
+        oldPrice: p.oldPrice == null ? null : toCents(p.oldPrice),
         badge:    p.badge ?? null,
         stock:    p.stock,
       },
@@ -72,8 +76,8 @@ async function main() {
         slug:        p.slug,
         name:        p.name,
         description: DEFAULT_DESC,
-        price:       p.price,
-        oldPrice:    p.oldPrice ?? null,
+        price:       toCents(p.price),
+        oldPrice:    p.oldPrice == null ? null : toCents(p.oldPrice),
         badge:       p.badge ?? null,
         stock:       p.stock,
         rating:      4,

@@ -13,7 +13,7 @@ export default function RegisterForm() {
   const sp = useSearchParams();
   const next = sp.get("next") || "/dashboard";
 
-  const [form, setForm] = useState({ name: "", username: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", username: "", email: "", password: "", phone: "", image: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -85,6 +85,20 @@ export default function RegisterForm() {
               id="password" type="password" minLength={8} required
               value={form.password} onChange={set("password")}
               autoComplete="new-password" className="eco-input" placeholder="••••••••"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500" htmlFor="phone">Phone (optional)</label>
+            <input
+              id="phone" type="tel" value={form.phone} onChange={set("phone")}
+              autoComplete="tel" className="eco-input" placeholder="+1 555 123 4567"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500" htmlFor="image">Profile photo URL (optional)</label>
+            <input
+              id="image" type="url" value={form.image} onChange={set("image")}
+              className="eco-input" placeholder="https://example.com/me.jpg"
             />
           </div>
           <button

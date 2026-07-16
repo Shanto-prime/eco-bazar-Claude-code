@@ -7,6 +7,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
+// specifications is stored as a JSON object; render it back as "Key: Value" lines.
+function specsToText(specs) {
+  if (!specs || typeof specs !== "object") return "";
+  return Object.entries(specs).map(([k, v]) => `${k}: ${v}`).join("\n");
+}
+
 export default function ProductForm({ product, action, allowDelete = false, onDelete }) {
   const router = useRouter();
   const [images, setImages] = useState(product?.images?.map((i) => i.url) || []);
@@ -91,9 +97,29 @@ export default function ProductForm({ product, action, allowDelete = false, onDe
           <label className="text-xs text-gray-500">Old price (optional)</label>
           <input name="oldPrice" type="number" step="0.01" min="0" defaultValue={product?.oldPrice ?? ""} className="eco-input" />
         </div>
-        <div className="sm:col-span-2">
+        <div>
           <label className="text-xs text-gray-500">Stock quantity *</label>
           <input name="stock" type="number" min="0" required defaultValue={product?.stock ?? 0} className="eco-input" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500">SKU (optional)</label>
+          <input name="sku" defaultValue={product?.sku ?? ""} className="eco-input" placeholder="ECO-APL-001" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500">Brand (optional)</label>
+          <input name="brand" defaultValue={product?.brand ?? ""} className="eco-input" placeholder="Ecobazar" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500">Tags (comma-separated)</label>
+          <input name="tags" defaultValue={(product?.tags || []).join(", ")} className="eco-input" placeholder="organic, fruit, fresh" />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="text-xs text-gray-500">Specifications (one per line — <code>Key: Value</code>)</label>
+          <textarea
+            name="specifications" rows={4} className="eco-input font-mono text-sm"
+            defaultValue={specsToText(product?.specifications)}
+            placeholder={"Weight: 1 kg\nOrigin: India\nStorage: Keep refrigerated"}
+          />
         </div>
         <div className="sm:col-span-2">
           <label className="text-xs text-gray-500">Description</label>

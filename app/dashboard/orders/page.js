@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
 import { requireAuth } from "../../../lib/auth-helpers";
+import { formatMoney } from "../../../lib/money";
 
 export default async function DashboardOrders() {
   const user = await requireAuth("/dashboard/orders");
@@ -72,7 +73,7 @@ export default async function DashboardOrders() {
                       </td>
                     )}
                     <td className="px-4 py-3 text-gray-500">{o._count.items}</td>
-                    <td className="px-4 py-3 font-semibold">${Number(o.total).toFixed(2)}</td>
+                    <td className="px-4 py-3 font-semibold">{formatMoney(o.total)}</td>
                     <td className="px-4 py-3"><StatusPill status={o.status} /></td>
                     <td className="px-4 py-3 text-gray-500">{new Date(o.createdAt).toLocaleDateString()}</td>
                   </tr>
@@ -95,7 +96,7 @@ export default async function DashboardOrders() {
                   </div>
                   <StatusPill status={o.status} />
                 </div>
-                <div className="text-sm font-semibold mt-2">${Number(o.total).toFixed(2)}</div>
+                <div className="text-sm font-semibold mt-2">{formatMoney(o.total)}</div>
               </div>
             ))}
           </div>

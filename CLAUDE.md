@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Stack
 
-Next.js 16 (App Router) + React 19, Tailwind CSS v4, Prisma + **MySQL**, NextAuth v5 (Auth.js). E-commerce store for organic groceries, with a role-based `/dashboard` living on the same domain as the storefront.
+Next.js 16 (App Router) + React 19, Tailwind CSS v4, Prisma + **MongoDB** (via the Prisma `mongodb` connector), NextAuth v5 (Auth.js). E-commerce store for organic groceries, with a role-based `/dashboard` living on the same domain as the storefront.
+
+> **DB requires a replica set.** Prisma's MongoDB connector needs the server run as a replica set — a standalone `mongod` cannot execute the checkout inventory transaction. Use Atlas, or a local single-node replica set (`?replicaSet=rs0` + a one-time `rs.initiate()`).
 
 ## Commands
 
@@ -14,8 +16,8 @@ npm run build        # runs `prisma generate` first, then `next build`
 npm start            # serve the production build
 npm run lint         # eslint (flat config, eslint-config-next)
 
-npm run db:push      # prisma db push — sync schema, no migration history
-npm run db:migrate   # prisma migrate dev — versioned migration
+npm run db:push      # prisma db push — sync schema to MongoDB (the way to apply changes)
+npm run db:migrate   # prisma migrate dev — NOT supported on MongoDB; use db:push instead
 npm run db:studio    # Prisma Studio
 npm run db:seed      # node prisma/seed.js — seeds 3 test users + 10 products
 ```
@@ -58,10 +60,13 @@ Access control is deliberately layered — do not rely on any single layer:
 
 `lib/CartContext.jsx` is a client-only Context + `useReducer` (no external state lib). Cart, wishlist, and coupon persist to `localStorage` under key `ecobazar-cart-v1`. `useCart()` also exposes the toast system. There is no server-side cart; the cart is materialized into an order only at checkout. (Cart-merge-on-login is a listed TODO.)
 
-## MySQL specifics (important gotchas)
+## MongoDB specifics (important gotchas)
 
-- Provider is **`mysql`** in `prisma/schema.prisma`. Long text columns carry `@db.Text` to escape MySQL's default `VARCHAR(191)` ceiling (descriptions, addresses, OAuth tokens, image URLs, review bodies, notes, audit metadata).
-- The default `utf8mb4_unicode_ci` collation is already case-insensitive, so **never** add Prisma's `mode: "insensitive"` to `contains` queries — it's PostgreSQL-only and throws on MySQL. `listProducts` search relies on this.
+- Provider is **`mongodb`** in `prisma/schema.prisma`. Every model has an id mapped to Mongo's `_id`: `String @id @default(cuid()) @map("_id")` (cuid strings kept as `_id`, not ObjectId). No `@db.Text` (Mongo strings are unbounded).
+- **Money is stored as integer cents** — the Mongo connector has no `Decimal`. Convert only at the boundary via `lib/money.js` (`toCents`/`toDollars`/`formatMoney`). DB + server-side order math run in integer cents; the UI/cart work in dollars.
+- **Transactions need a replica set.** `lib/order-actions.js` `$transaction` (guarded stock decrement) throws on a standalone `mongod`.
+- Mongo `contains` is **case-sensitive** by default. Prisma's Mongo connector *does* support `mode: "insensitive"` (unlike the old MySQL collation approach), so product search opts into it — see `listProducts` and `/dashboard/products`.
+- Optional unique fields are a trap: a non-sparse unique index treats a missing field as `null` and allows only one such doc. `Product.sku` is therefore **not** `@unique`; uniqueness is enforced in `_actions.js` when a SKU is supplied.
 
 ## Image uploads
 

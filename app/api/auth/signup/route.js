@@ -20,6 +20,9 @@ const Schema = z.object({
   username: z.string().min(2).max(30).regex(/^[A-Za-z0-9_.-]+$/, "letters, digits, . _ - only").transform((s) => s.toLowerCase()),
   email:    z.string().max(120).email().transform((s) => s.trim().toLowerCase()),
   password: z.string().min(8).max(128),
+  // Optional profile fields.
+  phone:    z.string().max(30).optional().or(z.literal("").transform(() => undefined)),
+  image:    z.string().url().max(500).optional().or(z.literal("").transform(() => undefined)),
 });
 
 export async function POST(req) {
@@ -48,7 +51,7 @@ export async function POST(req) {
   const passwordHash = await bcrypt.hash(data.password, 12);
 
   const user = await prisma.user.create({
-    data:   { name: data.name, username: data.username, email: data.email, passwordHash },
+    data:   { name: data.name, username: data.username, email: data.email, passwordHash, phone: data.phone ?? null, image: data.image ?? null },
     select: { id: true, username: true, email: true, role: true },
   });
 

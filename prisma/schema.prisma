@@ -145,7 +145,11 @@ model Product {
   stock       Int       @default(0)
 
   // Merchandising / catalog metadata.
-  sku            String?  @unique  // stock-keeping unit
+  // NOTE: `sku` is intentionally NOT `@unique`. On MongoDB a non-sparse unique
+  // index treats a missing field as `null` and allows only ONE such document,
+  // which would forbid more than one product without a SKU. Enforce SKU
+  // uniqueness in the application layer when a value is actually supplied.
+  sku            String?
   brand          String?
   tags           String[]          // native Mongo scalar list
   specifications Json?             // flexible key/value spec sheet

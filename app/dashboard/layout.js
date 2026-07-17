@@ -5,9 +5,13 @@
 // header/footer from the root layout.
 
 import { requireAuth } from "../../lib/auth-helpers";
+import { getT } from "../../lib/i18n/server";
 import DashboardShell from "./_components/DashboardShell";
 
-export const metadata = { title: "Dashboard — Ecobazar" };
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("meta.dashboardTitle") };
+}
 
 export default async function DashboardLayout({ children }) {
   // Defence-in-depth: middleware already redirects anonymous users, but if

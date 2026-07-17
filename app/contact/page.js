@@ -5,14 +5,15 @@
 import { useState } from "react";
 import Breadcrumb from "../../components/Breadcrumb";
 import { useCart } from "../../lib/CartContext";
-
-const cards = [
-  { icon: "fa-location-dot", text: "3119 Ash St, San Jose,\nSouth Dakota 83476" },
-  { icon: "fa-envelope",     text: "Proxy@gmail.com\nHelp.proxy@gmail.com" },
-  { icon: "fa-phone",        text: "(219) 555-0114\n(164) 333-0487" },
-];
+import { useT } from "../../lib/i18n/LanguageProvider";
 
 export default function ContactPage() {
+  const t = useT();
+  const cards = [
+    { icon: "fa-location-dot", text: t("contact.addressCard") },
+    { icon: "fa-envelope",     text: t("contact.emailCard") },
+    { icon: "fa-phone",        text: t("contact.phoneCard") },
+  ];
   const { showToast } = useCart();
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [errors, setErrors] = useState({});
@@ -21,22 +22,22 @@ export default function ContactPage() {
   const submit = (e) => {
     e.preventDefault();
     const errs = {};
-    if (!form.name.trim())    errs.name = "Required";
-    if (!/^\S+@\S+\.\S+$/.test(form.email)) errs.email = "Invalid email";
-    if (!form.subject.trim()) errs.subject = "Required";
-    if (form.message.trim().length < 10) errs.message = "Please write a bit more (≥10 chars)";
+    if (!form.name.trim())    errs.name = t("contact.required");
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) errs.email = t("contact.invalidEmail");
+    if (!form.subject.trim()) errs.subject = t("contact.required");
+    if (form.message.trim().length < 10) errs.message = t("contact.messageTooShort");
     setErrors(errs);
     if (Object.keys(errs).length) {
-      showToast("Please fix the highlighted fields", "error");
+      showToast(t("contact.fixFields"), "error");
       return;
     }
-    showToast("Thanks! We'll get back to you within 24 hours.");
+    showToast(t("contact.sent"));
     setForm({ name: "", email: "", subject: "", message: "" });
   };
 
   return (
     <>
-      <Breadcrumb items={[{ label: "Contact" }]} />
+      <Breadcrumb items={[{ label: t("contact.breadcrumb") }]} />
 
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 py-8 sm:py-10 grid grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
         <aside className="col-span-12 lg:col-span-4 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4 sm:gap-6">
@@ -51,27 +52,27 @@ export default function ContactPage() {
         </aside>
 
         <div className="col-span-12 lg:col-span-8 border border-gray-200 rounded-md p-4 sm:p-6 lg:p-8">
-          <h2 className="text-xl sm:text-2xl font-bold">Just Say Hello!</h2>
-          <p className="text-sm text-gray-500 mt-1">Pellentesque eu nibh eget mauris congue mattis mattis nec tellus.</p>
+          <h2 className="text-xl sm:text-2xl font-bold">{t("contact.sayHello")}</h2>
+          <p className="text-sm text-gray-500 mt-1">{t("contact.intro")}</p>
           <form onSubmit={submit} noValidate className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
             <div>
-              <input className={`eco-input ${errors.name ? "border-red-500" : ""}`} value={form.name} onChange={set("name")} placeholder="Your name" />
+              <input className={`eco-input ${errors.name ? "border-red-500" : ""}`} value={form.name} onChange={set("name")} placeholder={t("contact.namePlaceholder")} />
               {errors.name && <div className="text-xs text-red-500 mt-1">{errors.name}</div>}
             </div>
             <div>
-              <input className={`eco-input ${errors.email ? "border-red-500" : ""}`} value={form.email} onChange={set("email")} placeholder="you@example.com" />
+              <input className={`eco-input ${errors.email ? "border-red-500" : ""}`} value={form.email} onChange={set("email")} placeholder={t("contact.emailPlaceholder")} />
               {errors.email && <div className="text-xs text-red-500 mt-1">{errors.email}</div>}
             </div>
             <div className="sm:col-span-2">
-              <input className={`eco-input ${errors.subject ? "border-red-500" : "border-eco-green"}`} value={form.subject} onChange={set("subject")} placeholder="Subject" />
+              <input className={`eco-input ${errors.subject ? "border-red-500" : "border-eco-green"}`} value={form.subject} onChange={set("subject")} placeholder={t("contact.subjectPlaceholder")} />
               {errors.subject && <div className="text-xs text-red-500 mt-1">{errors.subject}</div>}
             </div>
             <div className="sm:col-span-2">
-              <textarea className={`eco-input ${errors.message ? "border-red-500" : ""}`} rows={5} value={form.message} onChange={set("message")} placeholder="Your message" />
+              <textarea className={`eco-input ${errors.message ? "border-red-500" : ""}`} rows={5} value={form.message} onChange={set("message")} placeholder={t("contact.messagePlaceholder")} />
               {errors.message && <div className="text-xs text-red-500 mt-1">{errors.message}</div>}
             </div>
             <button type="submit" className="sm:col-span-2 md:col-span-1 px-8 py-3 rounded-full bg-eco-green text-white font-medium hover:bg-emerald-600 min-h-[44px]">
-              Send Message <i className="fa-solid fa-arrow-right ml-1" />
+              {t("contact.sendMessage")} <i className="fa-solid fa-arrow-right ml-1" />
             </button>
           </form>
         </div>
@@ -81,8 +82,8 @@ export default function ContactPage() {
         <div className="map-placeholder h-60 sm:h-80 grid place-items-center">
           <div className="text-center">
             <i className="fa-solid fa-map-location-dot text-4xl text-eco-green mb-2" />
-            <div className="font-semibold">Our Store Location</div>
-            <div className="text-sm">Lincoln-344, Illinois, Chicago, USA</div>
+            <div className="font-semibold">{t("contact.storeLocation")}</div>
+            <div className="text-sm">{t("contact.storeAddress")}</div>
           </div>
         </div>
       </section>

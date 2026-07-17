@@ -14,14 +14,19 @@ import Stars from "./Stars";
 import { useCart } from "../lib/CartContext";
 import { useT } from "../lib/i18n/LanguageProvider";
 
-const TABS = ["Description", "Additional Information", "Customer Feedback"];
+// Stable ids drive the active-tab comparison; labels are translated at render.
+const TABS = [
+  { id: "description", labelKey: "product.tabDescription" },
+  { id: "additional",  labelKey: "product.tabAdditional" },
+  { id: "feedback",    labelKey: "product.tabFeedback" },
+];
 
 const SHORT_DESC = "Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Nulla nibh diam, blandit vel consequat nec.";
 const FULL_DESC  = "Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Nulla nibh diam, blandit vel consequat nec, ultrices et ipsum. Nulla varius magna a consequat pulvinar. Praesent fringilla mi at neque hendrerit aliquam. In ut lobortis ipsum, ut tincidunt ipsum. Vestibulum at sapien ut massa fringilla ullamcorper sit amet sit amet justo.";
 
 export default function ProductDetailClient({ product }) {
   const [qty, setQty]       = useState(1);
-  const [tab, setTab]       = useState(TABS[0]);
+  const [tab, setTab]       = useState(TABS[0].id);
   const [showFull, setFull] = useState(false);
   const { addItem, toggleWishlist, wishlist, hydrated } = useCart();
   const t = useT();
@@ -41,9 +46,9 @@ export default function ProductDetailClient({ product }) {
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm">
             <Stars value={product.rating} />
-            <span className="text-gray-500">4 Reviews</span>
+            <span className="text-gray-500">{t("product.reviewsCount", { count: 4 })}</span>
             <span className="text-gray-300 hidden sm:inline">|</span>
-            <span className="text-gray-500">SKU: 2,51,594</span>
+            <span className="text-gray-500">{t("product.sku")} 2,51,594</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 mt-4 border-b pb-5">
@@ -52,7 +57,7 @@ export default function ProductDetailClient({ product }) {
               <>
                 <span className="text-gray-400 line-through">${product.oldPrice.toFixed(2)}</span>
                 <span className="bg-eco-green text-white text-xs px-2 py-1 rounded">
-                  {Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)}% Off
+                  {t("product.percentOff", { percent: Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100) })}
                 </span>
               </>
             )}
@@ -68,11 +73,11 @@ export default function ProductDetailClient({ product }) {
               onClick={() => setFull((s) => !s)}
               className="mt-2 text-eco-green text-sm font-medium sm:hidden"
             >
-              {showFull ? "See less ↑" : "See more ↓"}
+              {showFull ? t("product.seeLess") : t("product.seeMore")}
             </button>
           </div>
 
-          <div className="text-sm mt-4">Brand: <span className="font-medium">Farmary</span></div>
+          <div className="text-sm mt-4">{t("product.brandLabel")} <span className="font-medium">Farmary</span></div>
 
           {/* Qty + Add to Cart + wishlist ------------------------------------ */}
           <div className="mt-6 flex flex-wrap items-center gap-3 sm:gap-4">
@@ -88,17 +93,17 @@ export default function ProductDetailClient({ product }) {
               type="button"
               onClick={() => toggleWishlist(product.slug, product.name)}
               className="w-12 h-12 rounded-full border border-gray-200 grid place-items-center hover:border-eco-green"
-              aria-label="Add to wishlist"
+              aria-label={t("product.addToWishlist")}
             >
               <i className={`${inWishlist ? "fa-solid text-red-500" : "fa-regular"} fa-heart`} />
             </button>
           </div>
 
           <div className="mt-6 text-sm space-y-2">
-            <div><span className="text-gray-500">Category:</span> Vegetables</div>
-            <div><span className="text-gray-500">Tag:</span> Healthy, Organic, Fresh</div>
+            <div><span className="text-gray-500">{t("product.categoryLabel")}</span> Vegetables</div>
+            <div><span className="text-gray-500">{t("product.tagLabel")}</span> Healthy, Organic, Fresh</div>
             <div className="flex items-center gap-2">
-              <span className="text-gray-500">Share:</span>
+              <span className="text-gray-500">{t("product.shareLabel")}</span>
               <a href="#" className="hover:text-eco-green"><i className="fa-brands fa-facebook-f" /></a>
               <a href="#" className="hover:text-eco-green"><i className="fa-brands fa-twitter" /></a>
               <a href="#" className="hover:text-eco-green"><i className="fa-brands fa-pinterest" /></a>
@@ -110,15 +115,15 @@ export default function ProductDetailClient({ product }) {
       {/* ============ Tabs ================================================= */}
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-2">
         <div className="pd-tabs overflow-x-auto no-scrollbar">
-          {TABS.map((t) => (
+          {TABS.map((tabItem) => (
             <button
-              key={t} type="button" onClick={() => setTab(t)}
-              className={`pd-tab whitespace-nowrap ${tab === t ? "active" : ""}`}
-            >{t}</button>
+              key={tabItem.id} type="button" onClick={() => setTab(tabItem.id)}
+              className={`pd-tab whitespace-nowrap ${tab === tabItem.id ? "active" : ""}`}
+            >{t(tabItem.labelKey)}</button>
           ))}
         </div>
         <div className="py-6 text-sm text-gray-600 leading-relaxed">
-          {tab === "Description" && (
+          {tab === "description" && (
             <>
               <p>{FULL_DESC}</p>
               <ul className="mt-4 space-y-2">
@@ -128,16 +133,16 @@ export default function ProductDetailClient({ product }) {
               </ul>
             </>
           )}
-          {tab === "Additional Information" && (
+          {tab === "additional" && (
             <table className="w-full max-w-lg text-sm">
               <tbody>
-                {[["Weight","500 g"],["Color","Green"],["Origin","USA"],["Organic","Yes"],["Best Before","5 days from delivery"]].map(([k,v]) => (
-                  <tr key={k} className="border-b"><td className="py-2 font-medium">{k}</td><td className="py-2">{v}</td></tr>
+                {[["product.specWeight","500 g"],["product.specColor","Green"],["product.specOrigin","USA"],["product.specOrganic","Yes"],["product.specBestBefore","5 days from delivery"]].map(([k,v]) => (
+                  <tr key={k} className="border-b"><td className="py-2 font-medium">{t(k)}</td><td className="py-2">{v}</td></tr>
                 ))}
               </tbody>
             </table>
           )}
-          {tab === "Customer Feedback" && (
+          {tab === "feedback" && (
             <div className="space-y-4">
               {[
                 { name: "Robert Fox",   rating: 5, body: "Super fresh, well packaged. Will order again." },

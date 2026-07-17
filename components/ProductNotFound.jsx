@@ -7,24 +7,26 @@
 import Link from "next/link";
 import ProductCard from "./ProductCard";
 import Breadcrumb from "./Breadcrumb";
+import { getT } from "../lib/i18n/server";
 
-export default function ProductNotFound({ query, best, suggestions, popular }) {
+export default async function ProductNotFound({ query, best, suggestions, popular }) {
+  const { t } = await getT();
   return (
     <>
-      <Breadcrumb items={[{ href: "/shop", label: "Shop" }, { label: "Not found" }]} />
+      <Breadcrumb items={[{ href: "/shop", label: t("productNotFound.breadcrumbShop") }, { label: t("productNotFound.breadcrumbNotFound") }]} />
 
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 py-10 sm:py-14">
         <div className="text-center max-w-2xl mx-auto">
           <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-eco-bg text-eco-green text-3xl mb-4">
             <i className="fa-solid fa-magnifying-glass" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold">We couldn&apos;t find that product</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t("productNotFound.heading")}</h1>
           <p className="text-gray-500 text-sm sm:text-base mt-2">
-            No product matches{" "}
+            {t("productNotFound.noMatch")}{" "}
             <code className="bg-eco-bg px-2 py-0.5 rounded text-eco-dark break-all">
               /shop/{query}
             </code>
-            . It may have been renamed or moved.
+            {t("productNotFound.mayHaveMoved")}
           </p>
         </div>
 
@@ -32,7 +34,7 @@ export default function ProductNotFound({ query, best, suggestions, popular }) {
         {best && (
           <div className="mt-8 sm:mt-10 max-w-md mx-auto">
             <div className="text-xs uppercase tracking-wider font-semibold text-gray-500 mb-2 text-center">
-              Did you mean
+              {t("productNotFound.didYouMean")}
             </div>
             <Link
               href={`/shop/${best.slug}`}
@@ -42,7 +44,7 @@ export default function ProductNotFound({ query, best, suggestions, popular }) {
                 {best.icon}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-eco-green text-xs uppercase tracking-wider font-semibold">Closest match</div>
+                <div className="text-eco-green text-xs uppercase tracking-wider font-semibold">{t("productNotFound.closestMatch")}</div>
                 <div className="font-bold text-lg truncate">{best.name}</div>
                 <div className="text-sm text-gray-500">
                   ${best.price.toFixed(2)}
@@ -60,14 +62,14 @@ export default function ProductNotFound({ query, best, suggestions, popular }) {
             href="/shop"
             className="inline-flex items-center px-6 py-3 rounded-full bg-eco-green text-white font-medium hover:bg-emerald-600 transition"
           >
-            Browse the shop <i className="fa-solid fa-arrow-right ml-2" />
+            {t("productNotFound.browseShop")} <i className="fa-solid fa-arrow-right ml-2" />
           </Link>
           <Link
             href={`/shop?q=${encodeURIComponent(query)}`}
             className="inline-flex items-center px-6 py-3 rounded-full border border-gray-200 text-gray-700 hover:border-eco-green hover:text-eco-green font-medium transition"
           >
             <i className="fa-solid fa-magnifying-glass mr-2" />
-            Search for &quot;{query}&quot;
+            {t("productNotFound.searchFor", { query })}
           </Link>
         </div>
       </section>
@@ -75,7 +77,7 @@ export default function ProductNotFound({ query, best, suggestions, popular }) {
       {/* You might also like / Popular products ============================ */}
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 pb-14">
         <h2 className="text-xl sm:text-2xl font-bold mb-5 sm:mb-6">
-          {suggestions?.length ? "You might also like" : "Popular products"}
+          {suggestions?.length ? t("productNotFound.youMightLike") : t("productNotFound.popularProducts")}
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
           {(suggestions?.length ? suggestions : popular).map((p) => (

@@ -4,8 +4,10 @@
 
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
+import { getT } from "../../../lib/i18n/server";
 
 export default async function DashboardAuditLog() {
+  const { t } = await getT();
   await requireRole("ADMIN", "/dashboard/audit-log");
 
   const events = await prisma.auditLog.findMany({
@@ -17,13 +19,13 @@ export default async function DashboardAuditLog() {
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">Audit log</h1>
-        <p className="text-sm text-gray-500 mt-1">100 most recent privileged writes.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold">{t("dashboard.auditLog")}</h1>
+        <p className="text-sm text-gray-500 mt-1">{t("dashboard.auditSubtitle")}</p>
       </header>
 
       {events.length === 0 ? (
         <div className="border border-dashed border-gray-300 rounded-lg p-10 text-center text-gray-500 bg-white">
-          No audit events recorded yet.
+          {t("dashboard.noAudit")}
         </div>
       ) : (
         <>
@@ -32,11 +34,11 @@ export default async function DashboardAuditLog() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
                 <tr>
-                  <th className="text-left px-4 py-3">When</th>
-                  <th className="text-left px-4 py-3">Actor</th>
-                  <th className="text-left px-4 py-3">Action</th>
-                  <th className="text-left px-4 py-3">Entity</th>
-                  <th className="text-left px-4 py-3">Metadata</th>
+                  <th className="text-left px-4 py-3">{t("dashboard.colWhen")}</th>
+                  <th className="text-left px-4 py-3">{t("dashboard.colActor")}</th>
+                  <th className="text-left px-4 py-3">{t("dashboard.colAction")}</th>
+                  <th className="text-left px-4 py-3">{t("dashboard.colEntity")}</th>
+                  <th className="text-left px-4 py-3">{t("dashboard.colMetadata")}</th>
                 </tr>
               </thead>
               <tbody>

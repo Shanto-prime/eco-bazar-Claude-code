@@ -5,8 +5,10 @@
 
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
+import { getT } from "../../../lib/i18n/server";
 
 export default async function DashboardReviews() {
+  const { t } = await getT();
   await requireRole(["ADMIN", "MODERATOR"], "/dashboard/reviews");
 
   const reviews = await prisma.review.findMany({
@@ -21,13 +23,13 @@ export default async function DashboardReviews() {
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">Reviews</h1>
-        <p className="text-sm text-gray-500 mt-1">Moderate customer reviews. {reviews.length} most recent shown.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold">{t("dashboard.reviews")}</h1>
+        <p className="text-sm text-gray-500 mt-1">{t("dashboard.reviewsSubtitle", { count: reviews.length })}</p>
       </header>
 
       {reviews.length === 0 ? (
         <div className="border border-dashed border-gray-300 rounded-lg p-10 text-center text-gray-500 bg-white">
-          No reviews yet.
+          {t("dashboard.noReviews")}
         </div>
       ) : (
         <div className="space-y-3">
@@ -36,12 +38,12 @@ export default async function DashboardReviews() {
               <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                 <div>
                   <div className="font-medium">{r.product.name} <span className="text-xs text-gray-400">/{r.product.slug}</span></div>
-                  <div className="text-xs text-gray-500">by {r.user.name || r.user.email} · {new Date(r.createdAt).toLocaleDateString()}</div>
+                  <div className="text-xs text-gray-500">{t("dashboard.reviewBy")}{r.user.name || r.user.email} · {new Date(r.createdAt).toLocaleDateString()}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-amber-500 text-sm">{"★".repeat(r.rating)}<span className="text-gray-300">{"★".repeat(5 - r.rating)}</span></span>
                   <span className={`text-xs px-2 py-1 rounded-full ${r.approved ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                    {r.approved ? "Approved" : "Pending"}
+                    {r.approved ? t("dashboard.approved") : t("dashboard.pending")}
                   </span>
                 </div>
               </div>

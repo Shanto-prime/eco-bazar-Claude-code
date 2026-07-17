@@ -10,20 +10,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { useT } from "../../../lib/i18n/LanguageProvider";
 
 const RANK = { CUSTOMER: 0, MODERATOR: 1, ADMIN: 2 };
 
 // Each nav item declares the minimum role required to see it.
 const NAV = [
-  { href: "/dashboard",            label: "Overview",     icon: "fa-gauge-high",     min: "CUSTOMER" },
-  { href: "/dashboard/products",   label: "Products",     icon: "fa-boxes-stacked",  min: "MODERATOR" },
-  { href: "/dashboard/orders",     label: "Orders",       icon: "fa-receipt",        min: "CUSTOMER" },
-  { href: "/dashboard/reviews",    label: "Reviews",      icon: "fa-comment-dots",   min: "MODERATOR" },
-  { href: "/dashboard/users",      label: "Users",        icon: "fa-users",          min: "ADMIN" },
-  { href: "/dashboard/audit-log",  label: "Audit log",    icon: "fa-clipboard-list", min: "ADMIN" },
+  { href: "/dashboard",            labelKey: "dashboard.overview",  icon: "fa-gauge-high",     min: "CUSTOMER" },
+  { href: "/dashboard/products",   labelKey: "dashboard.products",  icon: "fa-boxes-stacked",  min: "MODERATOR" },
+  { href: "/dashboard/orders",     labelKey: "dashboard.orders",    icon: "fa-receipt",        min: "CUSTOMER" },
+  { href: "/dashboard/reviews",    labelKey: "dashboard.reviews",   icon: "fa-comment-dots",   min: "MODERATOR" },
+  { href: "/dashboard/users",      labelKey: "dashboard.users",     icon: "fa-users",          min: "ADMIN" },
+  { href: "/dashboard/audit-log",  labelKey: "dashboard.auditLog",  icon: "fa-clipboard-list", min: "ADMIN" },
 ];
 
 export default function DashboardShell({ user, children }) {
+  const t = useT();
   const pathname = usePathname();
   const [drawer, setDrawer] = useState(false);
 
@@ -45,7 +47,7 @@ export default function DashboardShell({ user, children }) {
     <>
       <Link href="/dashboard" className="flex items-center gap-2 px-5 py-5 border-b border-white/10">
         <i className="fa-solid fa-seedling text-eco-green text-2xl sm:text-3xl" />
-        <span className="text-lg sm:text-xl font-bold text-white">Ecobazar</span>
+        <span className="text-lg sm:text-xl font-bold text-white">{t("dashboard.brand")}</span>
         <span className="ml-auto text-[10px] uppercase tracking-wider bg-eco-green text-white px-2 py-0.5 rounded">{user.role}</span>
       </Link>
       <nav className="flex-1 py-2 overflow-y-auto">
@@ -58,12 +60,12 @@ export default function DashboardShell({ user, children }) {
             }`}
           >
             <i className={`fa-solid ${n.icon} w-4`} />
-            {n.label}
+            {t(n.labelKey)}
           </Link>
         ))}
       </nav>
       <div className="border-t border-white/10 p-4 text-gray-300">
-        <div className="text-xs text-gray-400">Signed in as</div>
+        <div className="text-xs text-gray-400">{t("dashboard.signedInAs")}</div>
         <div className="font-medium text-white truncate">{user.name || user.email}</div>
         <div className="text-xs text-eco-green mt-0.5">{user.role}</div>
         <button
@@ -71,7 +73,7 @@ export default function DashboardShell({ user, children }) {
           onClick={() => signOut({ callbackUrl: "/login" })}
           className="mt-3 w-full py-2 text-sm border border-white/15 rounded hover:bg-white/5 min-h-[44px]"
         >
-          <i className="fa-solid fa-arrow-right-from-bracket mr-2" /> Sign out
+          <i className="fa-solid fa-arrow-right-from-bracket mr-2" /> {t("dashboard.signOut")}
         </button>
       </div>
     </>
@@ -91,19 +93,19 @@ export default function DashboardShell({ user, children }) {
             type="button"
             onClick={() => setDrawer(true)}
             className="w-11 h-11 grid place-items-center -ml-2"
-            aria-label="Open dashboard menu"
+            aria-label={t("dashboard.openMenu")}
           >
             <i className="fa-solid fa-bars text-xl" />
           </button>
           <Link href="/dashboard" className="flex items-center gap-2">
             <i className="fa-solid fa-seedling text-eco-green text-xl" />
-            <span className="font-bold">Dashboard</span>
+            <span className="font-bold">{t("dashboard.dashboard")}</span>
           </Link>
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="w-11 h-11 grid place-items-center -mr-2"
-            aria-label="Sign out"
+            aria-label={t("dashboard.signOut")}
           >
             <i className="fa-solid fa-arrow-right-from-bracket" />
           </button>

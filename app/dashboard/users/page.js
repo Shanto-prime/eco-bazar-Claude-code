@@ -5,9 +5,11 @@
 
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
+import { getT } from "../../../lib/i18n/server";
 import RoleSelect from "./_components/RoleSelect";
 
 export default async function DashboardUsers() {
+  const { t } = await getT();
   const me = await requireRole("ADMIN", "/dashboard/users");
 
   const users = await prisma.user.findMany({
@@ -21,8 +23,8 @@ export default async function DashboardUsers() {
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">Users</h1>
-        <p className="text-sm text-gray-500 mt-1">All accounts in the system. {users.length} total.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold">{t("dashboard.users")}</h1>
+        <p className="text-sm text-gray-500 mt-1">{t("dashboard.usersSubtitle", { count: users.length })}</p>
       </header>
 
       {/* Desktop table */}
@@ -30,12 +32,12 @@ export default async function DashboardUsers() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
             <tr>
-              <th className="text-left px-4 py-3">Username / Email</th>
-              <th className="text-left px-4 py-3">Name</th>
-              <th className="text-left px-4 py-3">Role</th>
-              <th className="text-left px-4 py-3">Orders</th>
-              <th className="text-left px-4 py-3">Products</th>
-              <th className="text-left px-4 py-3">Joined</th>
+              <th className="text-left px-4 py-3">{t("dashboard.colUsernameEmail")}</th>
+              <th className="text-left px-4 py-3">{t("dashboard.colName")}</th>
+              <th className="text-left px-4 py-3">{t("dashboard.colRole")}</th>
+              <th className="text-left px-4 py-3">{t("dashboard.colOrders")}</th>
+              <th className="text-left px-4 py-3">{t("dashboard.colProducts")}</th>
+              <th className="text-left px-4 py-3">{t("dashboard.colJoined")}</th>
             </tr>
           </thead>
           <tbody>
@@ -65,8 +67,8 @@ export default async function DashboardUsers() {
               <RoleSelect userId={u.id} role={u.role} isSelf={u.id === me.id} />
             </div>
             <div className="flex gap-4 mt-2 text-xs text-gray-500">
-              <span>{u._count.orders} orders</span>
-              <span>{u._count.productsAdded} products</span>
+              <span>{u._count.orders}{t("dashboard.ordersSuffix")}</span>
+              <span>{u._count.productsAdded}{t("dashboard.productsSuffix")}</span>
               <span className="ml-auto">{new Date(u.createdAt).toLocaleDateString()}</span>
             </div>
           </div>

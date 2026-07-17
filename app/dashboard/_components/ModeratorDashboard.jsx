@@ -7,8 +7,10 @@
 
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
+import { getT } from "../../../lib/i18n/server";
 
 export default async function ModeratorDashboard({ user }) {
+  const { t } = await getT();
   const [myProducts, lowStock, pendingReviews] = await Promise.all([
     prisma.product.count({ where: { createdById: user.id } }),
     prisma.product.count({ where: { createdById: user.id, stock: { lt: 5 } } }),
@@ -16,17 +18,17 @@ export default async function ModeratorDashboard({ user }) {
   ]);
 
   const stats = [
-    { label: "My products",         value: myProducts,     href: "/dashboard/products",            color: "bg-eco-green" },
-    { label: "Low stock (mine)",    value: lowStock,       href: "/dashboard/products?lowStock=1", color: "bg-amber-500" },
-    { label: "Reviews to moderate", value: pendingReviews, href: "/dashboard/reviews",             color: "bg-pink-500" },
-    { label: "Orders (read-only)",  value: "→",            href: "/dashboard/orders",              color: "bg-blue-500" },
+    { label: t("dashboard.myProducts"),        value: myProducts,     href: "/dashboard/products",            color: "bg-eco-green" },
+    { label: t("dashboard.lowStockMine"),      value: lowStock,       href: "/dashboard/products?lowStock=1", color: "bg-amber-500" },
+    { label: t("dashboard.reviewsToModerate"), value: pendingReviews, href: "/dashboard/reviews",             color: "bg-pink-500" },
+    { label: t("dashboard.ordersReadOnly"),    value: "→",            href: "/dashboard/orders",              color: "bg-blue-500" },
   ];
 
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">Welcome, {user.name || user.email}</h1>
-        <p className="text-sm text-gray-500 mt-1">You&apos;re signed in as <b>MODERATOR</b> — you can manage your own products and moderate reviews.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold">{t("dashboard.welcome", { name: user.name || user.email })}</h1>
+        <p className="text-sm text-gray-500 mt-1">{t("dashboard.signedInModerator", { role: t("dashboard.roleModerator") })}</p>
       </header>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
@@ -41,20 +43,20 @@ export default async function ModeratorDashboard({ user }) {
             </div>
             <div className="min-w-0">
               <div className="font-semibold text-sm truncate">{s.label}</div>
-              <div className="text-xs text-gray-500">Open</div>
+              <div className="text-xs text-gray-500">{t("dashboard.open")}</div>
             </div>
           </Link>
         ))}
       </div>
 
       <section className="mt-8">
-        <h2 className="text-lg sm:text-xl font-bold mb-3">Quick links</h2>
+        <h2 className="text-lg sm:text-xl font-bold mb-3">{t("dashboard.quickLinks")}</h2>
         <div className="flex flex-wrap gap-3">
           <Link href="/dashboard/products/new" className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-eco-green text-white text-sm min-h-[44px]">
-            <i className="fa-solid fa-plus" /> Add product
+            <i className="fa-solid fa-plus" /> {t("dashboard.addProduct")}
           </Link>
           <Link href="/dashboard/reviews" className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-gray-200 text-sm min-h-[44px]">
-            <i className="fa-solid fa-comment-dots" /> Moderate reviews
+            <i className="fa-solid fa-comment-dots" /> {t("dashboard.moderateReviews")}
           </Link>
         </div>
       </section>

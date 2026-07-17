@@ -8,8 +8,10 @@
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
 import { formatMoney } from "../../../lib/money";
+import { getT } from "../../../lib/i18n/server";
 
 export default async function AdminDashboard({ user }) {
+  const { t } = await getT();
   const [products, lowStock, orders, pendingOrders, users, reviews, revenueAgg] = await Promise.all([
     prisma.product.count(),
     prisma.product.count({ where: { stock: { lt: 5 } } }),
@@ -25,21 +27,21 @@ export default async function AdminDashboard({ user }) {
   const revenue = formatMoney(revenueAgg._sum.total || 0);
 
   const stats = [
-    { label: "Products",            value: products,      href: "/dashboard/products",                color: "bg-eco-green" },
-    { label: "Low stock (<5)",      value: lowStock,      href: "/dashboard/products?lowStock=1",     color: "bg-amber-500" },
-    { label: "Orders",              value: orders,        href: "/dashboard/orders",                  color: "bg-blue-500" },
-    { label: "Pending orders",      value: pendingOrders, href: "/dashboard/orders?status=PENDING",   color: "bg-purple-500" },
-    { label: "Users",               value: users,         href: "/dashboard/users",                   color: "bg-gray-700" },
-    { label: "Reviews to moderate", value: reviews,       href: "/dashboard/reviews",                 color: "bg-pink-500" },
-    { label: "Revenue (paid)",      value: revenue,       href: "/dashboard/orders",                  color: "bg-emerald-600" },
-    { label: "Audit log",           value: "→",           href: "/dashboard/audit-log",               color: "bg-slate-700" },
+    { label: t("dashboard.products"),          value: products,      href: "/dashboard/products",                color: "bg-eco-green" },
+    { label: t("dashboard.lowStock"),          value: lowStock,      href: "/dashboard/products?lowStock=1",     color: "bg-amber-500" },
+    { label: t("dashboard.orders"),            value: orders,        href: "/dashboard/orders",                  color: "bg-blue-500" },
+    { label: t("dashboard.pendingOrders"),     value: pendingOrders, href: "/dashboard/orders?status=PENDING",   color: "bg-purple-500" },
+    { label: t("dashboard.users"),             value: users,         href: "/dashboard/users",                   color: "bg-gray-700" },
+    { label: t("dashboard.reviewsToModerate"), value: reviews,       href: "/dashboard/reviews",                 color: "bg-pink-500" },
+    { label: t("dashboard.revenue"),           value: revenue,       href: "/dashboard/orders",                  color: "bg-emerald-600" },
+    { label: t("dashboard.auditLog"),          value: "→",           href: "/dashboard/audit-log",               color: "bg-slate-700" },
   ];
 
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">Welcome, {user.name || user.email}</h1>
-        <p className="text-sm text-gray-500 mt-1">You&apos;re signed in as <b>ADMIN</b> — full access.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold">{t("dashboard.welcome", { name: user.name || user.email })}</h1>
+        <p className="text-sm text-gray-500 mt-1">{t("dashboard.signedInFull", { role: t("dashboard.roleAdmin") })}</p>
       </header>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
@@ -54,23 +56,23 @@ export default async function AdminDashboard({ user }) {
             </div>
             <div className="min-w-0">
               <div className="font-semibold text-sm truncate">{s.label}</div>
-              <div className="text-xs text-gray-500">Manage</div>
+              <div className="text-xs text-gray-500">{t("dashboard.manage")}</div>
             </div>
           </Link>
         ))}
       </div>
 
       <section className="mt-8">
-        <h2 className="text-lg sm:text-xl font-bold mb-3">Quick links</h2>
+        <h2 className="text-lg sm:text-xl font-bold mb-3">{t("dashboard.quickLinks")}</h2>
         <div className="flex flex-wrap gap-3">
           <Link href="/dashboard/products/new" className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-eco-green text-white text-sm min-h-[44px]">
-            <i className="fa-solid fa-plus" /> Add product
+            <i className="fa-solid fa-plus" /> {t("dashboard.addProduct")}
           </Link>
           <Link href="/dashboard/users" className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-gray-200 text-sm min-h-[44px]">
-            <i className="fa-solid fa-user-shield" /> Manage users
+            <i className="fa-solid fa-user-shield" /> {t("dashboard.manageUsers")}
           </Link>
           <Link href="/dashboard/audit-log" className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-gray-200 text-sm min-h-[44px]">
-            <i className="fa-solid fa-clipboard-list" /> View audit log
+            <i className="fa-solid fa-clipboard-list" /> {t("dashboard.viewAuditLog")}
           </Link>
         </div>
       </section>

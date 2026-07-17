@@ -13,9 +13,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "../../../../lib/i18n/LanguageProvider";
 import { updateUserRoleAction } from "../_actions";
 
 const ROLES = ["CUSTOMER", "MODERATOR", "ADMIN"];
+const ROLE_LABEL_KEY = {
+  CUSTOMER:  "dashboard.roleCustomer",
+  MODERATOR: "dashboard.roleModerator",
+  ADMIN:     "dashboard.roleAdmin",
+};
 
 const COLOR = {
   ADMIN:     "text-eco-green",
@@ -24,6 +30,7 @@ const COLOR = {
 };
 
 export default function RoleSelect({ userId, role, isSelf }) {
+  const t = useT();
   const router = useRouter();
   const [value, setValue] = useState(role);
   const [error, setError] = useState(null);
@@ -38,7 +45,7 @@ export default function RoleSelect({ userId, role, isSelf }) {
       const res = await updateUserRoleAction({ userId, role: next });
       if (!res?.ok) {
         setValue(prev);
-        setError(res?.error || "Update failed.");
+        setError(res?.error || t("dashboard.roleUpdateFailed"));
         return;
       }
       router.refresh();
@@ -51,11 +58,11 @@ export default function RoleSelect({ userId, role, isSelf }) {
         value={value}
         onChange={onChange}
         disabled={isSelf || pending}
-        title={isSelf ? "You can't change your own role" : undefined}
+        title={isSelf ? t("dashboard.cantChangeOwnRole") : undefined}
         className={`text-xs font-medium rounded-md border border-gray-200 bg-white px-2 py-1 disabled:opacity-60 disabled:cursor-not-allowed ${COLOR[value] || ""}`}
       >
         {ROLES.map((r) => (
-          <option key={r} value={r}>{r}</option>
+          <option key={r} value={r}>{t(ROLE_LABEL_KEY[r])}</option>
         ))}
       </select>
       {error && <span className="text-xs text-red-600 max-w-[9rem]">{error}</span>}

@@ -14,7 +14,22 @@
     "backToHome": "Back to Home",
     "browseShop": "Browse the shop",
     "startShopping": "Start shopping",
-    "readMore": "Read More"
+    "readMore": "Read More",
+    "item": "item"
+  },
+  "toast": {
+    "addedToCart": "Added {qty} × {name} to your cart",
+    "removedFromCart": "Removed {name} from your cart",
+    "couponApplied": "Coupon applied: {label}",
+    "invalidCoupon": "Invalid coupon code",
+    "enterCoupon": "Please enter a coupon code.",
+    "addedToWishlist": "Added {name} to wishlist",
+    "removedFromWishlist": "Removed {name} from wishlist"
+  },
+  "coupon": {
+    "ECO10": "10% off your order",
+    "ECO20": "20% off your order",
+    "FREE5": "$5 off your order"
   },
   "meta": {
     "loginTitle": "Log in — Ecobazar",

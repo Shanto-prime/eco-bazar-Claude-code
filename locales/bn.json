@@ -14,7 +14,22 @@
     "backToHome": "হোমে ফিরে যান",
     "browseShop": "শপ ঘুরে দেখুন",
     "startShopping": "কেনাকাটা শুরু করুন",
-    "readMore": "আরও পড়ুন"
+    "readMore": "আরও পড়ুন",
+    "item": "পণ্য"
+  },
+  "toast": {
+    "addedToCart": "{qty} × {name} কার্টে যোগ হয়েছে",
+    "removedFromCart": "{name} কার্ট থেকে সরানো হয়েছে",
+    "couponApplied": "কুপন প্রয়োগ হয়েছে: {label}",
+    "invalidCoupon": "অবৈধ কুপন কোড",
+    "enterCoupon": "অনুগ্রহ করে একটি কুপন কোড লিখুন।",
+    "addedToWishlist": "{name} উইশলিস্টে যোগ হয়েছে",
+    "removedFromWishlist": "{name} উইশলিস্ট থেকে সরানো হয়েছে"
+  },
+  "coupon": {
+    "ECO10": "আপনার অর্ডারে ১০% ছাড়",
+    "ECO20": "আপনার অর্ডারে ২০% ছাড়",
+    "FREE5": "আপনার অর্ডারে $৫ ছাড়"
   },
   "meta": {
     "loginTitle": "লগ ইন — ইকোবাজার",

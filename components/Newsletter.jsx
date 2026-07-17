@@ -16,10 +16,10 @@ export default function Newsletter() {
     e.preventDefault();
     const v = email.trim();
     if (!v || !/^\S+@\S+\.\S+$/.test(v)) {
-      showToast("Please enter a valid email", "error");
+      showToast(t("newsletter.invalidEmail"), "error");
       return;
     }
-    showToast(`Subscribed! We'll email tips to ${v}.`);
+    showToast(t("newsletter.subscribed", { email: v }));
     setEmail("");
   };
 
@@ -29,7 +29,7 @@ export default function Newsletter() {
         <div className="flex-1">
           <div className="text-xl font-bold">{t("newsletter.title")}</div>
           <div className="text-sm text-gray-500">
-            Get fresh organic-food tips, recipes and discount codes — straight to your inbox.
+            {t("newsletter.body")}
           </div>
         </div>
         <form onSubmit={submit} className="flex-1 flex bg-white rounded-full overflow-hidden w-full md:w-auto">

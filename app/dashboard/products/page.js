@@ -5,8 +5,10 @@ import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
 import { formatMoney } from "../../../lib/money";
+import { getT } from "../../../lib/i18n/server";
 
 export default async function DashboardProducts({ searchParams }) {
+  const { t } = await getT();
   const user = await requireRole(["ADMIN", "MODERATOR"], "/dashboard/products");
   const sp = await searchParams;
   const q = (sp?.q || "").toString().trim();
@@ -31,27 +33,27 @@ export default async function DashboardProducts({ searchParams }) {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">Products</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">{t("dashboard.products")}</h1>
         <Link href="/dashboard/products/new" className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-eco-green text-white text-sm min-h-[44px]">
-          <i className="fa-solid fa-plus" /> Add product
+          <i className="fa-solid fa-plus" /> {t("dashboard.addProduct")}
         </Link>
       </div>
 
       <form className="mb-5">
         <div className="relative max-w-sm">
           <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input name="q" defaultValue={q} placeholder="Search by name or slug..." className="eco-input pl-10" />
+          <input name="q" defaultValue={q} placeholder={t("dashboard.productsSearchPh")} className="eco-input pl-10" />
         </div>
         {lowStockOnly && (
           <Link href="/dashboard/products" className="text-xs text-eco-green mt-2 inline-block">
-            Showing low-stock only — clear filter
+            {t("dashboard.showLowStockOnly")}
           </Link>
         )}
       </form>
 
       {products.length === 0 ? (
         <div className="border border-dashed border-gray-300 rounded-lg p-10 text-center text-gray-500">
-          {q ? "No products match that search." : "No products yet."}
+          {q ? t("dashboard.noProductsSearch") : t("dashboard.noProducts")}
         </div>
       ) : (
         <>
@@ -60,11 +62,11 @@ export default async function DashboardProducts({ searchParams }) {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
                 <tr>
-                  <th className="text-left px-4 py-3">Image</th>
-                  <th className="text-left px-4 py-3">Name</th>
-                  <th className="text-left px-4 py-3">Price</th>
-                  <th className="text-left px-4 py-3">Stock</th>
-                  <th className="text-left px-4 py-3">Added by</th>
+                  <th className="text-left px-4 py-3">{t("dashboard.colImage")}</th>
+                  <th className="text-left px-4 py-3">{t("dashboard.colName")}</th>
+                  <th className="text-left px-4 py-3">{t("dashboard.colPrice")}</th>
+                  <th className="text-left px-4 py-3">{t("dashboard.colStock")}</th>
+                  <th className="text-left px-4 py-3">{t("dashboard.colAddedBy")}</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -93,7 +95,7 @@ export default async function DashboardProducts({ searchParams }) {
                     </td>
                     <td className="px-4 py-3 text-gray-600">{p.createdBy?.name || p.createdBy?.email}</td>
                     <td className="px-4 py-3 text-right">
-                      <Link href={`/dashboard/products/${p.id}/edit`} className="text-eco-green hover:underline text-sm">Edit</Link>
+                      <Link href={`/dashboard/products/${p.id}/edit`} className="text-eco-green hover:underline text-sm">{t("dashboard.edit")}</Link>
                     </td>
                   </tr>
                 ))}
@@ -123,7 +125,7 @@ export default async function DashboardProducts({ searchParams }) {
                   <div className="flex justify-between items-center mt-2 text-sm">
                     <span className="font-semibold">{formatMoney(p.price)}</span>
                     <span className={`text-xs ${p.stock < 5 ? "text-amber-600 font-semibold" : "text-gray-500"}`}>
-                      Stock: {p.stock}
+                      {t("dashboard.stockLabel")}{p.stock}
                     </span>
                   </div>
                 </div>

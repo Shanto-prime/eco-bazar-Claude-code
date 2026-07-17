@@ -15,9 +15,10 @@ import { findNearestProducts, isGoodSuggestion, products as staticProducts } fro
 // Dynamic SEO title based on the resolved product (or a generic title).
 export async function generateMetadata({ params }) {
   const { slug } = await params;
+  const { t } = await getT();
   const product = await getProductBySlug(slug);
   return {
-    title: product ? `${product.name} — Ecobazar` : "Product not found — Ecobazar",
+    title: product ? `${product.name}${t("meta.productTitleSuffix")}` : t("meta.productNotFoundTitle"),
   };
 }
 

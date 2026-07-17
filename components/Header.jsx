@@ -48,10 +48,10 @@ export default function Header() {
           <button
             type="button" onClick={() => setSearchOpen((s) => !s)}
             className="md:hidden w-10 h-10 grid place-items-center"
-            aria-label="Search"
+            aria-label={t("header.searchAria")}
           ><i className="fa-solid fa-magnifying-glass text-xl" /></button>
 
-          <Link href="/wishlist" className="relative" aria-label="Wishlist">
+          <Link href="/wishlist" className="relative" aria-label={t("header.wishlistAria")}>
             <i className="fa-regular fa-heart text-xl sm:text-2xl" />
             {hydrated && wishlist.length > 0 && (
               <span className="absolute -top-2 -right-2 bg-eco-green text-white text-[10px] w-4 h-4 rounded-full grid place-items-center">{wishlist.length}</span>
@@ -60,7 +60,7 @@ export default function Header() {
 
           <div className="h-8 w-px bg-gray-200 hidden sm:block" />
 
-          <Link href="/cart" className="flex items-center gap-2 sm:gap-3" aria-label="Cart">
+          <Link href="/cart" className="flex items-center gap-2 sm:gap-3" aria-label={t("header.cartAria")}>
             <div className="relative">
               <i className="fa-solid fa-bag-shopping text-xl sm:text-2xl" />
               {hydrated && itemCount > 0 && (

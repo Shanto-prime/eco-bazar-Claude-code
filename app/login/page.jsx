@@ -4,9 +4,13 @@
 
 import { Suspense } from "react";
 import { hasGoogle, hasFacebook } from "../../lib/auth";
+import { getT } from "../../lib/i18n/server";
 import LoginForm from "./LoginForm";
 
-export const metadata = { title: "Log in — Ecobazar" };
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("meta.loginTitle") };
+}
 
 export default function LoginPage() {
   return (

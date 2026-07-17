@@ -105,11 +105,14 @@ export default function ShopClient({ products = [] }) {
       <div>
         <div className="font-semibold mb-3">{t("shop.popularTags")}</div>
         <div className="flex flex-wrap gap-2 text-xs">
-          {["Healthy","Low fat","Vegetarian","Vitamins","Bread","Meat","Snacks"].map((t) => (
+          {[
+            t("shop.tagHealthy"), t("shop.tagLowFat"), t("shop.tagVegetarian"),
+            t("shop.tagVitamins"), t("shop.tagBread"), t("shop.tagMeat"), t("shop.tagSnacks"),
+          ].map((label) => (
             <button
-              type="button" key={t} onClick={() => setTag(tag === t ? null : t)}
-              className={`px-3 py-1 border rounded-full transition ${tag === t ? "bg-eco-green text-white border-transparent" : "hover:border-eco-green"}`}
-            >{t}</button>
+              type="button" key={label} onClick={() => setTag(tag === label ? null : label)}
+              className={`px-3 py-1 border rounded-full transition ${tag === label ? "bg-eco-green text-white border-transparent" : "hover:border-eco-green"}`}
+            >{label}</button>
           ))}
         </div>
       </div>
@@ -168,7 +171,7 @@ export default function ShopClient({ products = [] }) {
                 >{i + 1}</button>
               ))}
               <button type="button" onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                className="w-9 h-9 rounded-full border hover:border-eco-green" aria-label="Next page">
+                className="w-9 h-9 rounded-full border hover:border-eco-green" aria-label={t("shop.nextPage")}>
                 <i className="fa-solid fa-arrow-right text-xs" />
               </button>
             </div>
@@ -183,7 +186,7 @@ export default function ShopClient({ products = [] }) {
           <aside className="fixed top-0 right-0 bottom-0 w-80 max-w-[88vw] bg-white z-50 lg:hidden flex flex-col animate-[slideInRight_.2s_ease-out]">
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <div className="font-semibold">{t("shop.filters")}</div>
-              <button type="button" onClick={() => setShowFilters(false)} className="w-9 h-9 grid place-items-center" aria-label="Close filters">
+              <button type="button" onClick={() => setShowFilters(false)} className="w-9 h-9 grid place-items-center" aria-label={t("shop.closeFilters")}>
                 <i className="fa-solid fa-xmark text-xl" />
               </button>
             </div>

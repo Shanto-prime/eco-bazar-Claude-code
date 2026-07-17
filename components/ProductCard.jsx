@@ -7,6 +7,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "../lib/CartContext";
+import { useT } from "../lib/i18n/LanguageProvider";
 import Stars from "./Stars";
 
 export default function ProductCard({
@@ -14,6 +15,7 @@ export default function ProductCard({
   size = "md", // "md" = standard, "sm" = compact (hot deals strip)
 }) {
   const { addItem, toggleWishlist, wishlist, hydrated } = useCart();
+  const t = useT();
   const inWishlist = hydrated && wishlist.includes(slug);
 
   const imgClass = size === "sm" ? "h-32 text-6xl" : "h-40 text-7xl";
@@ -33,7 +35,7 @@ export default function ProductCard({
             type="button"
             onClick={() => toggleWishlist(slug, name)}
             className="w-8 h-8 rounded-full bg-white shadow grid place-items-center"
-            aria-label="Add to wishlist"
+            aria-label={t("productCard.addToWishlist")}
           >
             <i className={`${inWishlist ? "fa-solid text-red-500" : "fa-regular"} fa-heart text-xs`} />
           </button>
@@ -75,7 +77,7 @@ export default function ProductCard({
         className={`absolute bottom-9 right-3 w-8 h-8 rounded-full grid place-items-center ${
           featured ? "bg-eco-green text-white" : "add-btn bg-gray-100"
         }`}
-        aria-label={`Add ${name} to cart`}
+        aria-label={t("productCard.addToCartAria", { name })}
       >
         <i className="fa-solid fa-bag-shopping text-xs" />
       </button>

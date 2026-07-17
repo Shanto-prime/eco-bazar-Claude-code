@@ -6,22 +6,27 @@
 import Image from "next/image";
 import Link from "next/link";
 import Breadcrumb from "../components/Breadcrumb";
+import { getT } from "../lib/i18n/server";
 
-export const metadata = {
-  title: "Page not found — Ecobazar",
-  description: "We couldn't find the page you were looking for.",
-};
+export async function generateMetadata() {
+  const { t } = await getT();
+  return {
+    title: t("meta.notFoundTitle"),
+    description: t("meta.notFoundDesc"),
+  };
+}
 
-export default function NotFound() {
+export default async function NotFound() {
+  const { t } = await getT();
   return (
     <>
-      <Breadcrumb items={[{ label: "404 Error Page" }]} />
+      <Breadcrumb items={[{ label: t("notFound.breadcrumb") }]} />
 
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 py-12 sm:py-20 text-center">
         <div className="relative mx-auto w-full max-w-[550px] aspect-[550/400]">
           <Image
             src="/images/404-illustration.png"
-            alt="Confused shopper next to a giant 404"
+            alt={t("notFound.imageAlt")}
             fill
             priority
             sizes="(min-width: 640px) 550px, 90vw"
@@ -30,11 +35,10 @@ export default function NotFound() {
         </div>
 
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mt-6 sm:mt-8">
-          Oops! page not found
+          {t("notFound.heading")}
         </h1>
         <p className="text-gray-500 text-sm sm:text-base mt-3 sm:mt-4 max-w-xl mx-auto">
-          We couldn&apos;t find the page you were looking for. It may have been
-          renamed or moved.
+          {t("notFound.body")}
         </p>
 
         <div className="mt-6 sm:mt-8 flex flex-wrap justify-center gap-3">
@@ -43,13 +47,13 @@ export default function NotFound() {
             className="inline-flex items-center px-6 py-3 rounded-full bg-eco-green text-white font-medium hover:bg-emerald-600 transition"
           >
             <i className="fa-solid fa-arrow-left mr-2" />
-            Back to Home
+            {t("notFound.backHome")}
           </Link>
           <Link
             href="/shop"
             className="inline-flex items-center px-6 py-3 rounded-full border border-gray-200 text-gray-700 hover:border-eco-green hover:text-eco-green font-medium transition"
           >
-            Browse the shop
+            {t("notFound.browseShop")}
             <i className="fa-solid fa-arrow-right ml-2" />
           </Link>
         </div>

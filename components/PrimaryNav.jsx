@@ -40,7 +40,7 @@ export default function PrimaryNav() {
         <button
           type="button" onClick={() => setOpen(true)}
           className="lg:hidden text-white py-4 flex items-center gap-2"
-          aria-label="Open menu"
+          aria-label={t("nav.openMenu")}
         >
           <i className="fa-solid fa-bars text-lg" />
           <span className="font-medium">{t("nav.menu")}</span>
@@ -73,14 +73,14 @@ export default function PrimaryNav() {
           <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setOpen(false)} />
           <aside
             className="fixed top-0 left-0 bottom-0 w-72 max-w-[85vw] bg-white z-50 lg:hidden flex flex-col animate-[slideInLeft_.2s_ease-out]"
-            role="dialog" aria-label="Site menu"
+            role="dialog" aria-label={t("nav.siteMenu")}
           >
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <Link href="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
                 <i className="fa-solid fa-seedling text-eco-green text-2xl" />
                 <span className="text-xl font-bold text-eco-dark">Ecobazar</span>
               </Link>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close menu" className="w-9 h-9 grid place-items-center">
+              <button type="button" onClick={() => setOpen(false)} aria-label={t("nav.closeMenu")} className="w-9 h-9 grid place-items-center">
                 <i className="fa-solid fa-xmark text-xl" />
               </button>
             </div>

@@ -23,12 +23,14 @@
 // -----------------------------------------------------------------------------
 
 import { useEffect, useRef, useState } from "react";
+import { useT } from "../lib/i18n/LanguageProvider";
 
 const ZOOM = 2;
 // Min horizontal distance (px) to count a touch as a swipe.
 const SWIPE_THRESHOLD = 40;
 
 export default function ProductGallery({ images = [], alt = "Product" }) {
+  const t = useT();
   const [active, setActive]     = useState(0);
   const [zoom, setZoom]         = useState({ on: false, x: 50, y: 50 });
   const [lightbox, setLightbox] = useState(false);
@@ -82,7 +84,7 @@ export default function ProductGallery({ images = [], alt = "Product" }) {
   if (!total) {
     return (
       <div className="aspect-square border border-gray-200 rounded-md grid place-items-center text-gray-400">
-        No images
+        {t("gallery.noImages")}
       </div>
     );
   }
@@ -103,7 +105,7 @@ export default function ProductGallery({ images = [], alt = "Product" }) {
         onClick={() => !supportsHoverZoom() && setLightbox(true)}
         className="gallery-stage relative border border-gray-200 rounded-md overflow-hidden bg-white aspect-square select-none focus:outline-none focus:ring-2 focus:ring-eco-green cursor-pointer"
         role="img"
-        aria-label={`${alt} — image ${active + 1} of ${total}`}
+        aria-label={t("gallery.imageOf", { alt, current: active + 1, total })}
       >
         <View
           v={current}
@@ -121,13 +123,13 @@ export default function ProductGallery({ images = [], alt = "Product" }) {
               type="button"
               onClick={(e) => { e.stopPropagation(); go(-1); }}
               className="gallery-nav left-2 sm:left-3"
-              aria-label="Previous image"
+              aria-label={t("gallery.previousImage")}
             ><i className="fa-solid fa-chevron-left" /></button>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); go(+1); }}
               className="gallery-nav right-2 sm:right-3"
-              aria-label="Next image"
+              aria-label={t("gallery.nextImage")}
             ><i className="fa-solid fa-chevron-right" /></button>
           </>
         )}
@@ -138,12 +140,12 @@ export default function ProductGallery({ images = [], alt = "Product" }) {
 
         {/* Hover-to-zoom hint — desktop only */}
         <div className="absolute bottom-3 left-3 bg-white/90 text-gray-700 text-xs px-2 py-1 rounded hidden md:flex items-center gap-1 pointer-events-none">
-          <i className="fa-solid fa-magnifying-glass-plus" /> Hover to zoom
+          <i className="fa-solid fa-magnifying-glass-plus" /> {t("gallery.hoverToZoom")}
         </div>
 
         {/* Swipe-hint pulse — touch only, fades after a moment */}
         <div className="absolute bottom-3 left-3 bg-white/90 text-gray-700 text-xs px-2 py-1 rounded md:hidden flex items-center gap-1 pointer-events-none">
-          <i className="fa-solid fa-hand-pointer" /> Swipe / tap
+          <i className="fa-solid fa-hand-pointer" /> {t("gallery.swipeTap")}
         </div>
       </div>
 
@@ -156,7 +158,7 @@ export default function ProductGallery({ images = [], alt = "Product" }) {
               type="button"
               onClick={() => setActive(i)}
               className={`h-1.5 rounded-full transition-all ${i === active ? "w-6 bg-eco-green" : "w-1.5 bg-gray-300"}`}
-              aria-label={`Go to image ${i + 1}`}
+              aria-label={t("gallery.goToImage", { index: i + 1 })}
             />
           ))}
         </div>
@@ -169,7 +171,7 @@ export default function ProductGallery({ images = [], alt = "Product" }) {
             type="button"
             onClick={() => thumbsRef.current?.scrollBy({ left: -200, behavior: "smooth" })}
             className="thumb-scroll left-0 hidden sm:grid"
-            aria-label="Scroll thumbnails left"
+            aria-label={t("gallery.scrollLeft")}
           ><i className="fa-solid fa-chevron-left" /></button>
         )}
 
@@ -187,7 +189,7 @@ export default function ProductGallery({ images = [], alt = "Product" }) {
               className={`relative flex-none w-[72px] sm:w-24 h-[72px] sm:h-24 rounded-md border-2 overflow-hidden snap-start transition ${
                 i === active ? "border-eco-green ring-1 ring-eco-green/40" : "border-gray-200 hover:border-eco-green/60"
               }`}
-              aria-label={`View ${i + 1}${img.label ? ` — ${img.label}` : ""}`}
+              aria-label={`${t("gallery.viewImage", { index: i + 1 })}${img.label ? ` — ${img.label}` : ""}`}
               aria-current={i === active}
             >
               <View v={img} alt={alt} small />
@@ -200,7 +202,7 @@ export default function ProductGallery({ images = [], alt = "Product" }) {
             type="button"
             onClick={() => thumbsRef.current?.scrollBy({ left: 200, behavior: "smooth" })}
             className="thumb-scroll right-0 hidden sm:grid"
-            aria-label="Scroll thumbnails right"
+            aria-label={t("gallery.scrollRight")}
           ><i className="fa-solid fa-chevron-right" /></button>
         )}
       </div>
@@ -211,13 +213,13 @@ export default function ProductGallery({ images = [], alt = "Product" }) {
           className="fixed inset-0 z-[60] bg-black/90 grid place-items-center p-4"
           onClick={() => setLightbox(false)}
           role="dialog"
-          aria-label="Image lightbox"
+          aria-label={t("gallery.lightbox")}
         >
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); setLightbox(false); }}
             className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white grid place-items-center"
-            aria-label="Close"
+            aria-label={t("gallery.close")}
           ><i className="fa-solid fa-xmark" /></button>
 
           <div
@@ -229,10 +231,10 @@ export default function ProductGallery({ images = [], alt = "Product" }) {
             <View v={current} alt={alt} />
             {total > 1 && (
               <>
-                <button type="button" onClick={() => go(-1)} className="gallery-nav left-3" aria-label="Previous">
+                <button type="button" onClick={() => go(-1)} className="gallery-nav left-3" aria-label={t("gallery.previous")}>
                   <i className="fa-solid fa-chevron-left" />
                 </button>
-                <button type="button" onClick={() => go(+1)} className="gallery-nav right-3" aria-label="Next">
+                <button type="button" onClick={() => go(+1)} className="gallery-nav right-3" aria-label={t("gallery.next")}>
                   <i className="fa-solid fa-chevron-right" />
                 </button>
               </>

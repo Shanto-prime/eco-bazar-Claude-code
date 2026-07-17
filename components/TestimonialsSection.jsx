@@ -7,6 +7,7 @@
 import { useState } from "react";
 import TestimonialCard from "./TestimonialCard";
 import { testimonials } from "../lib/data";
+import { useT } from "../lib/i18n/LanguageProvider";
 
 // Loop the source data so the carousel always has something to show.
 const cycle = (arr, n) => Array.from({ length: n }, (_, i) => arr[i % arr.length]);
@@ -14,6 +15,7 @@ const POOL  = cycle(testimonials, 6).map((t, i) => ({ ...t, id: `${t.id}-${i}` }
 const VISIBLE = 3;
 
 export default function TestimonialsSection() {
+  const t = useT();
   const [start, setStart] = useState(0);
 
   const max = POOL.length - VISIBLE;
@@ -26,17 +28,17 @@ export default function TestimonialsSection() {
     <section className="bg-eco-bg py-14 mt-14">
       <div className="max-w-[1320px] mx-auto px-6">
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-3xl font-bold">Client Testimonials</h2>
+          <h2 className="text-3xl font-bold">{t("testimonials.title")}</h2>
           <div className="flex gap-2">
             <button
               type="button" onClick={prev}
               className="w-10 h-10 rounded-full bg-white border border-gray-200 grid place-items-center hover:border-eco-green"
-              aria-label="Previous"
+              aria-label={t("testimonials.previous")}
             ><i className="fa-solid fa-arrow-left" /></button>
             <button
               type="button" onClick={next}
               className="w-10 h-10 rounded-full bg-eco-green text-white grid place-items-center hover:bg-emerald-600"
-              aria-label="Next"
+              aria-label={t("testimonials.next")}
             ><i className="fa-solid fa-arrow-right" /></button>
           </div>
         </div>

@@ -2,9 +2,13 @@
 // useSearchParams, so it's wrapped in Suspense (CSR bailout requirement).
 
 import { Suspense } from "react";
+import { getT } from "../../lib/i18n/server";
 import ResetPasswordForm from "./ResetPasswordForm";
 
-export const metadata = { title: "Reset password — Ecobazar" };
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("meta.resetTitle") };
+}
 
 export default function ResetPasswordPage() {
   return (

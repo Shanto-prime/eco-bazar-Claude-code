@@ -37,9 +37,9 @@ export default function CheckoutPage() {
     if (placing) return;
 
     const errs = {};
-    for (const k of REQUIRED) if (!form[k].trim()) errs[k] = "Required";
-    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) errs.email = "Invalid email";
-    if (form.phone && form.phone.replace(/\D/g, "").length < 7) errs.phone = "Invalid phone";
+    for (const k of REQUIRED) if (!form[k].trim()) errs[k] = t("checkout.required");
+    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) errs.email = t("checkout.invalidEmail");
+    if (form.phone && form.phone.replace(/\D/g, "").length < 7) errs.phone = t("checkout.invalidPhone");
     setErrors(errs);
     if (Object.keys(errs).length) {
       showToast(t("checkout.requiredFields"), "error");
@@ -74,7 +74,7 @@ export default function CheckoutPage() {
       setTimeout(() => router.push("/dashboard/orders"), 5000);
     } catch (err) {
       // Zod/stock/availability failures surface here with a readable message.
-      showToast(err?.message || "Could not place the order. Please try again.", "error");
+      showToast(err?.message || t("checkout.orderError"), "error");
     } finally {
       setPlacing(false);
     }
@@ -93,7 +93,7 @@ export default function CheckoutPage() {
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t("checkout.thankYou")}</h1>
           <p className="text-gray-500 mb-1">{t("checkout.placedMsg", { id: placed.id })}</p>
           <p className="text-gray-500 mb-6">
-            {placed.items} item{placed.items === 1 ? "" : "s"} · ${placed.total.toFixed(2)} ·{" "}
+            {t(placed.items === 1 ? "checkout.items_one" : "checkout.items_other", { count: placed.items })} · ${placed.total.toFixed(2)} ·{" "}
             {placed.payment === "cod" ? t("checkout.cod") : placed.payment}
           </p>
           <Link href="/shop" className="inline-block px-6 py-3 rounded-full bg-eco-green text-white font-medium">
@@ -141,19 +141,19 @@ export default function CheckoutPage() {
               </Field>
               <Field label={`${t("checkout.country")} *`} err={errors.country}>
                 <select className={`eco-input ${errors.country ? "border-red-500" : ""}`} value={form.country} onChange={set("country")}>
-                  <option value="">{t("checkout.select")}</option><option>USA</option><option>Canada</option><option>UK</option>
+                  <option value="">{t("checkout.select")}</option><option value="USA">{t("checkout.countryUsa")}</option><option value="Canada">{t("checkout.countryCanada")}</option><option value="UK">{t("checkout.countryUk")}</option>
                 </select>
               </Field>
               <Field label={`${t("checkout.state")} *`} err={errors.state}>
                 <select className={`eco-input ${errors.state ? "border-red-500" : ""}`} value={form.state} onChange={set("state")}>
-                  <option value="">{t("checkout.select")}</option><option>Illinois</option><option>California</option><option>New York</option>
+                  <option value="">{t("checkout.select")}</option><option value="Illinois">{t("checkout.stateIllinois")}</option><option value="California">{t("checkout.stateCalifornia")}</option><option value="New York">{t("checkout.stateNewYork")}</option>
                 </select>
               </Field>
               <Field label={`${t("checkout.zip")} *`} err={errors.zip}>
                 <input className={`eco-input ${errors.zip ? "border-red-500" : ""}`} value={form.zip} onChange={set("zip")} />
               </Field>
               <Field label={`${t("checkout.email")} *`} err={errors.email}>
-                <input className={`eco-input ${errors.email ? "border-red-500" : ""}`} type="email" value={form.email} onChange={set("email")} placeholder="you@example.com" />
+                <input className={`eco-input ${errors.email ? "border-red-500" : ""}`} type="email" value={form.email} onChange={set("email")} placeholder={t("checkout.emailPlaceholder")} />
               </Field>
               <Field label={`${t("checkout.phone")} *`} wide err={errors.phone}>
                 <input className={`eco-input ${errors.phone ? "border-red-500" : ""}`} type="tel" value={form.phone} onChange={set("phone")} />

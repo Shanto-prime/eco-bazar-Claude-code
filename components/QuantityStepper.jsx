@@ -7,8 +7,10 @@
 //      Add-to-Cart, where the user just picks a quantity locally.
 
 import { useState } from "react";
+import { useT } from "../lib/i18n/LanguageProvider";
 
 export default function QuantityStepper({ value, defaultValue = 1, min = 1, max = 999, onChange }) {
+  const t = useT();
   const controlled = typeof value === "number";
   const [internal, setInternal] = useState(defaultValue);
   const current = controlled ? value : internal;
@@ -21,15 +23,15 @@ export default function QuantityStepper({ value, defaultValue = 1, min = 1, max 
 
   return (
     <div className="qty-stepper">
-      <button type="button" onClick={() => update(current - 1)} aria-label="Decrease quantity">−</button>
+      <button type="button" onClick={() => update(current - 1)} aria-label={t("quantity.decrease")}>−</button>
       <input
         type="text"
         inputMode="numeric"
         value={current}
         onChange={(e) => update(e.target.value.replace(/[^0-9]/g, ""))}
-        aria-label="Quantity"
+        aria-label={t("quantity.label")}
       />
-      <button type="button" onClick={() => update(current + 1)} aria-label="Increase quantity">+</button>
+      <button type="button" onClick={() => update(current + 1)} aria-label={t("quantity.increase")}>+</button>
     </div>
   );
 }

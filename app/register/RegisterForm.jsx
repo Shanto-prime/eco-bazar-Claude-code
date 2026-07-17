@@ -30,7 +30,7 @@ export default function RegisterForm() {
     });
     if (!res.ok) {
       const { error } = await res.json().catch(() => ({}));
-      setError(error || "Sign-up failed.");
+      setError(error || t("auth.signupFailed"));
       setBusy(false);
       return;
     }
@@ -47,7 +47,7 @@ export default function RegisterForm() {
       <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-8">
         <div className="flex items-center gap-2 mb-6">
           <i className="fa-solid fa-seedling text-eco-green text-3xl" />
-          <span className="text-2xl font-bold text-eco-dark">Ecobazar</span>
+          <span className="text-2xl font-bold text-eco-dark">{t("auth.brand")}</span>
         </div>
 
         <h1 className="text-xl sm:text-2xl font-bold mb-1">{t("auth.registerTitle")}</h1>
@@ -64,21 +64,21 @@ export default function RegisterForm() {
             <label className="text-xs text-gray-500" htmlFor="name">{t("auth.fullName")}</label>
             <input
               id="name" required value={form.name} onChange={set("name")}
-              autoComplete="name" className="eco-input" placeholder="Your name"
+              autoComplete="name" className="eco-input" placeholder={t("auth.fullNamePh")}
             />
           </div>
           <div>
             <label className="text-xs text-gray-500" htmlFor="username">{t("auth.username")}</label>
             <input
               id="username" required value={form.username} onChange={set("username")}
-              autoComplete="username" className="eco-input" placeholder="yourname"
+              autoComplete="username" className="eco-input" placeholder={t("auth.usernamePh")}
             />
           </div>
           <div>
             <label className="text-xs text-gray-500" htmlFor="email">{t("checkout.email")}</label>
             <input
               id="email" type="email" required value={form.email} onChange={set("email")}
-              autoComplete="email" className="eco-input" placeholder="you@example.com"
+              autoComplete="email" className="eco-input" placeholder={t("auth.emailPh")}
             />
           </div>
           <div>
@@ -93,14 +93,14 @@ export default function RegisterForm() {
             <label className="text-xs text-gray-500" htmlFor="phone">{t("auth.phoneOptional")}</label>
             <input
               id="phone" type="tel" value={form.phone} onChange={set("phone")}
-              autoComplete="tel" className="eco-input" placeholder="+1 555 123 4567"
+              autoComplete="tel" className="eco-input" placeholder={t("auth.phonePh")}
             />
           </div>
           <div>
             <label className="text-xs text-gray-500" htmlFor="image">{t("auth.photoOptional")}</label>
             <input
               id="image" type="url" value={form.image} onChange={set("image")}
-              className="eco-input" placeholder="https://example.com/me.jpg"
+              className="eco-input" placeholder={t("auth.photoPh")}
             />
           </div>
           <button

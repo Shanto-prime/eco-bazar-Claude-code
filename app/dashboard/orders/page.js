@@ -12,8 +12,10 @@ import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
 import { requireAuth } from "../../../lib/auth-helpers";
 import { formatMoney } from "../../../lib/money";
+import { getT } from "../../../lib/i18n/server";
 
 export default async function DashboardOrders() {
+  const { t } = await getT();
   const user = await requireAuth("/dashboard/orders");
 
   const where = user.role === "CUSTOMER" ? { userId: user.id } : {};
@@ -32,20 +34,20 @@ export default async function DashboardOrders() {
     <div>
       <header className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold">
-          {user.role === "CUSTOMER" ? "My orders" : "Orders"}
+          {user.role === "CUSTOMER" ? t("dashboard.myOrders") : t("dashboard.orders")}
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          {user.role === "ADMIN"     && "All orders, system-wide."}
-          {user.role === "MODERATOR" && "All orders (read-only)."}
-          {user.role === "CUSTOMER"  && "Your order history."}
+          {user.role === "ADMIN"     && t("dashboard.ordersAllSystem")}
+          {user.role === "MODERATOR" && t("dashboard.ordersAllReadOnly")}
+          {user.role === "CUSTOMER"  && t("dashboard.ordersYourHistory")}
         </p>
       </header>
 
       {orders.length === 0 ? (
         <div className="border border-dashed border-gray-300 rounded-lg p-10 text-center text-gray-500 bg-white">
           {user.role === "CUSTOMER"
-            ? <>You haven&apos;t placed any orders yet. <Link href="/shop" className="text-eco-green underline">Browse the shop</Link>.</>
-            : "No orders in the system yet."}
+            ? <>{t("dashboard.noOrders")} <Link href="/shop" className="text-eco-green underline">{t("dashboard.browseShop")}</Link>.</>
+            : t("dashboard.noOrdersSystem")}
         </div>
       ) : (
         <>
@@ -54,12 +56,12 @@ export default async function DashboardOrders() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
                 <tr>
-                  <th className="text-left px-4 py-3">Order #</th>
-                  {user.role !== "CUSTOMER" && <th className="text-left px-4 py-3">Customer</th>}
-                  <th className="text-left px-4 py-3">Items</th>
-                  <th className="text-left px-4 py-3">Total</th>
-                  <th className="text-left px-4 py-3">Status</th>
-                  <th className="text-left px-4 py-3">Placed</th>
+                  <th className="text-left px-4 py-3">{t("dashboard.orderNumber")}</th>
+                  {user.role !== "CUSTOMER" && <th className="text-left px-4 py-3">{t("dashboard.colCustomer")}</th>}
+                  <th className="text-left px-4 py-3">{t("dashboard.colItems")}</th>
+                  <th className="text-left px-4 py-3">{t("dashboard.totalCol")}</th>
+                  <th className="text-left px-4 py-3">{t("dashboard.status")}</th>
+                  <th className="text-left px-4 py-3">{t("dashboard.colPlaced")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -92,7 +94,7 @@ export default async function DashboardOrders() {
                     {user.role !== "CUSTOMER" && (
                       <div className="text-xs text-gray-500 truncate">{o.firstName} {o.lastName} — {o.email}</div>
                     )}
-                    <div className="text-xs text-gray-500 mt-1">{new Date(o.createdAt).toLocaleDateString()} · {o._count.items} item{o._count.items === 1 ? "" : "s"}</div>
+                    <div className="text-xs text-gray-500 mt-1">{new Date(o.createdAt).toLocaleDateString()} · {t(o._count.items === 1 ? "dashboard.items_one" : "dashboard.items_other", { count: o._count.items })}</div>
                   </div>
                   <StatusPill status={o.status} />
                 </div>

@@ -7,6 +7,7 @@
 // - Exposes a single useCart() hook with everything the UI needs.
 
 import { createContext, useContext, useEffect, useReducer, useState, useCallback } from "react";
+import { useT } from "./i18n/LanguageProvider";
 
 // ---------- Coupons -----------------------------------------------------------
 const COUPONS = {
@@ -64,9 +65,10 @@ function reducer(state, action) {
 const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
+  const t = useT();
   const [state, dispatch] = useReducer(reducer, initialState);
   const [hydrated, setHydrated] = useState(false);
-  const [toast, setToast] = useState(null); // { id, kind, text }
+  const [toasts, setToasts] = useState([]); // [{ id, kind, text, duration }]
 
   // Load from localStorage once, on mount.
   useEffect(() => {
@@ -85,11 +87,20 @@ export function CartProvider({ children }) {
     } catch {}
   }, [state, hydrated]);
 
-  // Toast helper — auto-dismiss after 2.4s.
-  const showToast = useCallback((text, kind = "success") => {
+  // Toast helper — pushes onto a queue (newest first). The Toast component owns
+  // each toast's countdown/auto-dismiss (so it can pause on hover), then calls
+  // dismissToast(). Duration is clamped to a 3s minimum per the UX spec.
+  const dismissToast = useCallback((id) => {
+    setToasts((list) => list.filter((x) => x.id !== id));
+  }, []);
+
+  const showToast = useCallback((text, kind = "success", duration = 3000) => {
     const id = Math.random().toString(36).slice(2);
-    setToast({ id, kind, text });
-    setTimeout(() => setToast((t) => (t && t.id === id ? null : t)), 2400);
+    setToasts((list) => [
+      { id, kind, text, duration: Math.max(3000, duration) },
+      ...list,
+    ]);
+    return id;
   }, []);
 
   // Derived totals.
@@ -106,14 +117,14 @@ export function CartProvider({ children }) {
   // High-level actions.
   const addItem = useCallback((product, qty = 1) => {
     dispatch({ type: "ADD_ITEM", product, qty });
-    showToast(`Added ${qty} × ${product.name} to your cart`);
-  }, [showToast]);
+    showToast(t("toast.addedToCart", { qty, name: product.name }));
+  }, [showToast, t]);
 
   const removeItem = useCallback((slug) => {
     const i = state.items.find((x) => x.slug === slug);
     dispatch({ type: "REMOVE_ITEM", slug });
-    if (i) showToast(`Removed ${i.name} from your cart`, "info");
-  }, [state.items, showToast]);
+    if (i) showToast(t("toast.removedFromCart", { name: i.name }), "info");
+  }, [state.items, showToast, t]);
 
   const updateQty = useCallback((slug, qty) => {
     dispatch({ type: "UPDATE_QTY", slug, qty });
@@ -123,19 +134,30 @@ export function CartProvider({ children }) {
 
   const applyCoupon = useCallback((code) => {
     const key = code.trim().toUpperCase();
-    if (!key) return { ok: false, error: "Please enter a coupon code." };
+    if (!key) return { ok: false, error: t("toast.enterCoupon") };
     const def = COUPONS[key];
-    if (!def) { showToast("Invalid coupon code", "error"); return { ok: false, error: "Invalid coupon code" }; }
-    dispatch({ type: "APPLY_COUPON", coupon: { code: key, ...def } });
-    showToast(`Coupon applied: ${def.label}`);
+    if (!def) {
+      showToast(t("toast.invalidCoupon"), "error");
+      return { ok: false, error: t("toast.invalidCoupon") };
+    }
+    // Localized, code-derived label (falls back to the English COUPONS label).
+    const label = t(`coupon.${key}`);
+    dispatch({ type: "APPLY_COUPON", coupon: { code: key, ...def, label } });
+    showToast(t("toast.couponApplied", { label }));
     return { ok: true };
-  }, [showToast]);
+  }, [showToast, t]);
 
   const toggleWishlist = useCallback((slug, name) => {
     const has = state.wishlist.includes(slug);
     dispatch({ type: "TOGGLE_WISHLIST", slug });
-    showToast(has ? `Removed ${name || "item"} from wishlist` : `Added ${name || "item"} to wishlist`, "info");
-  }, [state.wishlist, showToast]);
+    const nm = name || t("common.item", {});
+    showToast(
+      has
+        ? t("toast.removedFromWishlist", { name: nm })
+        : t("toast.addedToWishlist", { name: nm }),
+      "info"
+    );
+  }, [state.wishlist, showToast, t]);
 
   const value = {
     items: state.items,
@@ -154,7 +176,8 @@ export function CartProvider({ children }) {
     applyCoupon,
     toggleWishlist,
     showToast,
-    toast,
+    toasts,
+    dismissToast,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

@@ -39,14 +39,14 @@ export default async function Home() {
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-4 sm:mt-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
           <div className="lg:col-span-8 rounded-xl overflow-hidden relative aspect-[16/11]">
-            <Image src="/images/hero-main.jpg" alt="Fresh & Healthy Organic Food" fill className="object-cover" priority sizes="(min-width:1024px) 66vw, 100vw" />
+            <Image src="/images/hero-main.jpg" alt={t("home.heroAlt")} fill className="object-cover" priority sizes="(min-width:1024px) 66vw, 100vw" />
           </div>
           <div className="lg:col-span-4 grid grid-cols-2 lg:grid-cols-1 gap-4 sm:gap-6">
             <div className="rounded-xl overflow-hidden relative aspect-[3/2]">
-              <Image src="/images/hero-summer.jpg" alt="Summer Sale 75% Off" fill className="object-cover" sizes="(min-width:1024px) 33vw, 50vw" />
+              <Image src="/images/hero-summer.jpg" alt={t("home.summerSale75Alt")} fill className="object-cover" sizes="(min-width:1024px) 33vw, 50vw" />
             </div>
             <div className="rounded-xl overflow-hidden relative aspect-[3/2]">
-              <Image src="/images/hero-special.jpg" alt="Special Products Deal of the Month" fill className="object-cover" sizes="(min-width:1024px) 33vw, 50vw" />
+              <Image src="/images/hero-special.jpg" alt={t("home.dealOfMonthAlt")} fill className="object-cover" sizes="(min-width:1024px) 33vw, 50vw" />
             </div>
           </div>
         </div>
@@ -119,7 +119,7 @@ export default async function Home() {
       {/* ============ 37% OFF BANNER ================================== */}
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-10 sm:mt-14">
         <div className="rounded-xl overflow-hidden relative aspect-[1620/440]">
-          <Image src="/images/banner-37off.jpg" alt="Summer Sale 37% Off" fill className="object-cover" sizes="100vw" />
+          <Image src="/images/banner-37off.jpg" alt={t("home.summerSale37Alt")} fill className="object-cover" sizes="100vw" />
         </div>
       </section>
 

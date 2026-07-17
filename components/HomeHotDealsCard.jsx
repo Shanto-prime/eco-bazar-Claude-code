@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useCart } from "../lib/CartContext";
 import { findProductBySlug } from "../lib/data";
+import { useT } from "../lib/i18n/LanguageProvider";
 
 // Fixed "offer ends" deadline: July 24th, 4:00 PM (local time).
 // Month is 0-indexed, so 6 = July. Adjust the year here as needed.
@@ -23,22 +24,23 @@ function diff(target) {
 
 export default function HomeHotDealsCard() {
   const { addItem } = useCart();
+  const t = useT();
   const product = findProductBySlug("chinese-cabbage");
 
   // Lock the target after first render so it doesn't drift between renders.
   const [target] = useState(() => TARGET());
-  const [t, setT] = useState(() => diff(target));
+  const [time, setTime] = useState(() => diff(target));
 
   useEffect(() => {
-    const id = setInterval(() => setT(diff(target)), 1000);
+    const id = setInterval(() => setTime(diff(target)), 1000);
     return () => clearInterval(id);
   }, [target]);
 
   return (
     <div className="bg-white border border-eco-green rounded-lg p-5">
       <div className="flex gap-2 mb-3">
-        <span className="bg-red-500 text-white text-xs px-2 py-1 rounded">Sale 50%</span>
-        <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded">Best Sale</span>
+        <span className="bg-red-500 text-white text-xs px-2 py-1 rounded">{t("hotDeals.sale50")}</span>
+        <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded">{t("hotDeals.bestSale")}</span>
       </div>
       <div className="relative h-52">
         <Image src="/images/hotdeal-big.jpg" alt={product.name} fill className="object-contain" sizes="(min-width:1024px) 33vw, 90vw" />
@@ -48,14 +50,14 @@ export default function HomeHotDealsCard() {
         onClick={() => addItem(product, 1)}
         className="w-full mt-4 py-3 rounded-full bg-eco-green text-white font-medium hover:bg-emerald-600"
       >
-        <i className="fa-solid fa-bag-shopping mr-2" /> Add to Cart
+        <i className="fa-solid fa-bag-shopping mr-2" /> {t("hotDeals.addToCart")}
       </button>
       <div className="text-center mt-4 text-eco-green font-semibold">{product.name}</div>
       <div className="text-center"><span className="font-bold">${product.price.toFixed(2)}</span> <span className="text-gray-400 line-through ml-1">$24.00</span></div>
-      <div className="text-yellow-400 text-center my-2">★★★★★ <span className="text-gray-500 text-xs">(524 Feedback)</span></div>
-      <div className="text-center text-xs text-gray-500 mb-2">Hurry up! Offer ends in:</div>
+      <div className="text-yellow-400 text-center my-2">★★★★★ <span className="text-gray-500 text-xs">{t("hotDeals.feedback", { count: 524 })}</span></div>
+      <div className="text-center text-xs text-gray-500 mb-2">{t("hotDeals.offerEnds")}</div>
       <div className="countdown justify-center">
-        {[["DAYS", t[0]], ["HOURS", t[1]], ["MINS", t[2]], ["SECS", t[3]]].map(([lbl, num], i, arr) => (
+        {[[t("hotDeals.days"), time[0]], [t("hotDeals.hours"), time[1]], [t("hotDeals.mins"), time[2]], [t("hotDeals.secs"), time[3]]].map(([lbl, num], i, arr) => (
           <span key={lbl} className="contents">
             <span className="unit"><div className="num">{num}</div><div className="lbl">{lbl}</div></span>
             {i < arr.length - 1 && <span className="sep">:</span>}

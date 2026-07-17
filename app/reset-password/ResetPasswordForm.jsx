@@ -8,10 +8,12 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useT } from "../../lib/i18n/LanguageProvider";
 
 export default function ResetPasswordForm() {
   const router = useRouter();
   const sp = useSearchParams();
+  const t = useT();
   const token = sp.get("token") || "";
 
   const [password, setPassword] = useState("");
@@ -23,7 +25,7 @@ export default function ResetPasswordForm() {
   const onSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-    if (password !== confirm) { setError("Passwords don't match."); return; }
+    if (password !== confirm) { setError(t("auth.passwordsNoMatch")); return; }
     setBusy(true);
     const res = await fetch("/api/auth/reset-password", {
       method:  "POST",
@@ -33,7 +35,7 @@ export default function ResetPasswordForm() {
     setBusy(false);
     if (!res.ok) {
       const { error } = await res.json().catch(() => ({}));
-      setError(error || "Reset failed.");
+      setError(error || t("auth.resetFailed"));
       return;
     }
     setDone(true);
@@ -45,23 +47,24 @@ export default function ResetPasswordForm() {
       <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-8">
         <div className="flex items-center gap-2 mb-6">
           <i className="fa-solid fa-seedling text-eco-green text-3xl" />
-          <span className="text-2xl font-bold text-eco-dark">Ecobazar</span>
+          <span className="text-2xl font-bold text-eco-dark">{t("auth.brand")}</span>
         </div>
 
-        <h1 className="text-xl sm:text-2xl font-bold mb-1">Set a new password</h1>
+        <h1 className="text-xl sm:text-2xl font-bold mb-1">{t("auth.resetHeading")}</h1>
 
         {!token ? (
           <div className="mt-4 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
-            This reset link is missing its token. Request a new one from the{" "}
-            <Link href="/forgot-password" className="font-medium underline">forgot password</Link> page.
+            {t("auth.resetMissingToken").split("{link}")[0]}
+            <Link href="/forgot-password" className="font-medium underline">{t("auth.resetForgotLink")}</Link>
+            {t("auth.resetMissingToken").split("{link}")[1]}
           </div>
         ) : done ? (
           <div className="mt-4 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-4 py-3">
-            Password updated. Redirecting you to log in…
+            {t("auth.resetDone")}
           </div>
         ) : (
           <>
-            <p className="text-sm text-gray-500 mb-5">Choose a strong password (min 8 characters).</p>
+            <p className="text-sm text-gray-500 mb-5">{t("auth.resetSub")}</p>
 
             {error && (
               <div className="mb-4 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3" role="alert">
@@ -71,7 +74,7 @@ export default function ResetPasswordForm() {
 
             <form onSubmit={onSubmit} className="space-y-3">
               <div>
-                <label className="text-xs text-gray-500" htmlFor="password">New password</label>
+                <label className="text-xs text-gray-500" htmlFor="password">{t("auth.newPassword")}</label>
                 <input
                   id="password" type="password" minLength={8} required autoComplete="new-password"
                   value={password} onChange={(e) => setPassword(e.target.value)}
@@ -79,7 +82,7 @@ export default function ResetPasswordForm() {
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500" htmlFor="confirm">Confirm new password</label>
+                <label className="text-xs text-gray-500" htmlFor="confirm">{t("auth.confirmPassword")}</label>
                 <input
                   id="confirm" type="password" minLength={8} required autoComplete="new-password"
                   value={confirm} onChange={(e) => setConfirm(e.target.value)}
@@ -90,14 +93,14 @@ export default function ResetPasswordForm() {
                 type="submit" disabled={busy}
                 className="w-full py-3 rounded-md bg-eco-green text-white font-medium hover:bg-emerald-600 disabled:opacity-60 min-h-[44px]"
               >
-                {busy ? "Updating…" : "Update password"}
+                {busy ? t("auth.updating") : t("auth.updatePassword")}
               </button>
             </form>
           </>
         )}
 
         <div className="text-sm text-center mt-6 text-gray-500">
-          <Link href="/login" className="text-eco-green font-medium">Back to log in</Link>
+          <Link href="/login" className="text-eco-green font-medium">{t("auth.backToLogin")}</Link>
         </div>
       </div>
     </section>

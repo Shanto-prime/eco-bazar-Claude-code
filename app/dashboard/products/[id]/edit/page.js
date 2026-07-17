@@ -7,8 +7,10 @@ import { updateProductAction, deleteProductAction } from "../../_actions";
 import { prisma } from "../../../../../lib/prisma";
 import { requireRole, isAdmin } from "../../../../../lib/auth-helpers";
 import { toDollars } from "../../../../../lib/money";
+import { getT } from "../../../../../lib/i18n/server";
 
 export default async function EditProduct({ params }) {
+  const { t } = await getT();
   const user = await requireRole(["ADMIN", "MODERATOR"], "/dashboard/products");
   const { id } = await params;
 
@@ -23,11 +25,11 @@ export default async function EditProduct({ params }) {
     return (
       <div>
         <div className="text-sm mb-4">
-          <Link href="/dashboard/products" className="text-eco-green">← Back to products</Link>
+          <Link href="/dashboard/products" className="text-eco-green">{t("dashboard.backToProducts")}</Link>
         </div>
         <div className="rounded-md bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3">
-          You can&apos;t edit this product — it was added by <b>{product.createdBy?.name || product.createdBy?.email}</b>.
-          Ask an admin to make changes.
+          {t("dashboard.cantEditProduct")}<b>{product.createdBy?.name || product.createdBy?.email}</b>.
+          {" "}{t("dashboard.askAdmin")}
         </div>
       </div>
     );
@@ -41,9 +43,9 @@ export default async function EditProduct({ params }) {
       <div className="text-sm mb-4">
         <Link href="/dashboard/products" className="text-eco-green">← Back to products</Link>
       </div>
-      <h1 className="text-2xl sm:text-3xl font-bold mb-1">Edit product</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold mb-1">{t("dashboard.editProduct")}</h1>
       <div className="text-sm text-gray-500 mb-6">
-        Added by <b>{product.createdBy?.name || product.createdBy?.email}</b> on {new Date(product.createdAt).toLocaleString()}
+        {t("dashboard.addedBy")}<b>{product.createdBy?.name || product.createdBy?.email}</b>{t("dashboard.addedOn")}{new Date(product.createdAt).toLocaleString()}
       </div>
       <ProductForm
         product={{ ...product, price: toDollars(product.price), oldPrice: toDollars(product.oldPrice) }}

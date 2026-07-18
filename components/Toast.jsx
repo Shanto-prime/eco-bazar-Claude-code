@@ -4,16 +4,24 @@
 //
 // Reads the toast queue from CartContext (any consumer calls showToast()).
 // Each toast:
-//   • slides in from the right (butter-smooth), stacks newest-on-top;
-//   • runs a countdown bar along its BOTTOM that depletes left→right and
-//     sweeps colour green → yellow → red on the same clock (see globals.css
-//     .toast-timer / @keyframes toastTimer);
-//   • stays a minimum of 3s; HOVER pauses the bar (and the auto-dismiss),
-//     so the toast stays until the pointer leaves;
-//   • can be dismissed early with the × button.
+//   • fades in from the right (moving right→left into place) and, when its
+//     time is up, fades back out to the right (left→right);
+//   • stacks newest-on-top and collapses the gap as it leaves;
+//   • runs a countdown bar along its BOTTOM that depletes and sweeps colour
+//     green → yellow → red on the same clock;
+//   • HOVER freezes the bar and the auto-dismiss; leaving the toast resumes
+//     from exactly where it stopped;
+//   • has no close button — it goes away only when the countdown finishes.
+//
+// The countdown is driven in JS (rAF + a remaining-ms ref) rather than by CSS
+// animationend. animationend is unreliable here: pausing/resuming or a
+// re-render mid-flight can drop the event and the toast then never leaves.
 
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useCart } from "../lib/CartContext";
+
+// Must match the .toast-leave animation duration in globals.css.
+const EXIT_MS = 240;
 
 const KIND = {
   success: { icon: "fa-circle-check", accent: "text-eco-green",   ring: "bg-eco-green/15" },
@@ -22,35 +30,69 @@ const KIND = {
   error:   { icon: "fa-circle-xmark", accent: "text-red-500",     ring: "bg-red-500/15" },
 };
 
+const GREEN  = [34, 197, 94];
+const YELLOW = [250, 204, 21];
+const RED    = [239, 68, 68];
+
+const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+
+// p is the fraction of time REMAINING: 1 → green, 0.5 → yellow, 0 → red.
+function timerColor(p) {
+  const [r, g, b] = p > 0.5 ? mix(YELLOW, GREEN, (p - 0.5) * 2) : mix(RED, YELLOW, p * 2);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
 function ToastItem({ toast, onDismiss }) {
+  const [progress, setProgress] = useState(1);
   const [paused, setPaused] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const remainingRef = useRef(toast.duration);
   const k = KIND[toast.kind] || KIND.info;
 
-  const beginLeave = useCallback(() => setLeaving(true), []);
+  // Countdown. Restarts on pause/resume, carrying the remaining time in a ref
+  // so hovering costs the toast nothing.
+  useEffect(() => {
+    if (paused || leaving) return;
+    let raf = 0;
+    let last = performance.now();
+    const tick = (now) => {
+      remainingRef.current -= now - last;
+      last = now;
+      if (remainingRef.current <= 0) {
+        remainingRef.current = 0;
+        setProgress(0);
+        setLeaving(true);
+        return;
+      }
+      setProgress(remainingRef.current / toast.duration);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [paused, leaving, toast.duration]);
 
-  // The bottom bar's animation finishing = time's up → play the exit animation.
-  const onTimerEnd = useCallback(() => setLeaving(true), []);
+  // Time's up → let the exit animation play, then drop it from the queue.
+  useEffect(() => {
+    if (!leaving) return;
+    const id = setTimeout(() => onDismiss(toast.id), EXIT_MS);
+    return () => clearTimeout(id);
+  }, [leaving, onDismiss, toast.id]);
 
-  // When the container's OWN animation ends and we're leaving, remove the toast.
-  const onContainerAnimEnd = useCallback(
-    (e) => {
-      if (e.target === e.currentTarget && leaving) onDismiss(toast.id);
-    },
-    [leaving, onDismiss, toast.id]
-  );
+  const pause = useCallback(() => setPaused(true), []);
+  const resume = useCallback(() => setPaused(false), []);
 
   return (
     <div
       role={toast.kind === "error" ? "alert" : "status"}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onAnimationEnd={onContainerAnimEnd}
+      onMouseEnter={pause}
+      onMouseLeave={resume}
+      onFocus={pause}
+      onBlur={resume}
       className={`pointer-events-auto relative w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg bg-white dark:bg-[#151b18] shadow-[0_8px_30px_rgba(0,0,0,0.16)] ring-1 ring-black/5 dark:ring-white/10 ${
         leaving ? "toast-leave" : "toast-enter"
       }`}
     >
-      <div className="flex items-start gap-3 p-3.5 pr-9">
+      <div className="flex items-start gap-3 p-3.5 pb-4">
         <span
           className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full ${k.ring} ${k.accent}`}
         >
@@ -61,24 +103,14 @@ function ToastItem({ toast, onDismiss }) {
         </p>
       </div>
 
-      <button
-        type="button"
-        onClick={beginLeave}
-        aria-label="Dismiss notification"
-        className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-gray-200"
-      >
-        <i className="fa-solid fa-xmark text-xs" />
-      </button>
-
-      {/* Countdown track (bottom). The inner bar is the moving timer. */}
+      {/* Countdown track (bottom). The inner bar is the timer itself. */}
       <div className="absolute inset-x-0 bottom-0 h-1 bg-black/5 dark:bg-white/10">
         <div
-          className="toast-timer h-full w-full"
+          className="h-full w-full origin-right"
           style={{
-            animationDuration: `${toast.duration}ms`,
-            animationPlayState: paused ? "paused" : "running",
+            transform: `scaleX(${progress})`,
+            backgroundColor: timerColor(progress),
           }}
-          onAnimationEnd={onTimerEnd}
         />
       </div>
     </div>

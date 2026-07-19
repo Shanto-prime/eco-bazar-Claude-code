@@ -71,7 +71,10 @@ export default function CheckoutPage() {
       clearCart();
       setPlaced({ id: res.number, total: res.total, items: itemCount, payment: form.payment });
       showToast(t("checkout.placedMsg", { id: res.number }));
-      setTimeout(() => router.push("/dashboard/orders"), 5000);
+      // Only signed-in buyers can reach /dashboard (middleware gates it), so
+      // guests stay on the thank-you screen instead of being bounced to
+      // /unauthorized moments after a successful order.
+      if (res.signedIn) setTimeout(() => router.push("/dashboard/orders"), 5000);
     } catch (err) {
       // Zod/stock/availability failures surface here with a readable message.
       showToast(err?.message || t("checkout.orderError"), "error");

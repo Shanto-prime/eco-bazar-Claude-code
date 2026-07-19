@@ -50,7 +50,7 @@
     "signup": "Sign Up",
     "dashboard": "Dashboard",
     "logout": "Log Out",
-    "greeting": "Hi,"
+    "hi": "Hi, {name}"
   },
   "nav": {
     "home": "Home",
@@ -498,6 +498,13 @@
     "roleAdmin": "ADMIN",
     "roleUpdateFailed": "Update failed.",
     "cantChangeOwnRole": "You can't change your own role",
+    "statusPending": "Pending",
+    "statusPaid": "Paid",
+    "statusShipped": "Shipped",
+    "statusDelivered": "Delivered",
+    "statusCancelled": "Cancelled",
+    "statusUpdateFailed": "Status update failed.",
+    "statusLocked": "This order is final and can't be changed",
     "reviewsSubtitle": "Moderate customer reviews. {count} most recent shown.",
     "noReviews": "No reviews yet.",
     "reviewBy": "by ",

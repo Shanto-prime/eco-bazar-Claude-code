@@ -75,6 +75,7 @@ model User {
   orders        Order[]
   reviews       Review[]
   auditEvents   AuditLog[]  @relation("AuditActor")
+  statusEvents  OrderStatusEvent[]
 }
 
 // Auth.js OAuth links — one row per (user, provider).
@@ -246,9 +247,31 @@ model Order {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   items         OrderItem[]
+  history       OrderStatusEvent[]
 
   @@index([userId])
   @@index([status])
+}
+
+// Append-only timeline of every status transition on an order. `Order.updatedAt`
+// can't serve this purpose — it moves on ANY write to the row — so each change
+// gets its own row with the moment it happened and who made it. The order's
+// creation is itself recorded as the first event (PENDING), so the timeline is
+// complete without special-casing the first entry.
+model OrderStatusEvent {
+  id        String      @id @default(cuid()) @map("_id")
+  orderId   String
+  status    OrderStatus
+  // Null for the initial PENDING event (the customer/guest placing the order)
+  // and for any future automated transition.
+  actorId   String?
+  note      String?
+  createdAt DateTime    @default(now())
+
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actor     User?       @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
 }
 
 // Snapshot of price+name at purchase time so historical orders don't change

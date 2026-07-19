@@ -11,6 +11,7 @@ import { auth, signOut } from "../auth";
 import { getT } from "../lib/i18n/server";
 import LanguageToggle from "./LanguageToggle";
 import ThemeToggle from "./ThemeToggle";
+import UserAvatar from "./UserAvatar";
 
 export default async function TopBar() {
   const session = await auth();
@@ -35,9 +36,10 @@ export default async function TopBar() {
 
           {user ? (
             <>
-              <span className="hidden sm:inline text-gray-300">
-                {t("topbar.greeting")} <span className="text-white font-medium">{user.name || user.email}</span>
-              </span>
+              <UserAvatar
+                user={user}
+                label={t("topbar.hi", { name: user.name || user.email })}
+              />
               <Link href="/dashboard" className="hover:text-white">{t("topbar.dashboard")}</Link>
               <span>/</span>
               <form

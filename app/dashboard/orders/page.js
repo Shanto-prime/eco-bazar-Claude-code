@@ -9,7 +9,7 @@
 // the customer-facing timeline reads — Order.updatedAt can't be used for that
 // because it moves on any write to the row.
 //
-// TODO: filter/search by status, date range, customer.
+// TODO: date-range + customer search.
 // TODO: order detail page with line items.
 
 import Link from "next/link";
@@ -17,32 +17,52 @@ import { prisma } from "../../../lib/prisma";
 import { requireAuth } from "../../../lib/auth-helpers";
 import { formatMoney } from "../../../lib/money";
 import { getT } from "../../../lib/i18n/server";
+import { ORDER_STATUSES, STATUS_PILL, statusKey } from "../../../lib/order-status";
 import LocalTime from "../../../components/LocalTime";
 import StatusSelect from "./_components/StatusSelect";
 
-export default async function DashboardOrders() {
+export default async function DashboardOrders({ searchParams }) {
   const { t } = await getT();
   const user = await requireAuth("/dashboard/orders");
 
-  const where = user.role === "CUSTOMER" ? { userId: user.id } : {};
-  const orders = await prisma.order.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    select: {
-      id: true, number: true, total: true, status: true, createdAt: true,
-      email: true, firstName: true, lastName: true,
-      _count: { select: { items: true } },
-      history: {
-        orderBy: { createdAt: "asc" },
-        select: { id: true, status: true, createdAt: true, actor: { select: { name: true, email: true } } },
+  // searchParams is a Promise in Next 15+. Anything not in the enum (including
+  // the default "all") falls through to no status filter rather than erroring.
+  const params = await searchParams;
+  const raw    = typeof params?.status === "string" ? params.status.toUpperCase() : "";
+  const active = ORDER_STATUSES.includes(raw) ? raw : null;
+
+  // CUSTOMER sees only their own orders; MODERATOR/ADMIN see everything. The
+  // status tab narrows within whatever that role is already allowed to see, so
+  // it can never widen the scope.
+  const scope = user.role === "CUSTOMER" ? { userId: user.id } : {};
+  const where = active ? { ...scope, status: active } : scope;
+
+  const [orders, grouped] = await Promise.all([
+    prisma.order.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: {
+        id: true, number: true, total: true, status: true, createdAt: true,
+        email: true, firstName: true, lastName: true,
+        _count: { select: { items: true } },
+        history: {
+          orderBy: { createdAt: "asc" },
+          select: { id: true, status: true, createdAt: true, actor: { select: { name: true, email: true } } },
+        },
       },
-    },
-  });
+    }),
+    // Counts come from `scope`, not `where` — the tab badges must keep showing
+    // every bucket's size while one bucket is selected.
+    prisma.order.groupBy({ by: ["status"], where: scope, _count: true }),
+  ]);
+
+  const countOf = (s) => grouped.find((g) => g.status === s)?._count ?? 0;
+  const totalCount = grouped.reduce((sum, g) => sum + g._count, 0);
 
   return (
     <div>
-      <header className="mb-6">
+      <header className="mb-4">
         <h1 className="text-2xl sm:text-3xl font-bold">
           {user.role === "CUSTOMER" ? t("dashboard.myOrders") : t("dashboard.orders")}
         </h1>
@@ -53,11 +73,28 @@ export default async function DashboardOrders() {
         </p>
       </header>
 
+      {/* Status tabs. Plain links, so each bucket is a shareable/bookmarkable
+          URL and the filtering stays server-side. */}
+      <nav className="flex flex-wrap gap-2 mb-5 overflow-x-auto">
+        <StatusTab href="/dashboard/orders" label={t("dashboard.statusAll")} count={totalCount} active={!active} />
+        {ORDER_STATUSES.map((s) => (
+          <StatusTab
+            key={s}
+            href={`/dashboard/orders?status=${s.toLowerCase()}`}
+            label={t(statusKey(s))}
+            count={countOf(s)}
+            active={active === s}
+          />
+        ))}
+      </nav>
+
       {orders.length === 0 ? (
         <div className="border border-dashed border-gray-300 rounded-lg p-10 text-center text-gray-500 bg-white">
-          {user.role === "CUSTOMER"
-            ? <>{t("dashboard.noOrders")} <Link href="/shop" className="text-eco-green underline">{t("dashboard.browseShop")}</Link>.</>
-            : t("dashboard.noOrdersSystem")}
+          {active
+            ? t("dashboard.noOrdersInStatus", { status: t(statusKey(active)) })
+            : user.role === "CUSTOMER"
+              ? <>{t("dashboard.noOrders")} <Link href="/shop" className="text-eco-green underline">{t("dashboard.browseShop")}</Link>.</>
+              : t("dashboard.noOrdersSystem")}
         </div>
       ) : (
         <>
@@ -157,12 +194,30 @@ function Timeline({ history, t }) {
 }
 
 function StatusPill({ status }) {
-  const map = {
-    PENDING:   "bg-amber-100  text-amber-700",
-    PAID:      "bg-blue-100   text-blue-700",
-    SHIPPED:   "bg-purple-100 text-purple-700",
-    DELIVERED: "bg-emerald-100 text-emerald-700",
-    CANCELLED: "bg-gray-200   text-gray-700",
-  };
-  return <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${map[status] || "bg-gray-100 text-gray-700"}`}>{status}</span>;
+  return (
+    <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${STATUS_PILL[status] || "bg-gray-100 text-gray-700"}`}>
+      {status}
+    </span>
+  );
+}
+
+// One filter tab. The count badge is rendered even at zero so the set of
+// buckets stays stable as orders move between statuses — tabs appearing and
+// vanishing under the cursor is worse than a few greyed-out zeros.
+function StatusTab({ href, label, count, active }) {
+  return (
+    <Link
+      href={href}
+      className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm whitespace-nowrap border transition min-h-[40px] ${
+        active
+          ? "bg-eco-green text-white border-eco-green"
+          : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+      }`}
+    >
+      {label}
+      <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${active ? "bg-white/20" : "bg-gray-100 text-gray-500"}`}>
+        {count}
+      </span>
+    </Link>
+  );
 }

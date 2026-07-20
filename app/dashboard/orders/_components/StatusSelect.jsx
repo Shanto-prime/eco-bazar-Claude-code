@@ -9,17 +9,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "../../../../lib/i18n/LanguageProvider";
+import { ORDER_STATUSES, STATUS_TEXT, isTerminal, statusKey } from "../../../../lib/order-status";
 import { updateOrderStatusAction } from "../_actions";
-
-const STATUSES = ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"];
-
-const COLOR = {
-  PENDING:   "text-amber-700",
-  PAID:      "text-blue-700",
-  SHIPPED:   "text-purple-700",
-  DELIVERED: "text-emerald-700",
-  CANCELLED: "text-gray-700",
-};
 
 export default function StatusSelect({ orderId, status }) {
   const t = useT();
@@ -30,7 +21,7 @@ export default function StatusSelect({ orderId, status }) {
 
   // Terminal states are rejected server-side too; disabling here just avoids a
   // pointless round-trip and makes the rule visible in the UI.
-  const locked = value === "CANCELLED" || value === "DELIVERED";
+  const locked = isTerminal(value);
 
   const onChange = (e) => {
     const next = e.target.value;
@@ -55,10 +46,10 @@ export default function StatusSelect({ orderId, status }) {
         onChange={onChange}
         disabled={locked || pending}
         title={locked ? t("dashboard.statusLocked") : undefined}
-        className={`text-xs font-medium rounded-md border border-gray-200 bg-white px-2 py-1 disabled:opacity-60 disabled:cursor-not-allowed ${COLOR[value] || ""}`}
+        className={`text-xs font-medium rounded-md border border-gray-200 bg-white px-2 py-1 disabled:opacity-60 disabled:cursor-not-allowed ${STATUS_TEXT[value] || ""}`}
       >
-        {STATUSES.map((s) => (
-          <option key={s} value={s}>{t(`dashboard.status${s[0]}${s.slice(1).toLowerCase()}`)}</option>
+        {ORDER_STATUSES.map((s) => (
+          <option key={s} value={s}>{t(statusKey(s))}</option>
         ))}
       </select>
       {error && <span className="text-xs text-red-600 max-w-[10rem]">{error}</span>}

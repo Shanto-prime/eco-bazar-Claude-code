@@ -14,14 +14,48 @@ import { useT } from "../../../lib/i18n/LanguageProvider";
 
 const RANK = { CUSTOMER: 0, MODERATOR: 1, ADMIN: 2 };
 
-// Each nav item declares the minimum role required to see it.
-const NAV = [
-  { href: "/dashboard",            labelKey: "dashboard.overview",  icon: "fa-gauge-high",     min: "CUSTOMER" },
-  { href: "/dashboard/products",   labelKey: "dashboard.products",  icon: "fa-boxes-stacked",  min: "MODERATOR" },
-  { href: "/dashboard/orders",     labelKey: "dashboard.orders",    icon: "fa-receipt",        min: "CUSTOMER" },
-  { href: "/dashboard/reviews",    labelKey: "dashboard.reviews",   icon: "fa-comment-dots",   min: "MODERATOR" },
-  { href: "/dashboard/users",      labelKey: "dashboard.users",     icon: "fa-users",          min: "ADMIN" },
-  { href: "/dashboard/audit-log",  labelKey: "dashboard.auditLog",  icon: "fa-clipboard-list", min: "ADMIN" },
+// Nav is grouped into sections so sales work (orders) and catalog work
+// (products, reviews) don't sit interleaved in one flat list. Each item still
+// declares the minimum role required to see it; a section whose items are all
+// filtered out renders nothing at all, heading included.
+//
+// `titleKey: null` = no heading, used for the single top-level Overview link.
+// Settings stays in the last section so it lands directly above the
+// signed-in-as footer block.
+const NAV_SECTIONS = [
+  {
+    titleKey: null,
+    items: [
+      { href: "/dashboard", labelKey: "dashboard.overview", icon: "fa-gauge-high", min: "CUSTOMER" },
+    ],
+  },
+  {
+    titleKey: "dashboard.navOrders",
+    items: [
+      { href: "/dashboard/orders", labelKey: "dashboard.orders", icon: "fa-receipt", min: "CUSTOMER" },
+    ],
+  },
+  {
+    titleKey: "dashboard.navCatalog",
+    items: [
+      { href: "/dashboard/products", labelKey: "dashboard.products", icon: "fa-boxes-stacked", min: "MODERATOR" },
+      { href: "/dashboard/reviews",  labelKey: "dashboard.reviews",  icon: "fa-comment-dots",  min: "MODERATOR" },
+    ],
+  },
+  {
+    titleKey: "dashboard.navAdmin",
+    items: [
+      { href: "/dashboard/users",            labelKey: "dashboard.users",    icon: "fa-users",          min: "ADMIN" },
+      { href: "/dashboard/profile-requests", labelKey: "requests.navLabel",  icon: "fa-user-pen",       min: "MODERATOR" },
+      { href: "/dashboard/audit-log",        labelKey: "dashboard.auditLog", icon: "fa-clipboard-list", min: "ADMIN" },
+    ],
+  },
+  {
+    titleKey: "dashboard.navAccount",
+    items: [
+      { href: "/dashboard/settings", labelKey: "dashboard.settings", icon: "fa-sliders", min: "CUSTOMER" },
+    ],
+  },
 ];
 
 export default function DashboardShell({ user, children }) {
@@ -41,7 +75,12 @@ export default function DashboardShell({ user, children }) {
   }, [drawer]);
 
   const isActive = (h) => pathname === h || (h !== "/dashboard" && pathname.startsWith(h));
-  const visible  = NAV.filter((n) => RANK[user.role] >= RANK[n.min]);
+
+  // Filter items by role first, then drop any section left empty — otherwise a
+  // CUSTOMER would see a bare "Catalog" heading with nothing under it.
+  const sections = NAV_SECTIONS
+    .map((s) => ({ ...s, items: s.items.filter((n) => RANK[user.role] >= RANK[n.min]) }))
+    .filter((s) => s.items.length > 0);
 
   const Sidebar = (
     <>
@@ -51,17 +90,26 @@ export default function DashboardShell({ user, children }) {
         <span className="ml-auto text-[10px] uppercase tracking-wider bg-eco-green text-white px-2 py-0.5 rounded">{user.role}</span>
       </Link>
       <nav className="flex-1 py-2 overflow-y-auto">
-        {visible.map((n) => (
-          <Link
-            key={n.href}
-            href={n.href}
-            className={`flex items-center gap-3 px-5 py-3 text-sm transition min-h-[44px] ${
-              isActive(n.href) ? "bg-eco-green text-white" : "text-gray-300 hover:bg-white/5 hover:text-white"
-            }`}
-          >
-            <i className={`fa-solid ${n.icon} w-4`} />
-            {t(n.labelKey)}
-          </Link>
+        {sections.map((section, i) => (
+          <div key={section.titleKey || "root"} className={i > 0 ? "mt-1 pt-2 border-t border-white/10" : ""}>
+            {section.titleKey && (
+              <div className="px-5 pt-2 pb-1 text-[10px] uppercase tracking-wider text-gray-500">
+                {t(section.titleKey)}
+              </div>
+            )}
+            {section.items.map((n) => (
+              <Link
+                key={n.href}
+                href={n.href}
+                className={`flex items-center gap-3 px-5 py-3 text-sm transition min-h-[44px] ${
+                  isActive(n.href) ? "bg-eco-green text-white" : "text-gray-300 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <i className={`fa-solid ${n.icon} w-4`} />
+                {t(n.labelKey)}
+              </Link>
+            ))}
+          </div>
         ))}
       </nav>
       <div className="border-t border-white/10 p-4 text-gray-300">

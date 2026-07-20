@@ -76,6 +76,79 @@ model User {
   reviews       Review[]
   auditEvents   AuditLog[]  @relation("AuditActor")
   statusEvents  OrderStatusEvent[]
+  addresses     Address[]
+  changeRequests ProfileChangeRequest[] @relation("ChangeRequester")
+  changeReviews  ProfileChangeRequest[] @relation("ChangeReviewer")
+}
+
+// ---------------------------------------------------------------------------
+// Address book — saved shipping/billing addresses, managed from
+// /dashboard/settings. Checkout prefills from the default one but still writes
+// its own snapshot onto Order: an address edited (or deleted) later must never
+// retroactively change where a past order was shipped. Same snapshot rationale
+// as OrderItem.
+// ---------------------------------------------------------------------------
+model Address {
+  id        String   @id @default(cuid()) @map("_id")
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String?  // "Home", "Office" — user-facing nickname
+  firstName String
+  lastName  String
+  company   String?
+  street    String
+  city      String?
+  state     String?
+  zip       String?
+  country   String?
+  phone     String?
+  // Exactly one address per user should carry this. Not expressible as a DB
+  // constraint on Mongo, so _actions.js clears the flag on siblings inside a
+  // transaction whenever a new default is set.
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Moderated profile changes
+// ---------------------------------------------------------------------------
+// Name / username / avatar edits apply instantly. Email and phone are the
+// account-recovery channels, so changing either would let a hijacked session
+// lock the real owner out — those go through a review queue instead
+// (/dashboard/profile-requests, ADMIN + MODERATOR).
+enum ProfileChangeField {
+  EMAIL
+  PHONE
+}
+
+enum ProfileChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED   // withdrawn by the requester before review
+}
+
+model ProfileChangeRequest {
+  id           String              @id @default(cuid()) @map("_id")
+  userId       String
+  user         User                @relation("ChangeRequester", fields: [userId], references: [id], onDelete: Cascade)
+  field        ProfileChangeField
+  currentValue String?             // snapshot at request time, for the reviewer's diff
+  newValue     String
+  status       ProfileChangeStatus @default(PENDING)
+  reviewerId   String?
+  reviewer     User?               @relation("ChangeReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewNote   String?
+  createdAt    DateTime            @default(now())
+  reviewedAt   DateTime?
+
+  // At most one PENDING row per (user, field) — enforced in _actions.js, since
+  // a partial/filtered unique index isn't expressible here.
+  @@index([userId])
+  @@index([status])
 }
 
 // Auth.js OAuth links — one row per (user, provider).

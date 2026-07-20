@@ -2,9 +2,10 @@
 // On small screens, hide the location & lang/currency selectors to save space.
 //
 // Server component: reads the NextAuth session so the right-hand links reflect
-// auth state — Log In / Sign Up when signed out; a greeting + Dashboard +
-// Log Out when signed in. (This opts the layout into dynamic rendering, which
-// is expected for a session-aware navbar.)
+// auth state — Log In / Sign Up when signed out; the user avatar (which links
+// to /dashboard and carries the greeting as a tooltip) + Log Out when signed
+// in. (This opts the layout into dynamic rendering, which is expected for a
+// session-aware navbar.)
 
 import Link from "next/link";
 import { auth, signOut } from "../auth";
@@ -36,12 +37,12 @@ export default async function TopBar() {
 
           {user ? (
             <>
+              {/* The avatar itself links to /dashboard — no separate button. */}
               <UserAvatar
                 user={user}
+                href="/dashboard"
                 label={t("topbar.hi", { name: user.name || user.email })}
               />
-              <Link href="/dashboard" className="hover:text-white">{t("topbar.dashboard")}</Link>
-              <span>/</span>
               <form
                 action={async () => {
                   "use server";

@@ -21,7 +21,11 @@ const NAV = [
   { href: "/dashboard/orders",     labelKey: "dashboard.orders",    icon: "fa-receipt",        min: "CUSTOMER" },
   { href: "/dashboard/reviews",    labelKey: "dashboard.reviews",   icon: "fa-comment-dots",   min: "MODERATOR" },
   { href: "/dashboard/users",      labelKey: "dashboard.users",     icon: "fa-users",          min: "ADMIN" },
+  { href: "/dashboard/profile-requests", labelKey: "requests.navLabel", icon: "fa-user-pen", min: "MODERATOR" },
   { href: "/dashboard/audit-log",  labelKey: "dashboard.auditLog",  icon: "fa-clipboard-list", min: "ADMIN" },
+  // Last entry, so it renders directly above the signed-in-as footer block.
+  // min CUSTOMER — appearance settings are personal, every role gets them.
+  { href: "/dashboard/settings",   labelKey: "dashboard.settings",   icon: "fa-sliders",       min: "CUSTOMER" },
 ];
 
 export default function DashboardShell({ user, children }) {

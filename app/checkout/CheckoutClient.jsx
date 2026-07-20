@@ -1,7 +1,13 @@
 "use client";
 
-// app/checkout/page.js — Live order summary + form validation + Place Order.
-// Fully responsive: form is single column on mobile, two-column on sm+.
+// app/checkout/CheckoutClient.jsx — Live order summary + form validation +
+// Place Order. Fully responsive: form is single column on mobile, two-column
+// on sm+.
+//
+// `initialBilling` is prefilled by the server page from the signed-in user's
+// default saved address (see app/checkout/page.js). It is a convenience only —
+// the fields stay fully editable, and placeOrderAction still validates whatever
+// is actually submitted. Guests get an empty object.
 
 import Link from "next/link";
 import { useState } from "react";
@@ -10,13 +16,19 @@ import Breadcrumb from "../../components/Breadcrumb";
 import { useCart } from "../../lib/CartContext";
 import { placeOrderAction } from "../../lib/order-actions";
 import { useT } from "../../lib/i18n/LanguageProvider";
+import { COUNTRIES, STATES } from "../../lib/geo";
 
 const REQUIRED = ["firstName", "lastName", "street", "country", "state", "zip", "email", "phone"];
 
 // UI radio value → PaymentMethod enum expected by the server action.
 const PAYMENT_MAP = { cod: "COD", paypal: "PAYPAL", amazon: "AMAZON" };
 
-export default function CheckoutPage() {
+// Stored geo values → their localized display keys. The VALUE written to the
+// order stays the English identifier from lib/geo.js; only the label localizes.
+const COUNTRY_KEYS = { USA: "checkout.countryUsa", Canada: "checkout.countryCanada", UK: "checkout.countryUk" };
+const STATE_KEYS   = { Illinois: "checkout.stateIllinois", California: "checkout.stateCalifornia", "New York": "checkout.stateNewYork" };
+
+export default function CheckoutClient({ initialBilling = {} }) {
   const router = useRouter();
   const t = useT();
   const { items, subtotal, discount, total, coupon, clearCart, hydrated, showToast } = useCart();
@@ -25,6 +37,9 @@ export default function CheckoutPage() {
     firstName: "", lastName: "", company: "", street: "",
     country: "", state: "", zip: "", email: "", phone: "", notes: "",
     payment: "cod",
+    // Spread last so saved-address values win, but only the keys the server
+    // actually sent — a missing address leaves every field at "".
+    ...initialBilling,
   });
   const [errors, setErrors] = useState({});
   const [placed, setPlaced] = useState(null);
@@ -142,14 +157,19 @@ export default function CheckoutPage() {
               <Field label={`${t("checkout.street")} *`} wide err={errors.street}>
                 <input className={`eco-input ${errors.street ? "border-red-500" : ""}`} value={form.street} onChange={set("street")} />
               </Field>
+              {/* Options come from lib/geo.js — the same list the settings
+                  address book writes, so a saved address always prefills to a
+                  real <option> instead of silently falling back to "". */}
               <Field label={`${t("checkout.country")} *`} err={errors.country}>
                 <select className={`eco-input ${errors.country ? "border-red-500" : ""}`} value={form.country} onChange={set("country")}>
-                  <option value="">{t("checkout.select")}</option><option value="USA">{t("checkout.countryUsa")}</option><option value="Canada">{t("checkout.countryCanada")}</option><option value="UK">{t("checkout.countryUk")}</option>
+                  <option value="">{t("checkout.select")}</option>
+                  {COUNTRIES.map((c) => <option key={c} value={c}>{t(COUNTRY_KEYS[c]) || c}</option>)}
                 </select>
               </Field>
               <Field label={`${t("checkout.state")} *`} err={errors.state}>
                 <select className={`eco-input ${errors.state ? "border-red-500" : ""}`} value={form.state} onChange={set("state")}>
-                  <option value="">{t("checkout.select")}</option><option value="Illinois">{t("checkout.stateIllinois")}</option><option value="California">{t("checkout.stateCalifornia")}</option><option value="New York">{t("checkout.stateNewYork")}</option>
+                  <option value="">{t("checkout.select")}</option>
+                  {STATES.map((s) => <option key={s} value={s}>{t(STATE_KEYS[s]) || s}</option>)}
                 </select>
               </Field>
               <Field label={`${t("checkout.zip")} *`} err={errors.zip}>

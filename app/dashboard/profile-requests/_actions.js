@@ -14,8 +14,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
-import { issueToken, appBaseUrl } from "../../../lib/tokens";
-import { sendMail } from "../../../lib/mailer";
+import { applyContactChange, notifyContactChange } from "../../../lib/profile-changes";
 
 const ok   = (message) => ({ ok: true, message });
 const fail = (error)   => ({ ok: false, error });
@@ -43,17 +42,7 @@ export async function approveChangeAction(requestId, note) {
   const previousEmail = req.user.email;
 
   await prisma.$transaction(async (tx) => {
-    if (req.field === "EMAIL") {
-      await tx.user.update({
-        where: { id: req.userId },
-        data:  { email: req.newValue, emailVerified: null },
-      });
-    } else {
-      await tx.user.update({
-        where: { id: req.userId },
-        data:  { phone: req.newValue },
-      });
-    }
+    await applyContactChange(tx, req.field, req.userId, req.newValue);
 
     await tx.profileChangeRequest.update({
       where: { id: req.id },
@@ -76,31 +65,10 @@ export async function approveChangeAction(requestId, note) {
     });
   });
 
-  // Notification is best-effort — the change is already committed above and
-  // must not roll back because a mail transport hiccuped.
-  try {
-    if (req.field === "EMAIL") {
-      const token = await issueToken("verify", req.newValue);
-      await sendMail({
-        to:      req.newValue,
-        subject: "Confirm your new Ecobazar email",
-        text:    `Your email change was approved.\n\nConfirm this address to finish:\n${appBaseUrl()}/api/auth/verify?token=${token}\n\nThis link expires in 1 hour.`,
-      });
-      // Tell the OLD address too — if the change was not the owner's doing,
-      // this is the only channel that still reaches them.
-      await sendMail({
-        to:      previousEmail,
-        subject: "Your Ecobazar email address was changed",
-        text:    `The email on your Ecobazar account was changed to ${req.newValue}.\n\nIf this was not you, contact support immediately.`,
-      });
-    } else {
-      await sendMail({
-        to:      previousEmail,
-        subject: "Your Ecobazar phone number was updated",
-        text:    `The phone number on your Ecobazar account is now ${req.newValue}.\n\nIf this was not you, contact support immediately.`,
-      });
-    }
-  } catch { /* notification is non-fatal */ }
+  // Best-effort notification — same behaviour as a self-approved change, so it
+  // lives in the shared helper. The change is already committed; a mail hiccup
+  // must not roll it back.
+  await notifyContactChange({ field: req.field, newValue: req.newValue, previousEmail });
 
   revalidatePath("/dashboard/profile-requests");
   revalidatePath("/dashboard/settings");

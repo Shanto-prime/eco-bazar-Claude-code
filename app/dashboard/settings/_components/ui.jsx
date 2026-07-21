@@ -1,30 +1,44 @@
 "use client";
 
 // app/dashboard/settings/_components/ui.jsx
-// Shared chrome for the settings sections, so Profile / Contact / Password /
-// Addresses stay visually identical without copy-pasting card markup.
+// Shared chrome for the settings sections. Layout follows components/settings.html:
+// a Stripe-style row — section title/description on the left (sm+), controls on
+// the right — inside a soft rounded-2xl card.
 //
-// bg-white + border-gray-200 are deliberate: globals.css maps both to dark
-// surfaces under `.dark`, so these cards theme themselves. Hard-coding a
-// specific hex here would break dark mode.
+// Colours use the app's dark-mode-aware utilities (bg-white, border-gray-200,
+// text-gray-500 …) rather than the mockup's hard-coded hexes, so these cards
+// theme themselves under `.dark` (globals.css remaps those classes). eco-input
+// gets a rounded-xl bump to match the mockup's softer fields while keeping its
+// dark-mode background/text overrides.
 
-export function Card({ title, description, children }) {
+export function Card({ id, title, description, children }) {
   return (
-    <section className="bg-white border border-gray-200 rounded-lg p-5">
-      <h2 className="text-base font-semibold">{title}</h2>
-      {description && <p className="text-sm text-gray-500 mt-0.5">{description}</p>}
-      <div className="mt-4">{children}</div>
+    <section
+      id={id}
+      className="scroll-mt-24 rounded-2xl bg-white border border-gray-200 shadow-sm"
+    >
+      <div className="p-6 sm:p-7 grid sm:grid-cols-[220px_1fr] gap-6">
+        <div>
+          <h2 className="font-semibold">{title}</h2>
+          {description && (
+            <p className="mt-1 text-[13px] leading-relaxed text-gray-500">{description}</p>
+          )}
+        </div>
+        <div className="min-w-0">{children}</div>
+      </div>
     </section>
   );
 }
 
-export function Field({ label, hint, wide, children }) {
+export function Field({ label, hint, required, wide, children }) {
   return (
-    <div className={wide ? "sm:col-span-2" : ""}>
-      <label className="text-xs text-gray-500 block mb-1">{label}</label>
+    <label className={`block ${wide ? "sm:col-span-2" : ""}`}>
+      <span className="block text-[13px] font-medium mb-1.5">
+        {label} {required && <span className="text-eco-green">*</span>}
+      </span>
       {children}
-      {hint && <p className="text-[11px] text-gray-400 mt-1">{hint}</p>}
-    </div>
+      {hint && <span className="block mt-1.5 text-xs text-gray-400">{hint}</span>}
+    </label>
   );
 }
 
@@ -43,14 +57,30 @@ export function Notice({ result }) {
   );
 }
 
-export function SubmitButton({ pending, children, className = "" }) {
+// Primary (filled green) button — used for the main save in each section.
+export function SubmitButton({ pending, children, className = "", ...rest }) {
   return (
     <button
       type="submit"
       disabled={pending}
-      className={`px-5 py-2.5 rounded-full bg-eco-green text-white text-sm font-medium hover:bg-emerald-600 disabled:opacity-60 min-h-[44px] ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl bg-eco-green px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60 shadow-sm transition min-h-[44px] ${className}`}
+      {...rest}
     >
-      {pending ? <i className="fa-solid fa-spinner fa-spin mr-2" /> : null}
+      {pending ? <i className="fa-solid fa-spinner fa-spin" /> : null}
+      {children}
+    </button>
+  );
+}
+
+// Secondary (outlined) button — Edit / Cancel / Add, matching the mockup's
+// white ring-1 pills.
+export function GhostButton({ children, className = "", ...rest }) {
+  return (
+    <button
+      type="button"
+      className={`inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-gray-200 px-3.5 py-2 text-sm font-medium hover:bg-gray-50 min-h-[40px] ${className}`}
+      {...rest}
+    >
       {children}
     </button>
   );

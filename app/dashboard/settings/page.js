@@ -34,10 +34,12 @@ export default async function DashboardSettings() {
       where:   { userId: session.id },
       orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
     }),
+    // Enough history that the latest APPROVED row per field is present for the
+    // "last changed" note even behind a run of pending/rejected rows.
     prisma.profileChangeRequest.findMany({
       where:   { userId: session.id },
       orderBy: { createdAt: "desc" },
-      take:    10,
+      take:    25,
     }),
   ]);
 
@@ -50,14 +52,23 @@ export default async function DashboardSettings() {
   // would then deny.
   const selfApprove = canSelfApprove(user.role);
 
-  // Section shortcuts. Password is conditional (OAuth-only users have none).
-  const shortcuts = [
-    { href: "#profile",     label: t("settings.profile") },
-    { href: "#contact",     label: t("settings.contact") },
-    ...(user.passwordHash ? [{ href: "#password", label: t("settings.password") }] : []),
-    { href: "#addresses",   label: t("settings.addresses") },
-    { href: "#preferences", label: t("settings.preferences") },
-  ];
+  // "Last changed" note per field: the most recent APPROVED request for that
+  // field (requests are ordered newest-first, so the first match is the
+  // latest). `added` = the value was empty at request time, so it was set for
+  // the first time rather than changed. Covers both admin self-approve and
+  // admin-approved moderator/customer changes — both land as APPROVED rows.
+  const lastChangedFor = (field) => {
+    const r = requests.find((x) => x.field === field && x.status === "APPROVED");
+    if (!r) return null;
+    return { date: (r.reviewedAt || r.createdAt).toISOString(), added: !r.currentValue };
+  };
+  const lastChanged = { EMAIL: lastChangedFor("EMAIL"), PHONE: lastChangedFor("PHONE") };
+
+  // The recent-requests list drops APPROVED rows (the change now shows as the
+  // "last changed" note) and CANCELLED ones (the user withdrew them). Only
+  // PENDING (still actionable — can be cancelled) and REJECTED (carries a note
+  // the user needs to read) remain.
+  const visibleRequests = requests.filter((r) => r.status === "PENDING" || r.status === "REJECTED");
 
   return (
     <div className="max-w-4xl">
@@ -65,18 +76,6 @@ export default async function DashboardSettings() {
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{t("dashboard.settings")}</h1>
         <p className="mt-1.5 text-sm text-gray-500">{t("settings.subtitle")}</p>
       </header>
-
-      <nav className="flex flex-wrap gap-2 text-sm mb-8">
-        {shortcuts.map((s) => (
-          <a
-            key={s.href}
-            href={s.href}
-            className="rounded-full bg-white border border-gray-200 px-3.5 py-1.5 font-medium text-gray-600 hover:border-eco-green hover:text-eco-green"
-          >
-            {s.label}
-          </a>
-        ))}
-      </nav>
 
       <div className="space-y-6">
         <ProfileSettings
@@ -87,7 +86,8 @@ export default async function DashboardSettings() {
           phone={user.phone || ""}
           emailVerified={!!user.emailVerified}
           canSelfApprove={selfApprove}
-          requests={requests.map((r) => ({
+          lastChanged={lastChanged}
+          requests={visibleRequests.map((r) => ({
             id: r.id, field: r.field, newValue: r.newValue, currentValue: r.currentValue,
             status: r.status, reviewNote: r.reviewNote,
             createdAt: r.createdAt.toISOString(),

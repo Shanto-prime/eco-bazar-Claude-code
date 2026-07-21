@@ -551,6 +551,8 @@
     "email": "Email",
     "phone": "Phone",
     "phoneHint": "Used for delivery updates.",
+    "lastChangedOn": "Last changed {date}",
+    "addedOn": "Added {date}",
     "emailVerified": "Verified",
     "emailUnverified": "Not verified yet",
     "newEmailPlaceholder": "New email address",

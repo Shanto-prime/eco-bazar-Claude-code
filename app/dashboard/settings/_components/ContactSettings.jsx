@@ -25,8 +25,15 @@ const STATUS_STYLE = {
 };
 
 // One field row (email or phone): shows the value + Edit, or the edit form.
-function ContactRow({ field, label, value, badge, hint, type, placeholder, locked, canSelfApprove, onSubmit, pending, t }) {
+function ContactRow({ field, label, value, badge, hint, type, placeholder, locked, canSelfApprove, lastChanged, onSubmit, pending, t }) {
   const [editing, setEditing] = useState(false);
+
+  // "Added"/"Last changed <date>", from the latest approved change (if any).
+  const changedNote = lastChanged
+    ? t(lastChanged.added ? "settings.addedOn" : "settings.lastChangedOn", {
+        date: new Date(lastChanged.date).toLocaleDateString(),
+      })
+    : null;
 
   return (
     <div className="rounded-xl border border-gray-200 p-4">
@@ -37,12 +44,19 @@ function ContactRow({ field, label, value, badge, hint, type, placeholder, locke
 
       {!editing ? (
         <div className="mt-1 flex items-center justify-between gap-3">
-          <p className={`text-sm truncate ${value ? "text-gray-700" : "text-gray-400"}`}>
-            {value || t("settings.notSet")}
-          </p>
+          <div className="min-w-0">
+            <p className={`text-sm truncate ${value ? "text-gray-700" : "text-gray-400"}`}>
+              {value || t("settings.notSet")}
+            </p>
+            {changedNote && (
+              <p className="mt-0.5 text-xs text-gray-400">
+                <i className="fa-regular fa-clock mr-1" />{changedNote}
+              </p>
+            )}
+          </div>
           {/* Locked = a request is already pending; no edit until it clears. */}
           {locked ? (
-            <span className="text-xs text-amber-600 whitespace-nowrap">
+            <span className="text-xs text-amber-600 whitespace-nowrap shrink-0">
               <i className="fa-solid fa-clock mr-1" />{t("settings.awaitingReview")}
             </span>
           ) : (
@@ -110,7 +124,7 @@ function RequestRow({ req, onCancel, busy, t }) {
   );
 }
 
-export default function ContactSettings({ email, phone, emailVerified, requests, canSelfApprove }) {
+export default function ContactSettings({ email, phone, emailVerified, requests, canSelfApprove, lastChanged = {} }) {
   const t = useT();
   const [result, setResult] = useState(null);
   const [pending, start]    = useTransition();
@@ -153,6 +167,7 @@ export default function ContactSettings({ email, phone, emailVerified, requests,
           placeholder={t("settings.newEmailPlaceholder")}
           locked={pendingFor("EMAIL")}
           canSelfApprove={canSelfApprove}
+          lastChanged={lastChanged.EMAIL}
           onSubmit={submit}
           pending={pending}
           t={t}
@@ -166,6 +181,7 @@ export default function ContactSettings({ email, phone, emailVerified, requests,
           placeholder={t("settings.newPhonePlaceholder")}
           locked={pendingFor("PHONE")}
           canSelfApprove={canSelfApprove}
+          lastChanged={lastChanged.PHONE}
           onSubmit={submit}
           pending={pending}
           t={t}

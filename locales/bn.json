@@ -551,6 +551,8 @@
     "email": "ইমেইল",
     "phone": "ফোন",
     "phoneHint": "ডেলিভারি আপডেটের জন্য ব্যবহৃত হয়।",
+    "lastChangedOn": "সর্বশেষ পরিবর্তন {date}",
+    "addedOn": "{date} তারিখে যোগ করা হয়েছে",
     "emailVerified": "যাচাই করা হয়েছে",
     "emailUnverified": "এখনো যাচাই করা হয়নি",
     "newEmailPlaceholder": "নতুন ইমেইল ঠিকানা",

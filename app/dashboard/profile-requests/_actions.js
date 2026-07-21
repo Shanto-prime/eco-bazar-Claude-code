@@ -20,7 +20,7 @@ const ok   = (message) => ({ ok: true, message });
 const fail = (error)   => ({ ok: false, error });
 
 export async function approveChangeAction(requestId, note) {
-  const reviewer = await requireRole(["ADMIN", "MODERATOR"], "/dashboard/profile-requests");
+  const reviewer = await requireRole("ADMIN", "/dashboard/profile-requests");
 
   const req = await prisma.profileChangeRequest.findUnique({
     where:   { id: String(requestId) },
@@ -76,7 +76,7 @@ export async function approveChangeAction(requestId, note) {
 }
 
 export async function rejectChangeAction(requestId, note) {
-  const reviewer = await requireRole(["ADMIN", "MODERATOR"], "/dashboard/profile-requests");
+  const reviewer = await requireRole("ADMIN", "/dashboard/profile-requests");
 
   const req = await prisma.profileChangeRequest.findUnique({ where: { id: String(requestId) } });
   if (!req)                     return fail("Request not found.");

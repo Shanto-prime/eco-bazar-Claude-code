@@ -17,8 +17,7 @@ export default function PasswordSettings() {
 
   const onSubmit = (e) => {
     e.preventDefault();
-    const form = e.currentTarget;
-    const formData = new FormData(form);
+    const formData = new FormData(e.currentTarget);
     start(async () => {
       const res = await changePasswordAction(formData);
       setResult(res);
@@ -28,20 +27,20 @@ export default function PasswordSettings() {
   };
 
   return (
-    <Card title={t("settings.password")} description={t("settings.passwordHelp")}>
+    <Card id="password" title={t("settings.password")} description={t("settings.passwordHelp")}>
       <form ref={formRef} onSubmit={onSubmit}>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Field label={`${t("settings.currentPassword")} *`}>
-            <input name="currentPassword" type="password" autoComplete="current-password" className="eco-input" required />
+        <div className="grid sm:grid-cols-3 gap-4">
+          <Field label={t("settings.currentPassword")} required>
+            <input name="currentPassword" type="password" autoComplete="current-password" className="eco-input rounded-xl" required />
           </Field>
-          <Field label={`${t("settings.newPassword")} *`} hint={t("settings.passwordHint")}>
-            <input name="newPassword" type="password" autoComplete="new-password" className="eco-input" required minLength={8} />
+          <Field label={t("settings.newPassword")} required hint={t("settings.passwordHint")}>
+            <input name="newPassword" type="password" autoComplete="new-password" className="eco-input rounded-xl" required minLength={8} />
           </Field>
-          <Field label={`${t("settings.confirmPassword")} *`}>
-            <input name="confirmPassword" type="password" autoComplete="new-password" className="eco-input" required minLength={8} />
+          <Field label={t("settings.confirmPassword")} required>
+            <input name="confirmPassword" type="password" autoComplete="new-password" className="eco-input rounded-xl" required minLength={8} />
           </Field>
         </div>
-        <div className="mt-4">
+        <div className="mt-5 flex justify-end">
           <SubmitButton pending={pending}>{t("settings.changePassword")}</SubmitButton>
         </div>
         <Notice result={result} />

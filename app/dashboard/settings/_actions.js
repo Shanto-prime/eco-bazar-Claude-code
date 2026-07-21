@@ -21,6 +21,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../../../lib/prisma";
 import { requireAuth } from "../../../lib/auth-helpers";
 import { COUNTRIES, STATES } from "../../../lib/geo";
+import { canSelfApprove, applyContactChange, notifyContactChange } from "../../../lib/profile-changes";
 
 // Actions return {ok,message} / {error} rather than throwing, so the client
 // components can render an inline result instead of tripping an error boundary.
@@ -111,9 +112,11 @@ export async function requestContactChangeAction(formData) {
     return fail("Enter a valid phone number.");
   }
 
+  // Read role from the DB, not the session — a self-approve must not ride on a
+  // possibly-stale JWT role. This is the authoritative check.
   const me = await prisma.user.findUnique({
     where:  { id: session.id },
-    select: { email: true, phone: true },
+    select: { email: true, phone: true, role: true },
   });
   if (!me) return fail("Account not found.");
 
@@ -140,6 +143,54 @@ export async function requestContactChangeAction(formData) {
     return fail("You already have a pending request for this field. Cancel it first.");
   }
 
+  // ADMIN / MODERATOR change their own contact details with no review — they
+  // are exactly the people who would otherwise approve the request, so routing
+  // it through the queue would just be them approving themselves. The change is
+  // applied immediately and logged as self-approved (auditable, not silent).
+  if (canSelfApprove(me.role)) {
+    await prisma.$transaction(async (tx) => {
+      await applyContactChange(tx, data.field, session.id, value);
+      // Recorded as an already-APPROVED request so it still shows in the user's
+      // history and the reviewer is on record as themselves.
+      await tx.profileChangeRequest.create({
+        data: {
+          userId:       session.id,
+          field:        data.field,
+          currentValue: current ?? null,
+          newValue:     value,
+          status:       "APPROVED",
+          reviewerId:   session.id,
+          reviewedAt:   new Date(),
+          reviewNote:   "Self-approved (privileged role).",
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId:  session.id,
+          action:   "profile.change_self_approved",
+          entity:   "User",
+          entityId: session.id,
+          metadata: { field: data.field, from: current ?? null, to: value, role: me.role },
+        },
+      });
+    });
+
+    await notifyContactChange({
+      field:        data.field,
+      newValue:     value,
+      previousEmail: me.email,
+    });
+
+    revalidatePath("/dashboard/settings");
+    revalidatePath("/", "layout"); // email/name feed the top-bar session
+    return ok(
+      data.field === "EMAIL"
+        ? "Email updated. Check the new address for a verification link."
+        : "Phone number updated.",
+    );
+  }
+
+  // Everyone else: queue it for review.
   await prisma.profileChangeRequest.create({
     data: {
       userId:       session.id,

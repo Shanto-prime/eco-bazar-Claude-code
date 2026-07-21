@@ -293,6 +293,10 @@ body {
   background: #fff;
 }
 .eco-input:focus { outline: none; border-color: var(--eco-green); }
+/* Settings pages use the softer rounded-xl field from components/settings.html.
+   Two-class selector so it beats the base .eco-input radius regardless of CSS
+   order, while inheriting every other .eco-input rule (incl. dark mode). */
+.eco-input.rounded-xl { border-radius: 0.75rem; }
 
 /* ------------------------------------------------------------
    app/contact/page.js

@@ -546,6 +546,8 @@
 
     "contact": "Email & phone",
     "contactHelp": "These are your account-recovery channels, so a change has to be approved by an admin or moderator before it takes effect.",
+    "contactHelpSelf": "Your account-recovery channels. As an admin or moderator, changes you make here take effect immediately.",
+    "uploadPhoto": "Upload photo",
     "email": "Email",
     "phone": "Phone",
     "phoneHint": "Used for delivery updates.",
@@ -575,6 +577,7 @@
     "noAddresses": "No saved addresses yet.",
     "addAddress": "Add address",
     "saveAddress": "Save address",
+    "noAddressesHint": "Add one to speed up your checkout.",
     "addrLabel": "Label",
     "addrLabelHint": "e.g. Home, Office",
     "city": "City",
@@ -582,6 +585,9 @@
     "default": "Default",
     "confirmDeleteAddress": "Delete this address?",
 
+    "preferences": "Preferences",
+    "preferencesHelp": "Choose how Ecobazar looks and which language it speaks.",
+    "signedInAs": "Signed in as",
     "theme": "Theme",
     "themeHelp": "Choose how Ecobazar looks to you.",
     "light": "Light",

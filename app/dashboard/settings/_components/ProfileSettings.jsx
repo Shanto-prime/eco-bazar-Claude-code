@@ -1,7 +1,11 @@
 "use client";
 
-// Name / username / avatar — applied immediately, no review. Email and phone
-// deliberately live in ContactSettings instead; see prisma/schema.prisma.
+// Name / username / avatar — applied immediately for everyone, no review. Email
+// and phone deliberately live in ContactSettings instead; see
+// prisma/schema.prisma and lib/profile-changes.js.
+//
+// Styling follows components/settings.html: avatar + Upload photo / Remove
+// buttons, name, and an @-prefixed username field.
 
 import { useState, useRef, useTransition } from "react";
 import { useT } from "../../../../lib/i18n/LanguageProvider";
@@ -45,55 +49,69 @@ export default function ProfileSettings({ initial }) {
     start(async () => setResult(await updateProfileAction(formData)));
   };
 
+  const initials = (initial.name || initial.username || "?").trim().slice(0, 2).toUpperCase();
+
   return (
-    <Card title={t("settings.profile")} description={t("settings.profileHelp")}>
+    <Card id="profile" title={t("settings.profile")} description={t("settings.profileHelp")}>
       <form onSubmit={onSubmit}>
         <input type="hidden" name="image" value={image} />
 
-        <div className="flex items-center gap-4 mb-5">
-          <div className="w-16 h-16 rounded-full overflow-hidden bg-eco-green text-white grid place-items-center text-lg font-semibold ring-1 ring-gray-200 shrink-0">
+        <div className="flex items-center gap-4">
+          <span className="inline-flex items-center justify-center w-16 h-16 rounded-full overflow-hidden bg-eco-green/10 ring-1 ring-eco-green/20 text-eco-green text-xl font-semibold shrink-0">
             {image ? (
               // Plain <img>: uploaded avatars and OAuth provider URLs are not
               // both covered by next.config images.remotePatterns.
               // eslint-disable-next-line @next/next/no-img-element
               <img src={image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             ) : (
-              <i className="fa-solid fa-user" />
+              initials
             )}
-          </div>
+          </span>
           <div className="min-w-0">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={onPickFile}
-              className="block text-sm max-w-full file:mr-3 file:px-3 file:py-2 file:rounded-full file:border-0 file:bg-eco-green file:text-white file:text-sm"
-            />
-            <p className="text-[11px] text-gray-400 mt-1">
-              {uploading ? t("settings.uploading") : t("settings.avatarHint")}
-            </p>
-            {image && (
-              <button
-                type="button"
-                onClick={() => setImage("")}
-                className="text-[11px] text-red-500 hover:underline mt-1"
-              >
-                {t("settings.removePhoto")}
-              </button>
-            )}
+            <div className="flex flex-wrap gap-2">
+              <label className="inline-flex items-center gap-2 rounded-xl bg-white border border-gray-200 px-3.5 py-2 text-sm font-medium hover:bg-gray-50 cursor-pointer min-h-[40px]">
+                <i className="fa-solid fa-arrow-up-from-bracket text-eco-green text-xs" />
+                {uploading ? t("settings.uploading") : t("settings.uploadPhoto")}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={onPickFile}
+                  className="hidden"
+                />
+              </label>
+              {image && (
+                <button
+                  type="button"
+                  onClick={() => setImage("")}
+                  className="rounded-xl px-3.5 py-2 text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 min-h-[40px]"
+                >
+                  {t("settings.removePhoto")}
+                </button>
+              )}
+            </div>
+            <p className="mt-1.5 text-xs text-gray-400">{t("settings.avatarHint")}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label={`${t("settings.name")} *`}>
-            <input name="name" className="eco-input" defaultValue={initial.name} required maxLength={120} />
+        <div className="mt-6 grid sm:grid-cols-2 gap-4">
+          <Field label={t("settings.name")} required>
+            <input name="name" className="eco-input rounded-xl" defaultValue={initial.name} required maxLength={120} />
           </Field>
           <Field label={t("settings.username")} hint={t("settings.usernameHint")}>
-            <input name="username" className="eco-input" defaultValue={initial.username} maxLength={32} />
+            <div className="flex rounded-xl border border-gray-200 bg-white focus-within:border-eco-green overflow-hidden">
+              <span className="inline-flex items-center px-3 bg-gray-50 text-gray-400 text-sm border-r border-gray-200">@</span>
+              <input
+                name="username"
+                className="w-full px-3.5 py-2.5 text-sm bg-transparent focus:outline-none"
+                defaultValue={initial.username}
+                maxLength={32}
+              />
+            </div>
           </Field>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-5 flex justify-end">
           <SubmitButton pending={pending || uploading}>{t("settings.save")}</SubmitButton>
         </div>
         <Notice result={result} />

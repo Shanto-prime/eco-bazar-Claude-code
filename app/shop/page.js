@@ -5,13 +5,10 @@
 import { Suspense } from "react";
 import ShopClient from "./ShopClient";
 import { listProducts } from "../../lib/products-db";
-import { getLocale } from "../../lib/i18n/server";
 
 export default async function ShopPage() {
-  // Load the catalogue from the database so admin/moderator products appear,
-  // localized to the active language.
-  const locale = await getLocale();
-  const products = await listProducts({ take: 100, locale });
+  // Load the catalogue from the database so admin/moderator products appear.
+  const products = await listProducts({ take: 100 });
 
   return (
     <Suspense fallback={null}>

@@ -8,10 +8,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "../lib/CartContext";
 import { useT } from "../lib/i18n/LanguageProvider";
+import { useMoney } from "../lib/currency/CurrencyProvider";
 
 export default function Header() {
   const { itemCount, total, wishlist, hydrated } = useCart();
   const t = useT();
+  const money = useMoney();
   const router = useRouter();
   const [q, setQ] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -69,7 +71,7 @@ export default function Header() {
             </div>
             <div className="hidden sm:block text-xs leading-tight">
               <div className="text-gray-500">{t("header.shoppingCart")}</div>
-              <div className="font-semibold">${hydrated ? total.toFixed(2) : "0.00"}</div>
+              <div className="font-semibold">{money(hydrated ? total : 0)}</div>
             </div>
           </Link>
         </div>

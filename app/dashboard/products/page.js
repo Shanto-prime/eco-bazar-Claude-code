@@ -5,11 +5,13 @@ import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
 import { formatMoney } from "../../../lib/money";
+import { getActiveCurrency } from "../../../lib/store-config";
 import { getT } from "../../../lib/i18n/server";
 
 export default async function DashboardProducts({ searchParams }) {
   const { t } = await getT();
   const user = await requireRole(["ADMIN", "MODERATOR"], "/dashboard/products");
+  const cur = await getActiveCurrency();
   const sp = await searchParams;
   const q = (sp?.q || "").toString().trim();
   const lowStockOnly = sp?.lowStock === "1";
@@ -87,7 +89,7 @@ export default async function DashboardProducts({ searchParams }) {
                       <Link href={`/dashboard/products/${p.id}/edit`} className="font-medium hover:text-eco-green">{p.name}</Link>
                       <div className="text-xs text-gray-500">/{p.slug}</div>
                     </td>
-                    <td className="px-4 py-3">{formatMoney(p.price)}</td>
+                    <td className="px-4 py-3">{formatMoney(p.price, cur)}</td>
                     <td className="px-4 py-3">
                       <span className={p.stock < 5 ? "text-amber-600 font-semibold" : p.stock === 0 ? "text-red-500 font-semibold" : ""}>
                         {p.stock}
@@ -123,7 +125,7 @@ export default async function DashboardProducts({ searchParams }) {
                   <div className="font-medium truncate">{p.name}</div>
                   <div className="text-xs text-gray-500 truncate">/{p.slug}</div>
                   <div className="flex justify-between items-center mt-2 text-sm">
-                    <span className="font-semibold">{formatMoney(p.price)}</span>
+                    <span className="font-semibold">{formatMoney(p.price, cur)}</span>
                     <span className={`text-xs ${p.stock < 5 ? "text-amber-600 font-semibold" : "text-gray-500"}`}>
                       {t("dashboard.stockLabel")}{p.stock}
                     </span>

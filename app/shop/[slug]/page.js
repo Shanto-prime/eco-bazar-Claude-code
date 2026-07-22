@@ -1,6 +1,5 @@
 // app/shop/[slug]/page.js — Server component for the product detail route.
-// - Loads the product from the DATABASE (so admin/moderator products work) and
-//   localizes it to the active language.
+// - Loads the product from the DATABASE (so admin/moderator products work).
 // - If the slug isn't in the DB → render a friendly "soft 404" with nearest
 //   matches from the static starter catalogue as suggestions.
 
@@ -24,8 +23,8 @@ export async function generateMetadata({ params }) {
 
 export default async function ProductPage({ params }) {
   const { slug } = await params;
-  const { locale, t } = await getT();
-  const product = await getProductBySlug(slug, locale);
+  const { t } = await getT();
+  const product = await getProductBySlug(slug);
 
   // --- Not found: soft-404 with suggestions from the starter catalogue -------
   if (!product) {
@@ -43,7 +42,7 @@ export default async function ProductPage({ params }) {
   }
 
   // --- Found: full detail page + related from the DB ------------------------
-  const all = await listProducts({ take: 5, locale });
+  const all = await listProducts({ take: 5 });
   const related = all.filter((p) => p.slug !== product.slug).slice(0, 4);
 
   return (

@@ -27,11 +27,10 @@ function SectionHead({ title, href, center, viewAllText = "View All" }) {
 }
 
 export default async function Home() {
-  const { locale, t } = await getT();
+  const { t } = await getT();
   const viewAll = t("common.viewAll");
-  // Products come from the database (so admin/moderator additions show up),
-  // localized to the active language.
-  const products = await listProducts({ take: 30, locale });
+  // Products come from the database (so admin/moderator additions show up).
+  const products = await listProducts({ take: 30 });
 
   return (
     <>

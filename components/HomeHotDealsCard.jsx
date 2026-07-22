@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useCart } from "../lib/CartContext";
 import { findProductBySlug } from "../lib/data";
 import { useT } from "../lib/i18n/LanguageProvider";
+import { useMoney } from "../lib/currency/CurrencyProvider";
 
 // Fixed "offer ends" deadline: July 24th, 4:00 PM (local time).
 // Month is 0-indexed, so 6 = July. Adjust the year here as needed.
@@ -25,6 +26,7 @@ function diff(target) {
 export default function HomeHotDealsCard() {
   const { addItem } = useCart();
   const t = useT();
+  const money = useMoney();
   const product = findProductBySlug("chinese-cabbage");
 
   // Lock the target after first render so it doesn't drift between renders.
@@ -53,7 +55,7 @@ export default function HomeHotDealsCard() {
         <i className="fa-solid fa-bag-shopping mr-2" /> {t("hotDeals.addToCart")}
       </button>
       <div className="text-center mt-4 text-eco-green font-semibold">{product.name}</div>
-      <div className="text-center"><span className="font-bold">${product.price.toFixed(2)}</span> <span className="text-gray-400 line-through ml-1">$24.00</span></div>
+      <div className="text-center"><span className="font-bold">{money(product.price)}</span> <span className="text-gray-400 line-through ml-1">{money(24)}</span></div>
       <div className="text-yellow-400 text-center my-2">★★★★★ <span className="text-gray-500 text-xs">{t("hotDeals.feedback", { count: 524 })}</span></div>
       <div className="text-center text-xs text-gray-500 mb-2">{t("hotDeals.offerEnds")}</div>
       <div className="countdown justify-center">

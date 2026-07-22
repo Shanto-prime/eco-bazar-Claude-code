@@ -12,17 +12,19 @@ import { requireAuth } from "../../../lib/auth-helpers";
 import { getT } from "../../../lib/i18n/server";
 import { prisma } from "../../../lib/prisma";
 import { canSelfApprove } from "../../../lib/profile-changes";
+import { getStoreConfig } from "../../../lib/store-config";
 import AppearanceSettings from "./_components/AppearanceSettings";
 import ProfileSettings from "./_components/ProfileSettings";
 import ContactSettings from "./_components/ContactSettings";
 import PasswordSettings from "./_components/PasswordSettings";
 import AddressBook from "./_components/AddressBook";
+import StoreCurrencySettings from "./_components/StoreCurrencySettings";
 
 export default async function DashboardSettings() {
   const { t } = await getT();
   const session = await requireAuth("/dashboard/settings");
 
-  const [user, addresses, requests] = await Promise.all([
+  const [user, addresses, requests, storeConfig] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.id },
       select: {
@@ -41,6 +43,8 @@ export default async function DashboardSettings() {
       orderBy: { createdAt: "desc" },
       take:    25,
     }),
+    // Store-wide currency config — only rendered/used for admins below.
+    getStoreConfig(),
   ]);
 
   if (!user) {
@@ -96,6 +100,10 @@ export default async function DashboardSettings() {
         {user.passwordHash ? <PasswordSettings /> : null}
         <AddressBook addresses={addresses.map((a) => ({ ...a, createdAt: null, updatedAt: null }))} />
         <AppearanceSettings />
+        {/* Store-wide currency — ADMIN only. */}
+        {user.role === "ADMIN" && (
+          <StoreCurrencySettings currency={storeConfig.currency} rates={storeConfig.rates} />
+        )}
       </div>
 
       <p className="mt-8 text-xs text-gray-400">

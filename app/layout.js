@@ -5,6 +5,8 @@ import { LanguageProvider } from "../lib/i18n/LanguageProvider";
 import { getLocale } from "../lib/i18n/server";
 import { ThemeProvider } from "../lib/theme/ThemeProvider";
 import { getTheme } from "../lib/theme/server";
+import { CurrencyProvider } from "../lib/currency/CurrencyProvider";
+import { getActiveCurrency } from "../lib/store-config";
 import Toast from "../components/Toast";
 import TopBar from "../components/TopBar";
 import Header from "../components/Header";
@@ -24,7 +26,7 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }) {
-  const [locale, theme] = await Promise.all([getLocale(), getTheme()]);
+  const [locale, theme, currency] = await Promise.all([getLocale(), getTheme(), getActiveCurrency()]);
 
   return (
     <html
@@ -41,15 +43,17 @@ export default async function RootLayout({ children }) {
       <body className="min-h-screen flex flex-col">
         <ThemeProvider initialTheme={theme}>
           <LanguageProvider initialLocale={locale}>
-            <CartProvider>
-              <TopBar />
-              <Header />
-              <PrimaryNav />
-              <main className="flex-1">{children}</main>
-              <Newsletter />
-              <Footer />
-              <Toast />
-            </CartProvider>
+            <CurrencyProvider currency={currency}>
+              <CartProvider>
+                <TopBar />
+                <Header />
+                <PrimaryNav />
+                <main className="flex-1">{children}</main>
+                <Newsletter />
+                <Footer />
+                <Toast />
+              </CartProvider>
+            </CurrencyProvider>
           </LanguageProvider>
         </ThemeProvider>
       </body>

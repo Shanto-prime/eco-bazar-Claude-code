@@ -1,16 +1,19 @@
 // components/TopBar.jsx — site-wide top utility bar.
-// On small screens, hide the location & lang/currency selectors to save space.
+// On small screens, hide the location selector to save space.
 //
 // Server component: reads the NextAuth session so the right-hand links reflect
 // auth state — Log In / Sign Up when signed out; the user avatar (which links
 // to /dashboard and carries the greeting as a tooltip) + Log Out when signed
 // in. (This opts the layout into dynamic rendering, which is expected for a
 // session-aware navbar.)
+//
+// No language or currency picker here: the app is English-only, and the display
+// currency is a store-wide setting the ADMIN controls in the dashboard, not a
+// per-visitor choice.
 
 import Link from "next/link";
 import { auth, signOut } from "../auth";
 import { getT } from "../lib/i18n/server";
-import LanguageToggle from "./LanguageToggle";
 import ThemeToggle from "./ThemeToggle";
 import UserAvatar from "./UserAvatar";
 
@@ -32,8 +35,6 @@ export default async function TopBar() {
         </div>
         <div className="flex items-center gap-3 sm:gap-4">
           <ThemeToggle />
-          <LanguageToggle />
-          <select className="bg-transparent text-[12px] hidden sm:inline"><option>{t("common.currency")}</option></select>
 
           {user ? (
             <>

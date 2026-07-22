@@ -8,6 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "../lib/CartContext";
 import { useT } from "../lib/i18n/LanguageProvider";
+import { useMoney } from "../lib/currency/CurrencyProvider";
 import Stars from "./Stars";
 
 export default function ProductCard({
@@ -16,6 +17,7 @@ export default function ProductCard({
 }) {
   const { addItem, toggleWishlist, wishlist, hydrated } = useCart();
   const t = useT();
+  const money = useMoney();
   const inWishlist = hydrated && wishlist.includes(slug);
 
   const imgClass = size === "sm" ? "h-32 text-6xl" : "h-40 text-7xl";
@@ -63,8 +65,8 @@ export default function ProductCard({
         <div className={`text-xs ${featured ? "text-eco-green font-medium" : "text-gray-500"}`}>{name}</div>
         <div className="flex items-center justify-between mt-1">
           <div>
-            <span className="font-semibold">${price.toFixed(2)}</span>
-            {oldPrice && <span className="text-xs text-gray-400 line-through ml-1">${oldPrice.toFixed(2)}</span>}
+            <span className="font-semibold">{money(price)}</span>
+            {oldPrice && <span className="text-xs text-gray-400 line-through ml-1">{money(oldPrice)}</span>}
           </div>
         </div>
         <Stars value={rating} className="text-xs mt-1" />

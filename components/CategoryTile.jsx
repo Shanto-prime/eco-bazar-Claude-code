@@ -2,11 +2,11 @@
 import Image from "next/image";
 import Link from "next/link";
 
-export default function CategoryTile({ slug, name, icon, image, active = false }) {
+export default function CategoryTile({ slug, name, icon, image }) {
   return (
     <Link
       href={`/shop?cat=${slug}`}
-      className={`cat-tile ${active ? "active" : ""} block border border-gray-200 rounded-md p-5 text-center hover:shadow-md transition`}
+      className="cat-tile block border border-gray-200 rounded-md p-5 text-center hover:shadow-md transition"
     >
       {image ? (
         <div className="relative h-16 mb-3">

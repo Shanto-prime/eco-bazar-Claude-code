@@ -1,18 +1,21 @@
 // app/shop/page.js — Shop route.
-// ShopClient calls useSearchParams(), so it must sit inside a <Suspense>
-// boundary for Next.js static generation (avoids the CSR-bailout build error).
+// Server-renders only the FIRST page (9 products) for the incoming search /
+// category deep-link, plus the category list. Further pages and filter changes
+// are fetched on demand by ShopClient from /api/products, so the browser never
+// downloads the whole catalogue.
 
-import { Suspense } from "react";
 import ShopClient from "./ShopClient";
-import { listProducts } from "../../lib/products-db";
+import { queryProducts, listCategories } from "../../lib/products-db";
 
-export default async function ShopPage() {
-  // Load the catalogue from the database so admin/moderator products appear.
-  const products = await listProducts({ take: 100 });
+export default async function ShopPage({ searchParams }) {
+  const sp = await searchParams;
+  const q   = typeof sp?.q   === "string" ? sp.q   : "";
+  const cat = typeof sp?.cat === "string" ? sp.cat : "";
 
-  return (
-    <Suspense fallback={null}>
-      <ShopClient products={products} />
-    </Suspense>
-  );
+  const [initial, categories] = await Promise.all([
+    queryProducts({ q: q || undefined, cat: cat || undefined, page: 1, perPage: 9 }),
+    listCategories(),
+  ]);
+
+  return <ShopClient initial={initial} initialQ={q} initialCat={cat} categories={categories} />;
 }

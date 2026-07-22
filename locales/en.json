@@ -24,7 +24,8 @@
     "invalidCoupon": "Invalid coupon code",
     "enterCoupon": "Please enter a coupon code.",
     "addedToWishlist": "Added {name} to wishlist",
-    "removedFromWishlist": "Removed {name} from wishlist"
+    "removedFromWishlist": "Removed {name} from wishlist",
+    "wishlistLoginRequired": "Please sign in to use your wishlist."
   },
   "coupon": {
     "ECO10": "10% off your order",
@@ -90,7 +91,8 @@
     "heroAlt": "Fresh & Healthy Organic Food",
     "summerSale75Alt": "Summer Sale 75% Off",
     "dealOfMonthAlt": "Special Products Deal of the Month",
-    "summerSale37Alt": "Summer Sale 37% Off"
+    "summerSale37Alt": "Summer Sale 37% Off",
+    "seeMoreProducts": "See More"
   },
   "shop": {
     "title": "Shop",
@@ -112,6 +114,7 @@
     "sortPriceDesc": "Price ↓",
     "sortName": "Name A–Z",
     "noMatch": "No products match your filters.",
+    "loadError": "Couldn't load products. Please try again.",
     "showResults": "Show {count} results",
     "nextPage": "Next page",
     "prevPage": "Previous page",

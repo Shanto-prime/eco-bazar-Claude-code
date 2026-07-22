@@ -6,8 +6,9 @@
 // - Cart and wishlist persist to localStorage so they survive reloads.
 // - Exposes a single useCart() hook with everything the UI needs.
 
-import { createContext, useContext, useEffect, useReducer, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useRef, useReducer, useState, useCallback } from "react";
 import { useT } from "./i18n/LanguageProvider";
+import { getCart, saveCart, mergeCart } from "./cart-actions";
 
 // ---------- Coupons -----------------------------------------------------------
 const COUPONS = {
@@ -64,28 +65,134 @@ function reducer(state, action) {
 // ---------- Context ----------------------------------------------------------
 const CartContext = createContext(null);
 
-export function CartProvider({ children }) {
+export function CartProvider({ children, user = null }) {
   const t = useT();
   const [state, dispatch] = useReducer(reducer, initialState);
   const [hydrated, setHydrated] = useState(false);
   const [toasts, setToasts] = useState([]); // [{ id, kind, text, duration }]
 
+  // The signed-in user's id (null when anonymous). Drives wishlist gating and
+  // cloud cart sync. Threaded from the server layout via the `user` prop.
+  const userId = user?.id || null;
+
+  // A live mirror of state so async callbacks read the latest cart without
+  // being in their dependency arrays.
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; }, [state]);
+
+  // Who the localStorage cart belongs to: a userId (their own saved cart's
+  // mirror) or null (a guest cart). This distinguishes "guest just logged in →
+  // merge their cart in" from "returning user reloaded → the DB is the truth"
+  // (merging on every reload would compound quantities) and from "a different
+  // user is on this browser → don't leak the previous cart".
+  const localOwnerRef = useRef(null);
+
   // Load from localStorage once, on mount.
   useEffect(() => {
     try {
       const raw = localStorage.getItem("ecobazar-cart-v1");
-      if (raw) dispatch({ type: "HYDRATE", payload: JSON.parse(raw) });
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        localOwnerRef.current = parsed.ownerId ?? null;
+        dispatch({ type: "HYDRATE", payload: {
+          items: parsed.items || [],
+          wishlist: parsed.wishlist || [],
+          coupon: parsed.coupon || null,
+        } });
+      }
     } catch {}
     setHydrated(true);
   }, []);
 
-  // Persist on every change (after first hydration).
+  // Persist on every change (after first hydration). The cart is tagged with
+  // its current owner so the sync logic above can tell guest vs. owned carts.
   useEffect(() => {
     if (!hydrated) return;
     try {
-      localStorage.setItem("ecobazar-cart-v1", JSON.stringify(state));
+      localStorage.setItem("ecobazar-cart-v1", JSON.stringify({
+        items: state.items,
+        wishlist: state.wishlist,
+        coupon: state.coupon,
+        ownerId: userId,
+      }));
     } catch {}
-  }, [state, hydrated]);
+  }, [state, hydrated, userId]);
+
+  // ---- Cloud cart (logged-in users) ---------------------------------------
+  // `cloudReady` gates DB writes: it flips true only AFTER the initial sync has
+  // hydrated the cart, so we never overwrite the saved cart with stale local
+  // data mid-sync.
+  const [cloudReady, setCloudReady] = useState(false);
+  const prevUserId = useRef(undefined);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const prev = prevUserId.current;
+    prevUserId.current = userId;
+
+    // Logged out (or logged out just now): clear cart + wishlist locally — they
+    // are safely persisted in the DB and will be restored on next login. This
+    // also prevents one account's items lingering for the next visitor.
+    if (!userId) {
+      if (prev) {
+        dispatch({ type: "HYDRATE", payload: { items: [], wishlist: [], coupon: null } });
+        try { localStorage.removeItem("ecobazar-cart-v1"); } catch {}
+        localOwnerRef.current = null;
+      }
+      setCloudReady(false);
+      return;
+    }
+
+    if (prev === userId) return; // already synced for this user
+
+    setCloudReady(false);
+    let cancelled = false;
+    const localOwner = localOwnerRef.current;
+    const localItems = stateRef.current.items;
+    const localCoupon = stateRef.current.coupon;
+
+    (async () => {
+      try {
+        if (localOwner == null && localItems.length) {
+          // Guest cart present → merge it into the user's saved cart (summing
+          // quantities), then hydrate from the merged result.
+          const merged = await mergeCart(localItems, localCoupon);
+          if (cancelled) return;
+          if (merged) dispatch({ type: "HYDRATE", payload: {
+            items: merged.items,
+            wishlist: stateRef.current.wishlist,
+            coupon: merged.coupon ?? null,
+          } });
+        } else {
+          // Returning or different user → the DB cart is authoritative (no
+          // summing). Keep the local wishlist only if it's this same user's.
+          const dbCart = await getCart();
+          if (cancelled) return;
+          const keepWishlist = localOwner === userId ? stateRef.current.wishlist : [];
+          dispatch({ type: "HYDRATE", payload: {
+            items: dbCart?.items || [],
+            wishlist: keepWishlist,
+            coupon: dbCart?.coupon ?? null,
+          } });
+        }
+        localOwnerRef.current = userId;
+      } catch {
+        // Network/DB hiccup: keep whatever is local; don't block the UI.
+      } finally {
+        if (!cancelled) setCloudReady(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [userId, hydrated]);
+
+  // Persist cart changes to the DB while logged in (debounced).
+  useEffect(() => {
+    if (!hydrated || !userId || !cloudReady) return;
+    const id = setTimeout(() => {
+      saveCart(state.items, state.coupon).catch(() => {});
+    }, 600);
+    return () => clearTimeout(id);
+  }, [state.items, state.coupon, hydrated, userId, cloudReady]);
 
   // Toast helper — pushes onto a queue (newest first). The Toast component owns
   // each toast's countdown/auto-dismiss (so it can pause on hover), then calls
@@ -148,6 +255,12 @@ export function CartProvider({ children }) {
   }, [showToast, t]);
 
   const toggleWishlist = useCallback((slug, name) => {
+    // Wishlist is a signed-in-only feature. Guests are prompted to log in and
+    // nothing is added.
+    if (!userId) {
+      showToast(t("toast.wishlistLoginRequired"), "error");
+      return;
+    }
     const has = state.wishlist.includes(slug);
     dispatch({ type: "TOGGLE_WISHLIST", slug });
     const nm = name || t("common.item", {});
@@ -157,12 +270,13 @@ export function CartProvider({ children }) {
         : t("toast.addedToWishlist", { name: nm }),
       "info"
     );
-  }, [state.wishlist, showToast, t]);
+  }, [userId, state.wishlist, showToast, t]);
 
   const value = {
     items: state.items,
     wishlist: state.wishlist,
     coupon: state.coupon,
+    isAuthed: !!userId,
     itemCount,
     subtotal,
     discount,

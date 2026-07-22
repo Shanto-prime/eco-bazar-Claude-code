@@ -9,9 +9,11 @@ import Breadcrumb from "../../components/Breadcrumb";
 import QuantityStepper from "../../components/QuantityStepper";
 import { useCart } from "../../lib/CartContext";
 import { useT } from "../../lib/i18n/LanguageProvider";
+import { useMoney } from "../../lib/currency/CurrencyProvider";
 
 export default function CartPage() {
   const t = useT();
+  const money = useMoney();
   const {
     items, subtotal, discount, total, coupon,
     updateQty, removeItem, applyCoupon, clearCart, hydrated,
@@ -63,11 +65,11 @@ export default function CartPage() {
                       <span className="text-3xl">{it.icon}</span>
                       <Link href={`/shop/${it.slug}`} className="hover:text-eco-green">{it.name}</Link>
                     </td>
-                    <td className="py-4 px-4">${it.price.toFixed(2)}</td>
+                    <td className="py-4 px-4">{money(it.price)}</td>
                     <td className="py-4 px-4">
                       <QuantityStepper value={it.qty} onChange={(n) => updateQty(it.slug, n)} />
                     </td>
-                    <td className="py-4 px-4 font-semibold">${(it.price * it.qty).toFixed(2)}</td>
+                    <td className="py-4 px-4 font-semibold">{money(it.price * it.qty)}</td>
                     <td className="py-4 px-4 text-right">
                       <button type="button" onClick={() => removeItem(it.slug)} className="text-gray-400 hover:text-red-500" aria-label={t("cart.remove", { name: it.name })}>
                         <i className="fa-solid fa-xmark" />
@@ -90,10 +92,10 @@ export default function CartPage() {
                         <i className="fa-solid fa-xmark" />
                       </button>
                     </div>
-                    <div className="text-xs text-gray-500 mt-0.5">${it.price.toFixed(2)} {t("cart.each")}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{money(it.price)} {t("cart.each")}</div>
                     <div className="flex items-center justify-between mt-3">
                       <QuantityStepper value={it.qty} onChange={(n) => updateQty(it.slug, n)} />
-                      <div className="font-semibold">${(it.price * it.qty).toFixed(2)}</div>
+                      <div className="font-semibold">{money(it.price * it.qty)}</div>
                     </div>
                   </div>
                 </div>
@@ -135,14 +137,14 @@ export default function CartPage() {
           <aside className="lg:col-span-4">
             <div className="border border-gray-200 rounded-md p-6 sticky top-24">
               <div className="font-semibold mb-4">{t("cart.cartTotal")}</div>
-              <div className="flex justify-between text-sm py-3 border-b"><span className="text-gray-500">{t("cart.subtotalLabel")}</span><span className="font-semibold">${subtotal.toFixed(2)}</span></div>
+              <div className="flex justify-between text-sm py-3 border-b"><span className="text-gray-500">{t("cart.subtotalLabel")}</span><span className="font-semibold">{money(subtotal)}</span></div>
               {discount > 0 && (
                 <div className="flex justify-between text-sm py-3 border-b text-eco-green">
-                  <span>{t("cart.discountLabel", { code: coupon.code })}</span><span className="font-semibold">−${discount.toFixed(2)}</span>
+                  <span>{t("cart.discountLabel", { code: coupon.code })}</span><span className="font-semibold">−{money(discount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm py-3 border-b"><span className="text-gray-500">{t("cart.shippingLabel")}</span><span className="font-semibold">{t("cart.free")}</span></div>
-              <div className="flex justify-between py-3"><span className="text-gray-500">{t("cart.totalLabel")}</span><span className="text-lg font-bold">${total.toFixed(2)}</span></div>
+              <div className="flex justify-between py-3"><span className="text-gray-500">{t("cart.totalLabel")}</span><span className="text-lg font-bold">{money(total)}</span></div>
               <Link href="/checkout" className="block text-center mt-3 py-3 rounded-full bg-eco-green text-white font-medium hover:bg-emerald-600">
                 {t("cart.proceedToCheckout")} <i className="fa-solid fa-arrow-right ml-1" />
               </Link>

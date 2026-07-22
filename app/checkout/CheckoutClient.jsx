@@ -16,6 +16,7 @@ import Breadcrumb from "../../components/Breadcrumb";
 import { useCart } from "../../lib/CartContext";
 import { placeOrderAction } from "../../lib/order-actions";
 import { useT } from "../../lib/i18n/LanguageProvider";
+import { useMoney } from "../../lib/currency/CurrencyProvider";
 import { COUNTRIES, STATES } from "../../lib/geo";
 
 const REQUIRED = ["firstName", "lastName", "street", "country", "state", "zip", "email", "phone"];
@@ -31,6 +32,7 @@ const STATE_KEYS   = { Illinois: "checkout.stateIllinois", California: "checkout
 export default function CheckoutClient({ initialBilling = {} }) {
   const router = useRouter();
   const t = useT();
+  const money = useMoney();
   const { items, subtotal, discount, total, coupon, clearCart, hydrated, showToast } = useCart();
 
   const [form, setForm] = useState({
@@ -111,7 +113,7 @@ export default function CheckoutClient({ initialBilling = {} }) {
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t("checkout.thankYou")}</h1>
           <p className="text-gray-500 mb-1">{t("checkout.placedMsg", { id: placed.id })}</p>
           <p className="text-gray-500 mb-6">
-            {t(placed.items === 1 ? "checkout.items_one" : "checkout.items_other", { count: placed.items })} · ${placed.total.toFixed(2)} ·{" "}
+            {t(placed.items === 1 ? "checkout.items_one" : "checkout.items_other", { count: placed.items })} · {money(placed.total)} ·{" "}
             {placed.payment === "cod" ? t("checkout.cod") : placed.payment}
           </p>
           <Link href="/shop" className="inline-block px-6 py-3 rounded-full bg-eco-green text-white font-medium">
@@ -197,15 +199,15 @@ export default function CheckoutClient({ initialBilling = {} }) {
             {items.map((it) => (
               <div key={it.slug} className="flex justify-between text-sm py-2">
                 <div className="flex items-center gap-2 flex-1 truncate"><span className="text-xl">{it.icon}</span> <span className="truncate">{it.name} ×{it.qty}</span></div>
-                <div className="font-semibold whitespace-nowrap">${(it.price * it.qty).toFixed(2)}</div>
+                <div className="font-semibold whitespace-nowrap">{money(it.price * it.qty)}</div>
               </div>
             ))}
-            <div className="flex justify-between py-2 border-t mt-2"><span className="text-gray-500">{t("checkout.subtotal")}</span><span className="font-semibold">${subtotal.toFixed(2)}</span></div>
+            <div className="flex justify-between py-2 border-t mt-2"><span className="text-gray-500">{t("checkout.subtotal")}</span><span className="font-semibold">{money(subtotal)}</span></div>
             {discount > 0 && (
-              <div className="flex justify-between py-2 text-eco-green"><span>{t("checkout.discount")} ({coupon.code}):</span><span className="font-semibold">−${discount.toFixed(2)}</span></div>
+              <div className="flex justify-between py-2 text-eco-green"><span>{t("checkout.discount")} ({coupon.code}):</span><span className="font-semibold">−{money(discount)}</span></div>
             )}
             <div className="flex justify-between py-2"><span className="text-gray-500">{t("checkout.shipping")}</span><span className="font-semibold">{t("checkout.free")}</span></div>
-            <div className="flex justify-between py-2 border-t"><span className="text-gray-500">{t("checkout.total")}</span><span className="text-lg font-bold">${total.toFixed(2)}</span></div>
+            <div className="flex justify-between py-2 border-t"><span className="text-gray-500">{t("checkout.total")}</span><span className="text-lg font-bold">{money(total)}</span></div>
 
             <div className="font-semibold mt-4 mb-3">{t("checkout.paymentMethod")}</div>
             {[

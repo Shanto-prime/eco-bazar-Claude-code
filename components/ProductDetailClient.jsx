@@ -13,6 +13,7 @@ import ProductGallery from "./ProductGallery";
 import Stars from "./Stars";
 import { useCart } from "../lib/CartContext";
 import { useT } from "../lib/i18n/LanguageProvider";
+import { useMoney } from "../lib/currency/CurrencyProvider";
 
 // Stable ids drive the active-tab comparison; labels are translated at render.
 const TABS = [
@@ -30,6 +31,7 @@ export default function ProductDetailClient({ product }) {
   const [showFull, setFull] = useState(false);
   const { addItem, toggleWishlist, wishlist, hydrated } = useCart();
   const t = useT();
+  const money = useMoney();
   const inWishlist = hydrated && wishlist.includes(product.slug);
 
   return (
@@ -52,10 +54,10 @@ export default function ProductDetailClient({ product }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 mt-4 border-b pb-5">
-            <span className="text-2xl font-bold">${product.price.toFixed(2)}</span>
+            <span className="text-2xl font-bold">{money(product.price)}</span>
             {product.oldPrice && (
               <>
-                <span className="text-gray-400 line-through">${product.oldPrice.toFixed(2)}</span>
+                <span className="text-gray-400 line-through">{money(product.oldPrice)}</span>
                 <span className="bg-eco-green text-white text-xs px-2 py-1 rounded">
                   {t("product.percentOff", { percent: Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100) })}
                 </span>

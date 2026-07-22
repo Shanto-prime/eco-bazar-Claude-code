@@ -16,6 +16,7 @@ import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
 import { requireAuth } from "../../../lib/auth-helpers";
 import { formatMoney } from "../../../lib/money";
+import { getActiveCurrency } from "../../../lib/store-config";
 import { getT } from "../../../lib/i18n/server";
 import { ORDER_STATUSES, STATUS_PILL, statusKey } from "../../../lib/order-status";
 import LocalTime from "../../../components/LocalTime";
@@ -24,6 +25,7 @@ import StatusSelect from "./_components/StatusSelect";
 export default async function DashboardOrders({ searchParams }) {
   const { t } = await getT();
   const user = await requireAuth("/dashboard/orders");
+  const cur = await getActiveCurrency();
 
   // searchParams is a Promise in Next 15+. Anything not in the enum (including
   // the default "all") falls through to no status filter rather than erroring.
@@ -122,7 +124,7 @@ export default async function DashboardOrders({ searchParams }) {
                       </td>
                     )}
                     <td className="px-4 py-3 text-gray-500">{o._count.items}</td>
-                    <td className="px-4 py-3 font-semibold">{formatMoney(o.total)}</td>
+                    <td className="px-4 py-3 font-semibold">{formatMoney(o.total, cur)}</td>
                     <td className="px-4 py-3">
                       {user.role === "ADMIN"
                         ? <StatusSelect orderId={o.id} status={o.status} />
@@ -156,7 +158,7 @@ export default async function DashboardOrders({ searchParams }) {
                     ? <StatusSelect orderId={o.id} status={o.status} />
                     : <StatusPill status={o.status} />}
                 </div>
-                <div className="text-sm font-semibold mt-2">{formatMoney(o.total)}</div>
+                <div className="text-sm font-semibold mt-2">{formatMoney(o.total, cur)}</div>
                 <Timeline history={o.history} t={t} />
               </div>
             ))}

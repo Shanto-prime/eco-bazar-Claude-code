@@ -8,10 +8,12 @@
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
 import { formatMoney } from "../../../lib/money";
+import { getActiveCurrency } from "../../../lib/store-config";
 import { getT } from "../../../lib/i18n/server";
 
 export default async function AdminDashboard({ user }) {
   const { t } = await getT();
+  const cur = await getActiveCurrency();
   const [products, lowStock, orders, pendingOrders, users, reviews, revenueAgg] = await Promise.all([
     prisma.product.count(),
     prisma.product.count({ where: { stock: { lt: 5 } } }),
@@ -23,8 +25,9 @@ export default async function AdminDashboard({ user }) {
     prisma.order.aggregate({ _sum: { total: true }, where: { paymentStatus: "PAID" } }),
   ]);
 
-  // `total` is stored in integer cents; formatMoney converts to a $ string.
-  const revenue = formatMoney(revenueAgg._sum.total || 0);
+  // `total` is stored in base (BDT) minor units; formatMoney converts to the
+  // active display currency.
+  const revenue = formatMoney(revenueAgg._sum.total || 0, cur);
 
   const stats = [
     { label: t("dashboard.products"),          value: products,      href: "/dashboard/products",                color: "bg-eco-green" },

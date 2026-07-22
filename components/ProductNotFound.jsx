@@ -8,9 +8,12 @@ import Link from "next/link";
 import ProductCard from "./ProductCard";
 import Breadcrumb from "./Breadcrumb";
 import { getT } from "../lib/i18n/server";
+import { getActiveCurrency } from "../lib/store-config";
+import { formatBaseMajor } from "../lib/currency";
 
 export default async function ProductNotFound({ query, best, suggestions, popular }) {
   const { t } = await getT();
+  const cur = await getActiveCurrency();
   return (
     <>
       <Breadcrumb items={[{ href: "/shop", label: t("productNotFound.breadcrumbShop") }, { label: t("productNotFound.breadcrumbNotFound") }]} />
@@ -47,8 +50,8 @@ export default async function ProductNotFound({ query, best, suggestions, popula
                 <div className="text-eco-green text-xs uppercase tracking-wider font-semibold">{t("productNotFound.closestMatch")}</div>
                 <div className="font-bold text-lg truncate">{best.name}</div>
                 <div className="text-sm text-gray-500">
-                  ${best.price.toFixed(2)}
-                  {best.oldPrice && <span className="line-through ml-2">${best.oldPrice.toFixed(2)}</span>}
+                  {formatBaseMajor(best.price, cur)}
+                  {best.oldPrice && <span className="line-through ml-2">{formatBaseMajor(best.oldPrice, cur)}</span>}
                 </div>
               </div>
               <i className="fa-solid fa-arrow-right text-eco-green text-xl" />

@@ -21,25 +21,21 @@ const prisma = new PrismaClient();
 const toCents = (dollars) => Math.round(Number(dollars) * 100);
 
 const PRODUCTS = [
-  { slug: "green-apple",        name: "Green Apple",         nameBn: "সবুজ আপেল",          price: 14.99, oldPrice: 20.99, badge: "Sale 50%", stock: 50,  image: "/images/prod1.jpg" },
-  { slug: "fresh-indian-malta", name: "Fresh Indian Malta",  nameBn: "তাজা ভারতীয় মাল্টা", price: 20.00, stock: 40,  image: "/images/prod2.jpg" },
-  { slug: "chinese-cabbage",    name: "Chinese cabbage",     nameBn: "চাইনিজ বাঁধাকপি",     price: 12.00, stock: 100, image: "/images/prod3.jpg" },
-  { slug: "green-lettuce",      name: "Green Lettuce",       nameBn: "সবুজ লেটুস",          price:  9.00, stock: 80,  image: "/images/prod4.jpg" },
-  { slug: "eggplant",           name: "Eggplant",            nameBn: "বেগুন",               price: 34.00, stock: 25,  image: "/images/prod5.jpg" },
-  { slug: "big-potatoes",       name: "Big Potatoes",        nameBn: "বড় আলু",             price: 20.00, stock: 200, image: "/images/prod6.jpg" },
-  { slug: "corn",               name: "Corn",                nameBn: "ভুট্টা",              price: 20.00, stock: 60,  image: "/images/prod7.jpg" },
-  { slug: "fresh-cauliflower",  name: "Fresh Cauliflower",   nameBn: "তাজা ফুলকপি",         price: 12.00, stock: 40,  image: "/images/prod8.jpg" },
-  { slug: "green-capsicum",     name: "Green Capsicum",      nameBn: "সবুজ ক্যাপসিকাম",     price:  9.00, oldPrice: 20.99, badge: "Sale 50%", stock: 70, image: "/images/prod9.jpg" },
-  { slug: "green-chili",        name: "Green Chili",         nameBn: "কাঁচা মরিচ",          price: 34.00, stock: 30,  image: "/images/prod10.jpg" },
+  { slug: "green-apple",        name: "Green Apple",         price: 14.99, oldPrice: 20.99, badge: "Sale 50%", stock: 50,  image: "/images/prod1.jpg" },
+  { slug: "fresh-indian-malta", name: "Fresh Indian Malta",  price: 20.00, stock: 40,  image: "/images/prod2.jpg" },
+  { slug: "chinese-cabbage",    name: "Chinese cabbage",     price: 12.00, stock: 100, image: "/images/prod3.jpg" },
+  { slug: "green-lettuce",      name: "Green Lettuce",       price:  9.00, stock: 80,  image: "/images/prod4.jpg" },
+  { slug: "eggplant",           name: "Eggplant",            price: 34.00, stock: 25,  image: "/images/prod5.jpg" },
+  { slug: "big-potatoes",       name: "Big Potatoes",        price: 20.00, stock: 200, image: "/images/prod6.jpg" },
+  { slug: "corn",               name: "Corn",                price: 20.00, stock: 60,  image: "/images/prod7.jpg" },
+  { slug: "fresh-cauliflower",  name: "Fresh Cauliflower",   price: 12.00, stock: 40,  image: "/images/prod8.jpg" },
+  { slug: "green-capsicum",     name: "Green Capsicum",      price:  9.00, oldPrice: 20.99, badge: "Sale 50%", stock: 70, image: "/images/prod9.jpg" },
+  { slug: "green-chili",        name: "Green Chili",         price: 34.00, stock: 30,  image: "/images/prod10.jpg" },
 ];
 
 const DEFAULT_DESC =
   "Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. " +
   "Fresh, organically grown produce delivered to your door.";
-
-const DEFAULT_DESC_BN =
-  "তাজা, জৈবভাবে উৎপাদিত পণ্য সরাসরি আপনার দরজায় পৌঁছে দেওয়া হয়। " +
-  "সেরা মানের নিশ্চয়তা সহ স্বাস্থ্যকর ও নিরাপদ খাবার।";
 
 const TEST_USERS = [
   { username: "admin",    email: "admin@ecobazar.test",    password: "admin",    role: "ADMIN",     name: "Site Admin" },
@@ -71,7 +67,6 @@ async function main() {
       where: { slug: p.slug },
       update: {
         name:     p.name,
-        nameBn:   p.nameBn ?? null,
         price:    toCents(p.price),
         oldPrice: p.oldPrice == null ? null : toCents(p.oldPrice),
         badge:    p.badge ?? null,
@@ -80,9 +75,7 @@ async function main() {
       create: {
         slug:          p.slug,
         name:          p.name,
-        nameBn:        p.nameBn ?? null,
         description:   DEFAULT_DESC,
-        descriptionBn: DEFAULT_DESC_BN,
         price:         toCents(p.price),
         oldPrice:      p.oldPrice == null ? null : toCents(p.oldPrice),
         badge:         p.badge ?? null,

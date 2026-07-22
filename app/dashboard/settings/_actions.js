@@ -19,9 +19,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "../../../lib/prisma";
-import { requireAuth } from "../../../lib/auth-helpers";
+import { requireAuth, requireRole } from "../../../lib/auth-helpers";
 import { COUNTRIES, STATES } from "../../../lib/geo";
 import { canSelfApprove, applyContactChange, notifyContactChange } from "../../../lib/profile-changes";
+import { CURRENCY_CODES, BASE_CURRENCY, isValidCurrency } from "../../../lib/currency";
+import { saveStoreConfig, getStoreConfig } from "../../../lib/store-config";
 
 // Actions return {ok,message} / {error} rather than throwing, so the client
 // components can render an inline result instead of tripping an error boundary.
@@ -434,4 +436,47 @@ export async function setDefaultAddressAction(addressId) {
 
   revalidatePath("/dashboard/settings");
   return ok("Default address updated.");
+}
+
+// ---------------------------------------------------------------------------
+// Store currency — ADMIN only, store-wide. Not a personal preference: this sets
+// the display currency + exchange rates for EVERY visitor. Rates are "BASE (BDT)
+// per 1 unit" of each non-base currency. Logged, since it changes what every
+// price on the site reads.
+// ---------------------------------------------------------------------------
+export async function updateStoreCurrencyAction(formData) {
+  const admin = await requireRole("ADMIN", "/dashboard/settings");
+
+  const currency = String(formData.get("currency") || "").toUpperCase();
+  if (!isValidCurrency(currency)) return fail("Unknown currency.");
+
+  // Collect a rate for every non-base currency. Each must be a positive number —
+  // a zero or negative rate would divide prices to nonsense (or NaN).
+  const rates = {};
+  for (const code of CURRENCY_CODES) {
+    if (code === BASE_CURRENCY) continue;
+    const raw = Number(formData.get(`rate_${code}`));
+    if (!Number.isFinite(raw) || raw <= 0) {
+      return fail(`Enter a valid exchange rate for ${code} (BDT per 1 ${code}).`);
+    }
+    rates[code] = raw;
+  }
+
+  const before = await getStoreConfig();
+  await saveStoreConfig({ currency, rates });
+
+  await prisma.auditLog.create({
+    data: {
+      actorId:  admin.id,
+      action:   "store.currency.update",
+      entity:   "StoreConfig",
+      entityId: "store",
+      metadata: { from: before.currency, to: currency, rates },
+    },
+  });
+
+  // Prices render everywhere — revalidate the whole app so the new currency and
+  // rates take effect immediately, on the storefront and the dashboard alike.
+  revalidatePath("/", "layout");
+  return ok(`Store currency set to ${currency}.`);
 }

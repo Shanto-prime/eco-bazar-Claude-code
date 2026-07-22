@@ -83,10 +83,6 @@ export default function ProductForm({ product, action, allowDelete = false, onDe
           <label className="text-xs text-gray-500">{t("productForm.nameEn")}</label>
           <input name="name" required defaultValue={product?.name} className="eco-input" />
         </div>
-        <div className="sm:col-span-2">
-          <label className="text-xs text-gray-500">{t("productForm.nameBn")}</label>
-          <input name="nameBn" defaultValue={product?.nameBn ?? ""} className="eco-input" placeholder={t("productForm.nameBnPh")} />
-        </div>
         <div>
           <label className="text-xs text-gray-500">{(() => { const [before, after] = t("productForm.slug").split("{slug}"); return <>{before}<i>slug</i>{after}</>; })()}</label>
           <input name="slug" required defaultValue={product?.slug} className="eco-input" placeholder={t("productForm.slugPh")} />
@@ -130,10 +126,6 @@ export default function ProductForm({ product, action, allowDelete = false, onDe
         <div className="sm:col-span-2">
           <label className="text-xs text-gray-500">{t("productForm.descEn")}</label>
           <textarea name="description" rows={5} defaultValue={product?.description ?? ""} className="eco-input" />
-        </div>
-        <div className="sm:col-span-2">
-          <label className="text-xs text-gray-500">{t("productForm.descBn")}</label>
-          <textarea name="descriptionBn" rows={5} defaultValue={product?.descriptionBn ?? ""} className="eco-input" placeholder={t("productForm.descBnPh")} />
         </div>
       </div>
 

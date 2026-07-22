@@ -148,40 +148,40 @@ export default function CheckoutClient({ initialBilling = {} }) {
             <h2 className="text-lg sm:text-xl font-bold mb-4">{t("checkout.billingInfo")}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label={`${t("checkout.firstName")} *`} err={errors.firstName}>
-                <input className={`eco-input ${errors.firstName ? "border-red-500" : ""}`} value={form.firstName} onChange={set("firstName")} />
+                <input name="firstName" autoComplete="given-name" className={`eco-input ${errors.firstName ? "border-red-500" : ""}`} value={form.firstName} onChange={set("firstName")} />
               </Field>
               <Field label={`${t("checkout.lastName")} *`} err={errors.lastName}>
-                <input className={`eco-input ${errors.lastName ? "border-red-500" : ""}`} value={form.lastName} onChange={set("lastName")} />
+                <input name="lastName" autoComplete="family-name" className={`eco-input ${errors.lastName ? "border-red-500" : ""}`} value={form.lastName} onChange={set("lastName")} />
               </Field>
               <Field label={t("checkout.company")} wide>
-                <input className="eco-input" value={form.company} onChange={set("company")} />
+                <input name="company" autoComplete="organization" className="eco-input" value={form.company} onChange={set("company")} />
               </Field>
               <Field label={`${t("checkout.street")} *`} wide err={errors.street}>
-                <input className={`eco-input ${errors.street ? "border-red-500" : ""}`} value={form.street} onChange={set("street")} />
+                <input name="street" autoComplete="street-address" className={`eco-input ${errors.street ? "border-red-500" : ""}`} value={form.street} onChange={set("street")} />
               </Field>
               {/* Options come from lib/geo.js — the same list the settings
                   address book writes, so a saved address always prefills to a
                   real <option> instead of silently falling back to "". */}
               <Field label={`${t("checkout.country")} *`} err={errors.country}>
-                <select className={`eco-input ${errors.country ? "border-red-500" : ""}`} value={form.country} onChange={set("country")}>
+                <select name="country" autoComplete="country-name" className={`eco-input ${errors.country ? "border-red-500" : ""}`} value={form.country} onChange={set("country")}>
                   <option value="">{t("checkout.select")}</option>
                   {COUNTRIES.map((c) => <option key={c} value={c}>{t(COUNTRY_KEYS[c]) || c}</option>)}
                 </select>
               </Field>
               <Field label={`${t("checkout.state")} *`} err={errors.state}>
-                <select className={`eco-input ${errors.state ? "border-red-500" : ""}`} value={form.state} onChange={set("state")}>
+                <select name="state" autoComplete="address-level1" className={`eco-input ${errors.state ? "border-red-500" : ""}`} value={form.state} onChange={set("state")}>
                   <option value="">{t("checkout.select")}</option>
                   {STATES.map((s) => <option key={s} value={s}>{t(STATE_KEYS[s]) || s}</option>)}
                 </select>
               </Field>
               <Field label={`${t("checkout.zip")} *`} err={errors.zip}>
-                <input className={`eco-input ${errors.zip ? "border-red-500" : ""}`} value={form.zip} onChange={set("zip")} />
+                <input name="zip" autoComplete="postal-code" className={`eco-input ${errors.zip ? "border-red-500" : ""}`} value={form.zip} onChange={set("zip")} />
               </Field>
               <Field label={`${t("checkout.email")} *`} err={errors.email}>
-                <input className={`eco-input ${errors.email ? "border-red-500" : ""}`} type="email" value={form.email} onChange={set("email")} placeholder={t("checkout.emailPlaceholder")} />
+                <input name="email" autoComplete="email" className={`eco-input ${errors.email ? "border-red-500" : ""}`} type="email" value={form.email} onChange={set("email")} placeholder={t("checkout.emailPlaceholder")} />
               </Field>
               <Field label={`${t("checkout.phone")} *`} wide err={errors.phone}>
-                <input className={`eco-input ${errors.phone ? "border-red-500" : ""}`} type="tel" value={form.phone} onChange={set("phone")} />
+                <input name="phone" autoComplete="tel" className={`eco-input ${errors.phone ? "border-red-500" : ""}`} type="tel" value={form.phone} onChange={set("phone")} />
               </Field>
             </div>
           </div>

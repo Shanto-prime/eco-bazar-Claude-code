@@ -57,6 +57,7 @@ const NAV_SECTIONS = [
       // ADMIN-only now: moderators submit profile-change requests, only the
       // admin approves them (see lib/profile-changes.js).
       { href: "/dashboard/profile-requests", labelKey: "requests.navLabel",  icon: "fa-user-pen",       min: "ADMIN", badge: "pendingRequests" },
+      { href: "/dashboard/banners",          labelKey: "banners.navLabel",   icon: "fa-images",         min: "ADMIN" },
       { href: "/dashboard/audit-log",        labelKey: "dashboard.auditLog", icon: "fa-clipboard-list", min: "ADMIN" },
     ],
   },

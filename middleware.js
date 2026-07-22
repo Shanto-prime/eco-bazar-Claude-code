@@ -26,10 +26,21 @@ export default auth((req) => {
     }
   }
 
+  // Wishlist is a signed-in-only page. Anonymous visitors are sent to /login
+  // with a `next` param; LoginForm returns them here after a successful login.
+  if (url.pathname.startsWith("/wishlist")) {
+    if (!req.auth) {
+      const redirect = url.clone();
+      redirect.pathname = "/login";
+      redirect.search = `?next=${encodeURIComponent(url.pathname)}`;
+      return NextResponse.redirect(redirect);
+    }
+  }
+
   return NextResponse.next();
 });
 
-// Only run middleware on /dashboard/*. Everything else is public.
+// Run middleware on the protected paths only. Everything else is public.
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/wishlist", "/wishlist/:path*"],
 };

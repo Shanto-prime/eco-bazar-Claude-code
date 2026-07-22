@@ -21,6 +21,25 @@ import { getT } from "../../../lib/i18n/server";
 import { ORDER_STATUSES, STATUS_PILL, statusKey } from "../../../lib/order-status";
 import LocalTime from "../../../components/LocalTime";
 import StatusSelect from "./_components/StatusSelect";
+import OrderDetails from "./_components/OrderDetails";
+
+// Flatten one order's history into the plain, serialisable shape OrderDetails
+// (a client component) expects — dates as ISO strings, actor pre-resolved.
+function toDetails(o) {
+  return {
+    number:    o.number,
+    status:    o.status,
+    notes:     o.notes || null,
+    createdAt: o.createdAt.toISOString(),
+    history: (o.history || []).map((h) => ({
+      id:        h.id,
+      status:    h.status,
+      note:      h.note || null,
+      createdAt: h.createdAt.toISOString(),
+      actorName: h.actor?.name || h.actor?.email || null,
+    })),
+  };
+}
 
 export default async function DashboardOrders({ searchParams }) {
   const { t } = await getT();
@@ -46,11 +65,11 @@ export default async function DashboardOrders({ searchParams }) {
       take: 50,
       select: {
         id: true, number: true, total: true, status: true, createdAt: true,
-        email: true, firstName: true, lastName: true,
+        email: true, firstName: true, lastName: true, notes: true,
         _count: { select: { items: true } },
         history: {
           orderBy: { createdAt: "asc" },
-          select: { id: true, status: true, createdAt: true, actor: { select: { name: true, email: true } } },
+          select: { id: true, status: true, createdAt: true, note: true, actor: { select: { name: true, email: true } } },
         },
       },
     }),
@@ -132,7 +151,13 @@ export default async function DashboardOrders({ searchParams }) {
                     </td>
                     <td className="px-4 py-3 text-gray-500 align-top">
                       <LocalTime value={o.createdAt} />
-                      <Timeline history={o.history} t={t} />
+                      {/* Staff see the full inline timeline; customers see only
+                          the latest update — both open the details popup for
+                          the complete history + any messages. */}
+                      {user.role === "CUSTOMER"
+                        ? <LastUpdate history={o.history} t={t} />
+                        : <Timeline history={o.history} t={t} />}
+                      <div className="mt-2"><OrderDetails order={toDetails(o)} /></div>
                     </td>
                   </tr>
                 ))}
@@ -159,7 +184,10 @@ export default async function DashboardOrders({ searchParams }) {
                     : <StatusPill status={o.status} />}
                 </div>
                 <div className="text-sm font-semibold mt-2">{formatMoney(o.total, cur)}</div>
-                <Timeline history={o.history} t={t} />
+                {user.role === "CUSTOMER"
+                  ? <LastUpdate history={o.history} t={t} />
+                  : <Timeline history={o.history} t={t} />}
+                <div className="mt-2"><OrderDetails order={toDetails(o)} /></div>
               </div>
             ))}
           </div>
@@ -169,10 +197,26 @@ export default async function DashboardOrders({ searchParams }) {
   );
 }
 
+// Compact "last update" line for the customer view — just the most recent
+// status change and when it happened. The full history is one click away in the
+// order-details popup.
+function LastUpdate({ history, t }) {
+  if (!history?.length) return null;
+  const last = history[history.length - 1];
+  return (
+    <div className="text-xs text-gray-500 mt-1">
+      {t("orders.lastUpdate")}{" "}
+      <span className="font-medium text-gray-700">{t(statusKey(last.status))}</span>
+      {" · "}
+      <LocalTime value={last.createdAt} />
+    </div>
+  );
+}
+
 // Append-only status history for one order. The first event is the order's own
 // creation (actor null — the purchase itself), so a brand-new order still shows
-// a one-entry timeline rather than nothing. Rendered for every role: customers
-// use it to see progress, admins to see what they changed and when.
+// a one-entry timeline rather than nothing. Rendered for staff: admins/mods see
+// what they changed and when at a glance.
 function Timeline({ history, t }) {
   if (!history?.length) return null;
 

@@ -18,25 +18,25 @@ export default function ThemeToggle() {
       aria-checked={isDark}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className={`relative inline-flex items-center w-14 h-7 rounded-full transition-colors duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-eco-green/50 ${
+      className={`relative inline-flex items-center w-12 h-5 rounded-full transition-colors duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-eco-green/50 ${
         isDark ? "bg-slate-700" : "bg-sky-300"
       }`}
     >
       {/* Sun — left side, yellow, visible in light mode */}
       <i
-        className={`fa-solid fa-sun absolute left-1.5 text-[12px] text-yellow-400 transition-all duration-300 ${
+        className={`fa-solid fa-sun absolute left-2 text-[12px] text-yellow-400 transition-all duration-300 ${
           isDark ? "opacity-0 scale-50" : "opacity-100 scale-100"
         }`}
       />
       {/* Moon — right side, visible in dark mode */}
       <i
-        className={`fa-solid fa-moon absolute right-1.5 text-[11px] text-slate-100 transition-all duration-300 ${
+        className={`fa-solid fa-moon absolute right-2.5 text-[11px] text-slate-100 transition-all duration-300 ${
           isDark ? "opacity-100 scale-100" : "opacity-0 scale-50"
         }`}
       />
       {/* Sliding knob */}
       <span
-        className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transform transition-transform duration-300 ease-out ${
+        className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ease-out ${
           isDark ? "translate-x-0" : "translate-x-7"
         }`}
       />

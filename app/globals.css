@@ -166,7 +166,9 @@ body {
    app/page.js (Home)
    Section: Category tile — active "dashed green" state
    ------------------------------------------------------------ */
-.cat-tile.active {
+/* Highlight the category tile on hover instead of pinning one category as
+   "active". Every tile gets the same dashed-green emphasis when hovered. */
+.cat-tile:hover {
   border: 1px dashed var(--eco-green);
   border-radius: 6px;
 }

@@ -7,6 +7,7 @@ import { ThemeProvider } from "../lib/theme/ThemeProvider";
 import { getTheme } from "../lib/theme/server";
 import { CurrencyProvider } from "../lib/currency/CurrencyProvider";
 import { getActiveCurrency } from "../lib/store-config";
+import { getCurrentUser } from "../lib/auth-helpers";
 import Toast from "../components/Toast";
 import TopBar from "../components/TopBar";
 import Header from "../components/Header";
@@ -26,7 +27,11 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }) {
-  const [locale, theme, currency] = await Promise.all([getLocale(), getTheme(), getActiveCurrency()]);
+  const [locale, theme, currency, currentUser] = await Promise.all([
+    getLocale(), getTheme(), getActiveCurrency(), getCurrentUser(),
+  ]);
+  // Pass only what the client cart needs (id) — not the whole session object.
+  const cartUser = currentUser ? { id: currentUser.id } : null;
 
   return (
     <html
@@ -44,7 +49,7 @@ export default async function RootLayout({ children }) {
         <ThemeProvider initialTheme={theme}>
           <LanguageProvider initialLocale={locale}>
             <CurrencyProvider currency={currency}>
-              <CartProvider>
+              <CartProvider user={cartUser}>
                 <TopBar />
                 <Header />
                 <PrimaryNav />

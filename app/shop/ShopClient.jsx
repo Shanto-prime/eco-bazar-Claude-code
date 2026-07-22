@@ -1,108 +1,108 @@
 "use client";
 
-// app/shop/ShopClient.jsx — Shop with live filtering, sort, search, pagination.
+// app/shop/ShopClient.jsx — Shop with live filtering, sort, search, and
+// SERVER-SIDE pagination. Only the current page (9 products) is ever held in
+// memory: the server renders page 1, and every filter/sort/page change fetches
+// just that page from /api/products. This keeps the initial payload small and
+// avoids loading the entire catalogue up front.
+//
 // Two search modes:
-//   1. by product NAME  — the search box (also drives /shop?q=…)
-//   2. by CATEGORY      — the Categories list in the sidebar, and the homepage
-//      category tiles that link to /shop?cat=<slug>. Selecting a category shows
-//      ONLY that category's products.
-// Responsive: sidebar collapses behind a "Filters" button on mobile.
+//   1. by product NAME  — the search box
+//   2. by CATEGORY      — the Categories list in the sidebar (and the homepage
+//      tiles that deep-link to /shop?cat=<slug>, seeded server-side on entry)
 
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import Breadcrumb from "../../components/Breadcrumb";
 import ProductCard from "../../components/ProductCard";
 import { useT } from "../../lib/i18n/LanguageProvider";
 
 const PER_PAGE = 9;
 
-// Build a /shop URL from the active filters that belong in the URL (name query +
-// category), so both are shareable/bookmarkable and survive a reload.
-function buildShopUrl({ q, cat }) {
-  const usp = new URLSearchParams();
-  if (q)   usp.set("q", q);
-  if (cat) usp.set("cat", cat);
-  const s = usp.toString();
-  return s ? `/shop?${s}` : "/shop";
-}
-
-export default function ShopClient({ products = [] }) {
-  const router = useRouter();
-  const sp = useSearchParams();
+export default function ShopClient({ initial, initialQ = "", initialCat = "", categories = [] }) {
   const t = useT();
 
-  const [query, setQuery]   = useState(sp.get("q") || "");
-  const [minPrice, setMin]  = useState(0);
-  const [maxPrice, setMax]  = useState(100);
+  // Filters.
+  const [query, setQuery]      = useState(initialQ);
+  const [activeCat, setCat]    = useState(initialCat || null);
+  const [minPrice]             = useState(0); // lower bound is fixed at 0 in the UI
+  const [maxPrice, setMax]     = useState(100);
   const [minRating, setRating] = useState(0);
-  const [sort, setSort]     = useState("latest");
-  const [page, setPage]     = useState(1);
+  const [sort, setSort]        = useState("latest");
+  const [page, setPage]        = useState(1);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Category is driven by the URL (?cat=…) so tiles, the sidebar, and deep links
-  // all agree. null = all categories.
-  const activeCat = sp.get("cat") || null;
-
-  useEffect(() => { setQuery(sp.get("q") || ""); }, [sp]);
-
-  // Distinct categories present in the catalogue, for the sidebar list.
-  const categories = useMemo(() => {
-    const map = new Map();
-    for (const p of products) {
-      if (p.categorySlug && !map.has(p.categorySlug)) map.set(p.categorySlug, p.categoryName || p.categorySlug);
-    }
-    return [...map.entries()]
-      .map(([slug, name]) => ({ slug, name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [products]);
+  // Server-provided page + status.
+  const [items, setItems]   = useState(initial?.items || []);
+  const [total, setTotal]   = useState(initial?.total || 0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]   = useState(false);
 
   const activeCatName = activeCat
     ? categories.find((c) => c.slug === activeCat)?.name || activeCat
     : null;
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    let list = products.filter((p) => {
-      // Category search: hard filter to the selected category.
-      if (activeCat && p.categorySlug !== activeCat) return false;
-      // Name search.
-      if (q && !p.name.toLowerCase().includes(q)) return false;
-      if (p.price < minPrice) return false;
-      if (p.price > maxPrice && maxPrice < 100) return false;
-      if ((p.rating ?? 0) < minRating) return false;
-      return true;
-    });
-    if (sort === "price-asc")  list = [...list].sort((a, b) => a.price - b.price);
-    if (sort === "price-desc") list = [...list].sort((a, b) => b.price - a.price);
-    if (sort === "name")       list = [...list].sort((a, b) => a.name.localeCompare(b.name));
-    return list;
-  }, [products, query, activeCat, minPrice, maxPrice, minRating, sort]);
+  // Reset to page 1 whenever a non-page filter changes.
+  useEffect(() => { setPage(1); }, [query, activeCat, maxPrice, minRating, sort]);
 
-  useEffect(() => { setPage(1); }, [query, activeCat, minPrice, maxPrice, minRating, sort]);
+  // Fetch the current page from the API whenever filters or page change.
+  // The first render is seeded by the server (props), so we skip it. A request
+  // id guards against out-of-order responses overwriting newer results.
+  const first = useRef(true);
+  const reqId = useRef(0);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
-  const pageItems = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+    const id = setTimeout(async () => {
+      const mine = ++reqId.current;
+      setLoading(true);
+      setError(false);
+      try {
+        const params = new URLSearchParams();
+        if (query.trim())   params.set("q", query.trim());
+        if (activeCat)      params.set("cat", activeCat);
+        if (minPrice > 0)   params.set("minPrice", String(minPrice));
+        if (maxPrice < 100) params.set("maxPrice", String(maxPrice));
+        if (minRating > 0)  params.set("minRating", String(minRating));
+        if (sort !== "latest") params.set("sort", sort);
+        params.set("page", String(page));
+        params.set("perPage", String(PER_PAGE));
 
-  const onSearchSubmit = (e) => {
-    e.preventDefault();
-    router.replace(buildShopUrl({ q: query.trim(), cat: activeCat }));
-  };
+        const res = await fetch(`/api/products?${params.toString()}`);
+        if (!res.ok) throw new Error("bad status");
+        const data = await res.json();
+        if (mine !== reqId.current) return; // a newer request superseded this one
+        setItems(data.items || []);
+        setTotal(data.total || 0);
+      } catch {
+        if (mine !== reqId.current) return;
+        setError(true);
+        setItems([]);
+        setTotal(0);
+      } finally {
+        if (mine === reqId.current) setLoading(false);
+      }
+    }, 250); // debounce rapid changes (typing, slider drag)
+
+    return () => clearTimeout(id);
+  }, [query, activeCat, minPrice, maxPrice, minRating, sort, page]);
 
   const selectCategory = (slug) => {
     // Toggle: clicking the active category again clears it.
-    const nextCat = activeCat === slug ? null : slug;
-    router.replace(buildShopUrl({ q: query.trim(), cat: nextCat }));
+    setCat((cur) => (cur === slug ? null : slug));
     setShowFilters(false);
   };
 
   const resetAll = () => {
-    setQuery(""); setMin(0); setMax(100); setRating(0); setSort("latest");
-    router.replace("/shop");
+    setQuery(""); setMax(100); setRating(0); setSort("latest"); setCat(null);
   };
+
+  const pageCount = Math.max(1, Math.ceil(total / PER_PAGE));
+  const showingFrom = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
+  const showingTo   = Math.min(page * PER_PAGE, total);
 
   const sidebar = (
     <div className="space-y-8">
-      <form onSubmit={onSearchSubmit} className="relative">
+      <form onSubmit={(e) => e.preventDefault()} className="relative">
         <input
           value={query} onChange={(e) => setQuery(e.target.value)}
           placeholder={t("common.searchProducts")} className="eco-input pr-10 rounded-full"
@@ -120,7 +120,7 @@ export default function ShopClient({ products = [] }) {
             <li>
               <button
                 type="button"
-                onClick={() => { router.replace(buildShopUrl({ q: query.trim(), cat: null })); setShowFilters(false); }}
+                onClick={() => { setCat(null); setShowFilters(false); }}
                 className={`w-full text-left px-2 py-1.5 rounded transition ${!activeCat ? "bg-eco-green/10 text-eco-green font-medium" : "text-gray-600 hover:text-eco-green"}`}
               >
                 {t("shop.allCategories")}
@@ -190,7 +190,7 @@ export default function ShopClient({ products = [] }) {
             <div className="mb-4 flex items-center gap-2 text-sm">
               <span className="inline-flex items-center gap-2 rounded-full bg-eco-green/10 text-eco-green px-3 py-1 font-medium">
                 {t("shop.categoryLabel")} {activeCatName}
-                <button type="button" onClick={() => router.replace(buildShopUrl({ q: query.trim(), cat: null }))} aria-label={t("shop.clearCategory")}>
+                <button type="button" onClick={() => setCat(null)} aria-label={t("shop.clearCategory")}>
                   <i className="fa-solid fa-xmark" />
                 </button>
               </span>
@@ -199,11 +199,8 @@ export default function ShopClient({ products = [] }) {
 
           <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
             <div className="text-sm text-gray-500">
-              {t("shop.showing", {
-                from: filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1,
-                to: Math.min(page * PER_PAGE, filtered.length),
-                total: filtered.length,
-              })}
+              {t("shop.showing", { from: showingFrom, to: showingTo, total })}
+              {loading && <span className="ml-2 text-eco-green">{t("common.loading")}</span>}
             </div>
             <div className="flex items-center gap-2 sm:gap-3 text-sm">
               <button
@@ -219,14 +216,19 @@ export default function ShopClient({ products = [] }) {
             </div>
           </div>
 
-          {pageItems.length === 0 ? (
+          {error ? (
+            <div className="border border-dashed border-red-200 rounded-lg p-10 text-center text-red-500">
+              <div className="text-5xl mb-3">⚠️</div>
+              {t("shop.loadError")}
+            </div>
+          ) : items.length === 0 && !loading ? (
             <div className="border border-dashed border-gray-200 rounded-lg p-10 text-center text-gray-500">
               <div className="text-5xl mb-3">🤷</div>
               {t("shop.noMatch")}
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
-              {pageItems.map((p) => <ProductCard key={p.slug} {...p} />)}
+            <div className={`grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 transition-opacity ${loading ? "opacity-60" : ""}`}>
+              {items.map((p) => <ProductCard key={p.slug} {...p} />)}
             </div>
           )}
 
@@ -260,7 +262,7 @@ export default function ShopClient({ products = [] }) {
             <div className="flex-1 overflow-y-auto px-5 py-4">{sidebar}</div>
             <div className="border-t p-4">
               <button type="button" onClick={() => setShowFilters(false)} className="w-full py-3 rounded-full bg-eco-green text-white font-medium">
-                {t("shop.showResults", { count: filtered.length })}
+                {t("shop.showResults", { count: total })}
               </button>
             </div>
           </aside>

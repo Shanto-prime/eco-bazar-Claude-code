@@ -9,7 +9,7 @@ import TestimonialsSection from "../components/TestimonialsSection";
 import HomeHotDealsCard from "../components/HomeHotDealsCard";
 import PromoBanners from "../components/PromoBanners";
 import { categories, news, instagramTiles } from "../lib/data";
-import { listProducts } from "../lib/products-db";
+import { listProducts, listBestSellers } from "../lib/products-db";
 import { getT } from "../lib/i18n/server";
 
 // Reusable section heading shared across the homepage.
@@ -32,6 +32,9 @@ export default async function Home() {
   const viewAll = t("common.viewAll");
   // Products come from the database (so admin/moderator additions show up).
   const products = await listProducts({ take: 30 });
+  // Popular Products shows the best-selling items (falls back to on-sale, then
+  // latest). Two rows on desktop (10 items); the rest live on the shop page.
+  const popular = await listBestSellers(10);
 
   return (
     <>
@@ -90,7 +93,17 @@ export default async function Home() {
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-10 sm:mt-14">
         <SectionHead title={t("home.popularProducts")} href="/shop" viewAllText={viewAll} />
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-5">
-          {products.map((p) => <ProductCard key={p.slug} {...p} />)}
+          {popular.map((p) => <ProductCard key={p.slug} {...p} />)}
+        </div>
+        {/* The two rows above are the top sellers; everything else lives on the
+            shop page, loaded a page at a time. */}
+        <div className="flex justify-center mt-6 sm:mt-8">
+          <Link
+            href="/shop"
+            className="inline-block px-8 py-3 rounded-full bg-eco-green text-white font-medium hover:bg-emerald-600 transition min-h-[44px]"
+          >
+            {t("home.seeMoreProducts")}
+          </Link>
         </div>
       </section>
 

@@ -79,6 +79,28 @@ model User {
   addresses     Address[]
   changeRequests ProfileChangeRequest[] @relation("ChangeRequester")
   changeReviews  ProfileChangeRequest[] @relation("ChangeReviewer")
+  cart          Cart?
+}
+
+// ---------------------------------------------------------------------------
+// Server-side cart — one row per user. Anonymous visitors keep their cart in
+// localStorage only (see lib/CartContext.jsx); on login the guest cart is
+// merged into this row (lib/cart-actions.js `mergeCart`) and every subsequent
+// change is persisted here so the cart follows the user across devices.
+//
+// `items` is stored as a JSON array of the exact shape the client uses:
+//   [{ slug, name, icon, price, qty }]
+// Prices here are for display only — checkout always recomputes authoritative
+// prices from the Product table (see lib/order-actions.js).
+// ---------------------------------------------------------------------------
+model Cart {
+  id        String   @id @default(cuid()) @map("_id")
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     Json     // [{ slug, name, icon, price, qty }]
+  coupon    Json?    // { code, type, value, label } | null
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ---------------------------------------------------------------------------

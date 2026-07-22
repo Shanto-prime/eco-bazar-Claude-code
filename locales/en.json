@@ -99,6 +99,10 @@
     "rating": "Rating",
     "anyRating": "Any rating",
     "andUp": "& up",
+    "categories": "Categories",
+    "allCategories": "All categories",
+    "categoryLabel": "Category:",
+    "clearCategory": "Clear category filter",
     "popularTags": "Popular Tags",
     "resetFilters": "Reset all filters",
     "filters": "Filters",
@@ -604,6 +608,19 @@
     "exchangeRates": "Exchange rates",
     "exchangeRatesHint": "How many {base} equal one unit of each currency. Used to convert prices from {base}.",
     "ratePerUnit": "1 {code} in {base}"
+  },
+  "orders": {
+    "seeDetails": "See details",
+    "detailsTitle": "Order {number}",
+    "placedOn": "Placed on {date}",
+    "close": "Close",
+    "currentStatus": "Current status",
+    "customerNote": "Customer note",
+    "timeline": "Timeline",
+    "noHistory": "No history yet.",
+    "byActor": "by {actor}",
+    "bySystem": "automatic",
+    "lastUpdate": "Last update:"
   },
   "requests": {
     "navLabel": "Profile requests",

@@ -1,9 +1,12 @@
 "use client";
 
 // app/shop/ShopClient.jsx — Shop with live filtering, sort, search, pagination.
+// Two search modes:
+//   1. by product NAME  — the search box (also drives /shop?q=…)
+//   2. by CATEGORY      — the Categories list in the sidebar, and the homepage
+//      category tiles that link to /shop?cat=<slug>. Selecting a category shows
+//      ONLY that category's products.
 // Responsive: sidebar collapses behind a "Filters" button on mobile.
-// Rendered inside a <Suspense> boundary by app/shop/page.js because it calls
-// useSearchParams() (required by Next for static-generation bailout).
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -13,13 +16,22 @@ import { useT } from "../../lib/i18n/LanguageProvider";
 
 const PER_PAGE = 9;
 
+// Build a /shop URL from the active filters that belong in the URL (name query +
+// category), so both are shareable/bookmarkable and survive a reload.
+function buildShopUrl({ q, cat }) {
+  const usp = new URLSearchParams();
+  if (q)   usp.set("q", q);
+  if (cat) usp.set("cat", cat);
+  const s = usp.toString();
+  return s ? `/shop?${s}` : "/shop";
+}
+
 export default function ShopClient({ products = [] }) {
   const router = useRouter();
   const sp = useSearchParams();
   const t = useT();
 
   const [query, setQuery]   = useState(sp.get("q") || "");
-  const [tag, setTag]       = useState(null);
   const [minPrice, setMin]  = useState(0);
   const [maxPrice, setMax]  = useState(100);
   const [minRating, setRating] = useState(0);
@@ -27,11 +39,33 @@ export default function ShopClient({ products = [] }) {
   const [page, setPage]     = useState(1);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Category is driven by the URL (?cat=…) so tiles, the sidebar, and deep links
+  // all agree. null = all categories.
+  const activeCat = sp.get("cat") || null;
+
   useEffect(() => { setQuery(sp.get("q") || ""); }, [sp]);
+
+  // Distinct categories present in the catalogue, for the sidebar list.
+  const categories = useMemo(() => {
+    const map = new Map();
+    for (const p of products) {
+      if (p.categorySlug && !map.has(p.categorySlug)) map.set(p.categorySlug, p.categoryName || p.categorySlug);
+    }
+    return [...map.entries()]
+      .map(([slug, name]) => ({ slug, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [products]);
+
+  const activeCatName = activeCat
+    ? categories.find((c) => c.slug === activeCat)?.name || activeCat
+    : null;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = products.filter((p) => {
+      // Category search: hard filter to the selected category.
+      if (activeCat && p.categorySlug !== activeCat) return false;
+      // Name search.
       if (q && !p.name.toLowerCase().includes(q)) return false;
       if (p.price < minPrice) return false;
       if (p.price > maxPrice && maxPrice < 100) return false;
@@ -42,21 +76,27 @@ export default function ShopClient({ products = [] }) {
     if (sort === "price-desc") list = [...list].sort((a, b) => b.price - a.price);
     if (sort === "name")       list = [...list].sort((a, b) => a.name.localeCompare(b.name));
     return list;
-  }, [products, query, minPrice, maxPrice, minRating, sort]);
+  }, [products, query, activeCat, minPrice, maxPrice, minRating, sort]);
 
-  useEffect(() => { setPage(1); }, [query, minPrice, maxPrice, minRating, sort]);
+  useEffect(() => { setPage(1); }, [query, activeCat, minPrice, maxPrice, minRating, sort]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const pageItems = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const onSearchSubmit = (e) => {
     e.preventDefault();
-    const url = query.trim() ? `/shop?q=${encodeURIComponent(query.trim())}` : "/shop";
-    router.replace(url);
+    router.replace(buildShopUrl({ q: query.trim(), cat: activeCat }));
+  };
+
+  const selectCategory = (slug) => {
+    // Toggle: clicking the active category again clears it.
+    const nextCat = activeCat === slug ? null : slug;
+    router.replace(buildShopUrl({ q: query.trim(), cat: nextCat }));
+    setShowFilters(false);
   };
 
   const resetAll = () => {
-    setQuery(""); setMin(0); setMax(100); setRating(0); setSort("latest"); setTag(null);
+    setQuery(""); setMin(0); setMax(100); setRating(0); setSort("latest");
     router.replace("/shop");
   };
 
@@ -71,6 +111,36 @@ export default function ShopClient({ products = [] }) {
           <i className="fa-solid fa-magnifying-glass" />
         </button>
       </form>
+
+      {/* Category search */}
+      {categories.length > 0 && (
+        <div>
+          <div className="font-semibold mb-3">{t("shop.categories")}</div>
+          <ul className="space-y-1 text-sm">
+            <li>
+              <button
+                type="button"
+                onClick={() => { router.replace(buildShopUrl({ q: query.trim(), cat: null })); setShowFilters(false); }}
+                className={`w-full text-left px-2 py-1.5 rounded transition ${!activeCat ? "bg-eco-green/10 text-eco-green font-medium" : "text-gray-600 hover:text-eco-green"}`}
+              >
+                {t("shop.allCategories")}
+              </button>
+            </li>
+            {categories.map((c) => (
+              <li key={c.slug}>
+                <button
+                  type="button"
+                  onClick={() => selectCategory(c.slug)}
+                  aria-pressed={activeCat === c.slug}
+                  className={`w-full text-left px-2 py-1.5 rounded transition ${activeCat === c.slug ? "bg-eco-green/10 text-eco-green font-medium" : "text-gray-600 hover:text-eco-green"}`}
+                >
+                  {c.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div>
         <div className="font-semibold mb-3">{t("shop.priceRange")}</div>
@@ -102,34 +172,31 @@ export default function ShopClient({ products = [] }) {
         </ul>
       </div>
 
-      <div>
-        <div className="font-semibold mb-3">{t("shop.popularTags")}</div>
-        <div className="flex flex-wrap gap-2 text-xs">
-          {[
-            t("shop.tagHealthy"), t("shop.tagLowFat"), t("shop.tagVegetarian"),
-            t("shop.tagVitamins"), t("shop.tagBread"), t("shop.tagMeat"), t("shop.tagSnacks"),
-          ].map((label) => (
-            <button
-              type="button" key={label} onClick={() => setTag(tag === label ? null : label)}
-              className={`px-3 py-1 border rounded-full transition ${tag === label ? "bg-eco-green text-white border-transparent" : "hover:border-eco-green"}`}
-            >{label}</button>
-          ))}
-        </div>
-      </div>
-
       <button type="button" onClick={resetAll} className="text-sm text-gray-500 hover:text-eco-green underline">{t("shop.resetFilters")}</button>
     </div>
   );
 
   return (
     <>
-      <Breadcrumb items={[{ label: t("shop.title") }]} />
+      <Breadcrumb items={activeCatName ? [{ href: "/shop", label: t("shop.title") }, { label: activeCatName }] : [{ label: t("shop.title") }]} />
 
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 py-8 sm:py-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         {/* Desktop sidebar */}
         <aside className="hidden lg:block lg:col-span-3">{sidebar}</aside>
 
         <div className="lg:col-span-9">
+          {/* Active category banner */}
+          {activeCatName && (
+            <div className="mb-4 flex items-center gap-2 text-sm">
+              <span className="inline-flex items-center gap-2 rounded-full bg-eco-green/10 text-eco-green px-3 py-1 font-medium">
+                {t("shop.categoryLabel")} {activeCatName}
+                <button type="button" onClick={() => router.replace(buildShopUrl({ q: query.trim(), cat: null }))} aria-label={t("shop.clearCategory")}>
+                  <i className="fa-solid fa-xmark" />
+                </button>
+              </span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
             <div className="text-sm text-gray-500">
               {t("shop.showing", {

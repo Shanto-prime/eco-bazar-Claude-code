@@ -206,6 +206,37 @@ model StoreConfig {
 }
 
 // ---------------------------------------------------------------------------
+// Promotional banners — admin-managed images shown in the storefront's promo
+// areas (top announcement, the ad below the product list, and hot deals). Each
+// banner is a clickable Canva-designed image that links to /deals/<slug>, a
+// landing page listing the products the promo applies to (matched by
+// `targetTag` against a product's badge or tags). See lib/banners.js.
+// ---------------------------------------------------------------------------
+enum BannerPlacement {
+  TOP          // top announcement / discount banner
+  BELOW_LIST   // advertisement below the product list
+  HOT_DEALS    // hot deals promotion area
+}
+
+model PromoBanner {
+  id          String          @id @default(cuid()) @map("_id")
+  title       String          // internal label + image alt text
+  imageUrl    String          // uploaded banner image
+  placement   BannerPlacement
+  slug        String          @unique   // landing slug → /deals/<slug>
+  promoCode   String?         // shown to customers (display only)
+  deadline    DateTime?       // past this → banner is hidden from the storefront
+  targetTag   String          // matches product.badge OR product.tags → applicable products
+  active      Boolean         @default(true)
+  sort        Int             @default(0)
+  createdById String          // actor id (no relation — kept simple, like an audit stamp)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([placement, active])
+}
+
+// ---------------------------------------------------------------------------
 // Catalog
 // ---------------------------------------------------------------------------
 model Category {

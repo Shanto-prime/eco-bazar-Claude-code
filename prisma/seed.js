@@ -1,9 +1,10 @@
 // prisma/seed.js
 // Seed the MongoDB database with:
-//   1. Three test users (login with the username OR the email + password):
+//   1. Test users (login with the username OR the email + password):
 //        admin    / admin@ecobazar.test    / admin    / ADMIN
 //        mod      / mod@ecobazar.test      / mod      / MODERATOR
 //        customer / customer@ecobazar.test / customer / CUSTOMER
+//        mamun    / mamun@ecobazar.test    / mamun    / CUSTOMER
 //   2. The storefront CATEGORIES (from lib/data.js).
 //   3. The 10 starter products, each assigned to a category.
 //   4. DEMO products (no image) for any category that would otherwise be empty,
@@ -60,6 +61,8 @@ const TEST_USERS = [
   { username: "admin",    email: "admin@ecobazar.test",    password: "admin",    role: "ADMIN",     name: "Site Admin" },
   { username: "mod",      email: "mod@ecobazar.test",      password: "mod",      role: "MODERATOR", name: "Demo Moderator" },
   { username: "customer", email: "customer@ecobazar.test", password: "customer", role: "CUSTOMER",  name: "Demo Customer" },
+  // Second customer for testing (auto-generated details).
+  { username: "mamun",    email: "mamun@ecobazar.test",    password: "mamun",    role: "CUSTOMER",  name: "Mamun" },
 ];
 
 async function main() {
@@ -158,6 +161,28 @@ async function main() {
     }
   }
   console.log(`• ${demoTotal} demo products seeded (image-less, for empty categories).`);
+
+  // ---- Promo banners -------------------------------------------------------
+  // One example banner per placement, reusing existing storefront images, so the
+  // promo areas are populated and immediately editable in the dashboard. Each
+  // targets the "Sale 50%" badge → its /deals/<slug> page lists those products.
+  const BANNERS = [
+    { slug: "summer-sale", title: "Summer Sale — up to 50% off", placement: "TOP",        image: "/images/hero-summer.jpg",  promoCode: "SUMMER25", targetTag: "Sale 50%" },
+    { slug: "top-deals",   title: "Top Deals of the Week",       placement: "BELOW_LIST", image: "/images/banner-37off.jpg", promoCode: "SAVE37",   targetTag: "Sale 50%" },
+    { slug: "hot-deals",   title: "Hot Deals — limited time",    placement: "HOT_DEALS",  image: "/images/hotdeal-big.jpg",  promoCode: "HOT10",    targetTag: "Sale 50%" },
+  ];
+  for (const b of BANNERS) {
+    await prisma.promoBanner.upsert({
+      where:  { slug: b.slug },
+      update: { title: b.title, imageUrl: b.image, placement: b.placement, promoCode: b.promoCode, targetTag: b.targetTag, active: true },
+      create: {
+        slug: b.slug, title: b.title, imageUrl: b.image, placement: b.placement,
+        promoCode: b.promoCode, targetTag: b.targetTag, active: true, sort: 0,
+        createdById: owner.id,
+      },
+    });
+  }
+  console.log(`• ${BANNERS.length} promo banners seeded (one per placement).`);
   console.log("");
   console.log("Sign in at /login with any of the three test accounts above.");
 }

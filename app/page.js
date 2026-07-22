@@ -7,6 +7,7 @@ import CategoryTile from "../components/CategoryTile";
 import NewsCard from "../components/NewsCard";
 import TestimonialsSection from "../components/TestimonialsSection";
 import HomeHotDealsCard from "../components/HomeHotDealsCard";
+import PromoBanners from "../components/PromoBanners";
 import { categories, news, instagramTiles } from "../lib/data";
 import { listProducts } from "../lib/products-db";
 import { getT } from "../lib/i18n/server";
@@ -50,6 +51,12 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* ============ TOP PROMO BANNERS (admin-managed) ============== */}
+      <PromoBanners
+        placement="TOP"
+        className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-6 sm:mt-8 space-y-4 sm:space-y-5"
+      />
 
       {/* ============ SERVICE BAR ===================================== */}
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-6 sm:mt-8">
@@ -112,15 +119,19 @@ export default async function Home() {
               ))}
             </div>
           </div>
+
+          {/* Admin-managed hot-deals promo banners */}
+          <PromoBanners placement="HOT_DEALS" className="mt-6 sm:mt-8 space-y-4 sm:space-y-5" />
         </div>
       </section>
 
-      {/* ============ 37% OFF BANNER ================================== */}
-      <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-10 sm:mt-14">
-        <div className="rounded-xl overflow-hidden relative aspect-[1620/440]">
-          <Image src="/images/banner-37off.jpg" alt={t("home.summerSale37Alt")} fill className="object-cover" sizes="100vw" />
-        </div>
-      </section>
+      {/* ============ AD BELOW PRODUCT LIST (admin-managed) ========== */}
+      {/* Replaces the old hardcoded 37%-off image; falls back to nothing when
+          no banner is set. */}
+      <PromoBanners
+        placement="BELOW_LIST"
+        className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-10 sm:mt-14 space-y-4 sm:space-y-5"
+      />
 
       {/* ============ FEATURED PRODUCTS =============================== */}
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-10 sm:mt-14">

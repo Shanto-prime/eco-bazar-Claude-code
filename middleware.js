@@ -17,8 +17,10 @@ const { auth } = NextAuth(authConfig);
 export default auth((req) => {
   const url = req.nextUrl;
 
+  // `req.auth?.user` (not just `req.auth`): an idle-expired session still has a
+  // session object but its `user` is nulled out, so it must count as anonymous.
   if (url.pathname.startsWith("/dashboard")) {
-    if (!req.auth) {
+    if (!req.auth?.user) {
       const redirect = url.clone();
       redirect.pathname = "/unauthorized";
       redirect.search = `?next=${encodeURIComponent(url.pathname)}`;
@@ -29,7 +31,7 @@ export default auth((req) => {
   // Wishlist is a signed-in-only page. Anonymous visitors are sent to /login
   // with a `next` param; LoginForm returns them here after a successful login.
   if (url.pathname.startsWith("/wishlist")) {
-    if (!req.auth) {
+    if (!req.auth?.user) {
       const redirect = url.clone();
       redirect.pathname = "/login";
       redirect.search = `?next=${encodeURIComponent(url.pathname)}`;

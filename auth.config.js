@@ -12,6 +12,7 @@
 
 import Google from "next-auth/providers/google";
 import Facebook from "next-auth/providers/facebook";
+import { SESSION_MAX_AGE_S, isIdleExpired } from "./lib/session-policy";
 
 const hasEnv = (k) => !!process.env[k] && process.env[k].trim().length > 0;
 
@@ -43,7 +44,11 @@ if (hasFacebook) {
 }
 
 export const authConfig = {
-  session: { strategy: "jwt" },
+  // JWT sessions are rolling: `maxAge` is the inactivity window and is refreshed
+  // on each request. We set it to the longest role limit (12h) so an idle admin
+  // cookie can't outlive that; the per-role idle check in the `jwt` callback
+  // enforces the shorter 6h window for customers.
+  session: { strategy: "jwt", maxAge: SESSION_MAX_AGE_S },
 
   pages: {
     signIn: "/login",
@@ -58,13 +63,28 @@ export const authConfig = {
     // config already minted (with role) at sign-in, so no DB access is needed
     // here.
     async jwt({ token, user }) {
+      const now = Date.now();
       if (user) {
-        token.role   = user.role || "CUSTOMER";
-        token.userId = user.id;
+        token.role           = user.role || "CUSTOMER";
+        token.userId         = user.id;
+        token.lastActivityAt = now;
+        return token;
       }
+      // Auto-logout on inactivity (6h customers / 12h admin+mod): once the idle
+      // window is exceeded, drop the identity so this token stops authenticating.
+      if (isIdleExpired(token, now)) {
+        return { expired: true };
+      }
+      // Rolling activity stamp — refreshed on every authenticated request.
+      if (token.userId) token.lastActivityAt = now;
       return token;
     },
     async session({ session, token }) {
+      // Idle-expired / identity-stripped token → no authenticated user.
+      if (!token?.userId) {
+        session.user = null;
+        return session;
+      }
       if (session.user) {
         session.user.id   = token.userId;
         session.user.role = token.role || "CUSTOMER";

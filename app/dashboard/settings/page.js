@@ -30,6 +30,7 @@ export default async function DashboardSettings() {
       select: {
         id: true, name: true, username: true, email: true, phone: true,
         image: true, emailVerified: true, passwordHash: true, role: true,
+        lastLoginAt: true,
       },
     }),
     prisma.address.findMany({
@@ -74,6 +75,12 @@ export default async function DashboardSettings() {
   // the user needs to read) remain.
   const visibleRequests = requests.filter((r) => r.status === "PENDING" || r.status === "REJECTED");
 
+  // Sign-in timestamp + the role-based inactivity window shown to the user.
+  const lastSignIn = user.lastLoginAt
+    ? new Date(user.lastLoginAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
+    : null;
+  const idleHours = user.role === "ADMIN" || user.role === "MODERATOR" ? 12 : 6;
+
   return (
     <div className="max-w-4xl">
       <header className="mb-6">
@@ -104,6 +111,24 @@ export default async function DashboardSettings() {
         {user.role === "ADMIN" && (
           <StoreCurrencySettings currency={storeConfig.currency} rates={storeConfig.rates} />
         )}
+
+        {/* Account activity — sign-in timestamp + auto-logout policy. */}
+        <section className="rounded-lg border border-gray-200 bg-white p-5">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <i className="fa-solid fa-clock-rotate-left text-eco-green" />
+            {t("settings.lastSignIn")}
+          </div>
+          <div className="mt-2 text-sm text-gray-700">
+            {lastSignIn ? (
+              <span className="font-medium">{lastSignIn}</span>
+            ) : (
+              <span className="text-gray-500">{t("settings.lastSignInNever")}</span>
+            )}
+          </div>
+          <p className="mt-2 text-xs text-gray-400">
+            {t("settings.autoLogoutNote", { hours: idleHours })}
+          </p>
+        </section>
       </div>
 
       <p className="mt-8 text-xs text-gray-400">

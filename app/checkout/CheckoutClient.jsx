@@ -17,17 +17,18 @@ import { useCart } from "../../lib/CartContext";
 import { placeOrderAction } from "../../lib/order-actions";
 import { useT } from "../../lib/i18n/LanguageProvider";
 import { useMoney } from "../../lib/currency/CurrencyProvider";
-import { COUNTRIES, STATES } from "../../lib/geo";
+import { divisions, districtsOf, thanasOf } from "../../lib/bd-geo";
 
-const REQUIRED = ["firstName", "lastName", "street", "country", "state", "zip", "email", "phone"];
+// Bangladesh-based store: a fixed country plus the cascading
+// Division → District (Jella) → Thana/Upazila selectors below.
+const COUNTRY = "Bangladesh";
+const REQUIRED = ["firstName", "lastName", "street", "division", "district", "thana", "email", "phone"];
 
 // UI radio value → PaymentMethod enum expected by the server action.
-const PAYMENT_MAP = { cod: "COD", paypal: "PAYPAL", amazon: "AMAZON" };
+const PAYMENT_MAP = { cod: "COD", bkash: "BKASH", nagad: "NAGAD" };
 
-// Stored geo values → their localized display keys. The VALUE written to the
-// order stays the English identifier from lib/geo.js; only the label localizes.
-const COUNTRY_KEYS = { USA: "checkout.countryUsa", Canada: "checkout.countryCanada", UK: "checkout.countryUk" };
-const STATE_KEYS   = { Illinois: "checkout.stateIllinois", California: "checkout.stateCalifornia", "New York": "checkout.stateNewYork" };
+// Label a geo option as "English (বাংলা)" so both scripts are clear.
+const geoLabel = (o) => (o.bn ? `${o.name} (${o.bn})` : o.name);
 
 export default function CheckoutClient({ initialBilling = {} }) {
   const router = useRouter();
@@ -35,19 +36,36 @@ export default function CheckoutClient({ initialBilling = {} }) {
   const money = useMoney();
   const { items, subtotal, discount, total, coupon, clearCart, hydrated, showToast } = useCart();
 
-  const [form, setForm] = useState({
-    firstName: "", lastName: "", company: "", street: "",
-    country: "", state: "", zip: "", email: "", phone: "", notes: "",
-    payment: "cod",
-    // Spread last so saved-address values win, but only the keys the server
-    // actually sent — a missing address leaves every field at "".
-    ...initialBilling,
-  });
+  // A saved address stores Division as `state` and District as `city`, so we
+  // seed the BD selectors from those. Thana isn't kept on saved addresses yet.
+  const [form, setForm] = useState(() => ({
+    firstName: initialBilling.firstName || "",
+    lastName:  initialBilling.lastName  || "",
+    company:   initialBilling.company   || "",
+    street:    initialBilling.street    || "",
+    division:  initialBilling.state      || "",
+    district:  initialBilling.city       || "",
+    thana:     "",
+    zip:       initialBilling.zip        || "",
+    email:     initialBilling.email      || "",
+    phone:     initialBilling.phone      || "",
+    notes:     "",
+    payment:   "cod",
+  }));
   const [errors, setErrors] = useState({});
   const [placed, setPlaced] = useState(null);
   const [placing, setPlacing] = useState(false);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // Cascading selectors: changing a division clears the district + thana below
+  // it; changing a district clears the thana — so a stale child value from
+  // another area can never survive a parent change.
+  const onDivision = (e) => setForm((f) => ({ ...f, division: e.target.value, district: "", thana: "" }));
+  const onDistrict = (e) => setForm((f) => ({ ...f, district: e.target.value, thana: "" }));
+
+  const districtOptions = form.division ? districtsOf(form.division) : [];
+  const thanaOptions = form.division && form.district ? thanasOf(form.division, form.district) : [];
 
   const onPlaceOrder = async (e) => {
     e.preventDefault();
@@ -73,9 +91,11 @@ export default function CheckoutClient({ initialBilling = {} }) {
           firstName: form.firstName,
           lastName:  form.lastName,
           street:    form.street,
-          country:   form.country,
-          state:     form.state,
-          zip:       form.zip,
+          country:   COUNTRY,
+          state:     form.division,   // Division (বিভাগ)
+          city:      form.district,   // District / Jella (জেলা)
+          thana:     form.thana,      // Thana / Upazila (থানা/উপজেলা)
+          zip:       form.zip || undefined,
           email:     form.email,
           phone:     form.phone,
           notes:     form.notes || undefined,
@@ -114,7 +134,7 @@ export default function CheckoutClient({ initialBilling = {} }) {
           <p className="text-gray-500 mb-1">{t("checkout.placedMsg", { id: placed.id })}</p>
           <p className="text-gray-500 mb-6">
             {t(placed.items === 1 ? "checkout.items_one" : "checkout.items_other", { count: placed.items })} · {money(placed.total)} ·{" "}
-            {placed.payment === "cod" ? t("checkout.cod") : placed.payment}
+            {t(`checkout.${placed.payment}`)}
           </p>
           <Link href="/shop" className="inline-block px-6 py-3 rounded-full bg-eco-green text-white font-medium">
             {t("checkout.continueShopping")} <i className="fa-solid fa-arrow-right ml-1" />
@@ -159,29 +179,48 @@ export default function CheckoutClient({ initialBilling = {} }) {
               <Field label={`${t("checkout.street")} *`} wide err={errors.street}>
                 <input name="street" autoComplete="street-address" className={`eco-input ${errors.street ? "border-red-500" : ""}`} value={form.street} onChange={set("street")} />
               </Field>
-              {/* Options come from lib/geo.js — the same list the settings
-                  address book writes, so a saved address always prefills to a
-                  real <option> instead of silently falling back to "". */}
-              <Field label={`${t("checkout.country")} *`} err={errors.country}>
-                <select name="country" autoComplete="country-name" className={`eco-input ${errors.country ? "border-red-500" : ""}`} value={form.country} onChange={set("country")}>
-                  <option value="">{t("checkout.select")}</option>
-                  {COUNTRIES.map((c) => <option key={c} value={c}>{t(COUNTRY_KEYS[c]) || c}</option>)}
+
+              {/* Bangladesh cascading address: Division → District → Thana.
+                  Each level only lists children of the one above it. */}
+              <Field label={`${t("checkout.division")} *`} err={errors.division}>
+                <select name="division" autoComplete="address-level1" className={`eco-input ${errors.division ? "border-red-500" : ""}`} value={form.division} onChange={onDivision}>
+                  <option value="">{t("checkout.selectDivision")}</option>
+                  {divisions().map((d) => <option key={d.name} value={d.name}>{geoLabel(d)}</option>)}
                 </select>
               </Field>
-              <Field label={`${t("checkout.state")} *`} err={errors.state}>
-                <select name="state" autoComplete="address-level1" className={`eco-input ${errors.state ? "border-red-500" : ""}`} value={form.state} onChange={set("state")}>
-                  <option value="">{t("checkout.select")}</option>
-                  {STATES.map((s) => <option key={s} value={s}>{t(STATE_KEYS[s]) || s}</option>)}
+              <Field label={`${t("checkout.district")} *`} err={errors.district}>
+                <select
+                  name="district" autoComplete="address-level2"
+                  className={`eco-input ${errors.district ? "border-red-500" : ""}`}
+                  value={form.district} onChange={onDistrict}
+                  disabled={!form.division}
+                >
+                  <option value="">{form.division ? t("checkout.selectDistrict") : t("checkout.selectDistrictFirst")}</option>
+                  {districtOptions.map((d) => <option key={d.name} value={d.name}>{geoLabel(d)}</option>)}
                 </select>
               </Field>
-              <Field label={`${t("checkout.zip")} *`} err={errors.zip}>
-                <input name="zip" autoComplete="postal-code" className={`eco-input ${errors.zip ? "border-red-500" : ""}`} value={form.zip} onChange={set("zip")} />
+              <Field label={`${t("checkout.thana")} *`} err={errors.thana}>
+                <select
+                  name="thana" autoComplete="address-level3"
+                  className={`eco-input ${errors.thana ? "border-red-500" : ""}`}
+                  value={form.thana} onChange={set("thana")}
+                  disabled={!form.district}
+                >
+                  <option value="">{form.district ? t("checkout.selectThana") : t("checkout.selectThanaFirst")}</option>
+                  {thanaOptions.map((tItem) => <option key={tItem.name} value={tItem.name}>{geoLabel(tItem)}</option>)}
+                </select>
+              </Field>
+              <Field label={t("checkout.postcode")}>
+                <input name="zip" inputMode="numeric" autoComplete="postal-code" className="eco-input" value={form.zip} onChange={set("zip")} />
               </Field>
               <Field label={`${t("checkout.email")} *`} err={errors.email}>
                 <input name="email" autoComplete="email" className={`eco-input ${errors.email ? "border-red-500" : ""}`} type="email" value={form.email} onChange={set("email")} placeholder={t("checkout.emailPlaceholder")} />
               </Field>
+              <Field label={`${t("checkout.country")}`}>
+                <input name="country" className="eco-input bg-gray-50 text-gray-500" value={COUNTRY} readOnly aria-readonly="true" />
+              </Field>
               <Field label={`${t("checkout.phone")} *`} wide err={errors.phone}>
-                <input name="phone" autoComplete="tel" className={`eco-input ${errors.phone ? "border-red-500" : ""}`} type="tel" value={form.phone} onChange={set("phone")} />
+                <input name="phone" autoComplete="tel" className={`eco-input ${errors.phone ? "border-red-500" : ""}`} type="tel" value={form.phone} onChange={set("phone")} placeholder="01XXXXXXXXX" />
               </Field>
             </div>
           </div>
@@ -211,9 +250,9 @@ export default function CheckoutClient({ initialBilling = {} }) {
 
             <div className="font-semibold mt-4 mb-3">{t("checkout.paymentMethod")}</div>
             {[
-              { v: "cod",    l: t("checkout.cod") },
-              { v: "paypal", l: t("checkout.paypal") },
-              { v: "amazon", l: t("checkout.amazon") },
+              { v: "cod",   l: t("checkout.cod") },
+              { v: "bkash", l: t("checkout.bkash") },
+              { v: "nagad", l: t("checkout.nagad") },
             ].map((p) => (
               <label key={p.v} className="flex items-center gap-2 py-2 text-sm cursor-pointer">
                 <input type="radio" name="pay" className="eco-check" checked={form.payment === p.v} onChange={() => setForm((f) => ({ ...f, payment: p.v }))} />

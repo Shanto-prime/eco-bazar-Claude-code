@@ -364,9 +364,10 @@ model Order {
   firstName     String
   lastName      String
   street        String
-  city          String?
-  state         String?
-  zip           String?
+  city          String?   // Bangladesh: District / Jella (জেলা)
+  thana         String?   // Bangladesh: Thana / Upazila (থানা/উপজেলা)
+  state         String?   // Bangladesh: Division (বিভাগ)
+  zip           String?   // postcode (optional)
   country       String?
 
   // Money in INTEGER CENTS.

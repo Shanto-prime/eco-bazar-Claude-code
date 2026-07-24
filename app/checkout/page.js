@@ -37,7 +37,8 @@ export default async function CheckoutPage() {
     company:   address?.company   || "",
     street:    address?.street    || "",
     country:   address?.country   || "",
-    state:     address?.state     || "",
+    state:     address?.state     || "",   // Division (বিভাগ)
+    city:      address?.city      || "",   // District / Jella (জেলা)
     zip:       address?.zip       || "",
     email:     user?.email        || "",
     phone:     address?.phone || user?.phone || "",

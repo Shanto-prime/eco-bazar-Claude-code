@@ -50,7 +50,8 @@ export default async function EditProduct({ params }) {
       <ProductForm
         product={{ ...product, price: toDollars(product.price), oldPrice: toDollars(product.oldPrice) }}
         action={boundUpdate}
-        allowDelete={isAdmin(user)}
+        allowDelete
+        requestMode={!isAdmin(user)}
         onDelete={boundDelete}
       />
     </div>

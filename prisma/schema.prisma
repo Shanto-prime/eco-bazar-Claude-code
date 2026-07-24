@@ -66,6 +66,10 @@ model User {
   emailVerified DateTime?
   passwordHash  String?    // bcrypt — null for OAuth-only users
   role          Role       @default(CUSTOMER)
+  // The very first user (the founding ADMIN). A "super admin" can never be
+  // demoted or deleted by anyone — see app/dashboard/users/_actions.js. Set by
+  // promoteIfFirstUser() and the seed.
+  isSuperAdmin  Boolean    @default(false)
   lastLoginAt   DateTime?  // stamped on every successful sign-in; shown in settings
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
@@ -81,6 +85,48 @@ model User {
   changeRequests ProfileChangeRequest[] @relation("ChangeRequester")
   changeReviews  ProfileChangeRequest[] @relation("ChangeReviewer")
   cart          Cart?
+  approvalRequests ApprovalRequest[] @relation("ApprovalRequester")
+  approvalReviews  ApprovalRequest[] @relation("ApprovalReviewer")
+}
+
+// ---------------------------------------------------------------------------
+// Approval queue — actions a MODERATOR is not allowed to perform directly go
+// here as a PENDING request for an ADMIN to approve or reject. Currently:
+//   • PRODUCT_DELETE — a moderator asking to delete a product they created
+//   • ORDER_CANCEL   — a moderator asking to cancel an order
+// On approval the ADMIN performs the real action (delete / cancel) exactly as
+// if they had done it themselves. See app/dashboard/approvals/_actions.js.
+// ---------------------------------------------------------------------------
+enum ApprovalType {
+  PRODUCT_DELETE
+  ORDER_CANCEL
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED   // withdrawn by the requester before review
+}
+
+model ApprovalRequest {
+  id          String         @id @default(cuid()) @map("_id")
+  type        ApprovalType
+  status      ApprovalStatus @default(PENDING)
+  requesterId String
+  requester   User           @relation("ApprovalRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  entityId    String         // productId or orderId the request targets
+  entityLabel String?        // snapshot (product name / order number) for the review UI
+  reason      String?        // optional note from the requester
+  reviewerId  String?
+  reviewer    User?          @relation("ApprovalReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewNote  String?
+  createdAt   DateTime       @default(now())
+  reviewedAt  DateTime?
+
+  @@index([status])
+  @@index([requesterId])
+  @@index([type, entityId])
 }
 
 // ---------------------------------------------------------------------------
@@ -452,8 +498,10 @@ model Review {
 // ---------------------------------------------------------------------------
 model AuditLog {
   id         String   @id @default(cuid()) @map("_id")
-  actorId    String
-  actor      User     @relation("AuditActor", fields: [actorId], references: [id])
+  // Optional + SetNull so deleting a user preserves their audit trail (the row
+  // stays, the actor link is cleared) instead of blocking the delete.
+  actorId    String?
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
   action     String   // e.g. "product.create" | "product.update" | "order.refund"
   entity     String   // e.g. "Product" | "Order" | "User"
   entityId   String?

@@ -23,7 +23,12 @@ export default async function DashboardLayout({ children }) {
   // action them, so only the admin pays for the query — everyone else skips it.
   const counts = {};
   if (user.role === "ADMIN") {
-    counts.pendingRequests = await prisma.profileChangeRequest.count({ where: { status: "PENDING" } });
+    const [pendingRequests, pendingApprovals] = await Promise.all([
+      prisma.profileChangeRequest.count({ where: { status: "PENDING" } }),
+      prisma.approvalRequest.count({ where: { status: "PENDING" } }),
+    ]);
+    counts.pendingRequests = pendingRequests;
+    counts.pendingApprovals = pendingApprovals;
   }
 
   return <DashboardShell user={user} counts={counts}>{children}</DashboardShell>;

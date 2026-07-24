@@ -145,7 +145,7 @@ export default async function DashboardOrders({ searchParams }) {
                     <td className="px-4 py-3 text-gray-500">{o._count.items}</td>
                     <td className="px-4 py-3 font-semibold">{formatMoney(o.total, cur)}</td>
                     <td className="px-4 py-3">
-                      {user.role === "ADMIN"
+                      {user.role === "ADMIN" || user.role === "MODERATOR"
                         ? <StatusSelect orderId={o.id} status={o.status} />
                         : <StatusPill status={o.status} />}
                     </td>
@@ -179,7 +179,7 @@ export default async function DashboardOrders({ searchParams }) {
                       <LocalTime value={o.createdAt} /> · {t(o._count.items === 1 ? "dashboard.items_one" : "dashboard.items_other", { count: o._count.items })}
                     </div>
                   </div>
-                  {user.role === "ADMIN"
+                  {user.role === "ADMIN" || user.role === "MODERATOR"
                     ? <StatusSelect orderId={o.id} status={o.status} />
                     : <StatusPill status={o.status} />}
                 </div>

@@ -15,6 +15,7 @@ export default async function DashboardProducts({ searchParams }) {
   const sp = await searchParams;
   const q = (sp?.q || "").toString().trim();
   const lowStockOnly = sp?.lowStock === "1";
+  const deletionRequested = sp?.requested === "1";
 
   // MongoDB `contains` is case-sensitive by default; opt into Prisma's
   // `mode: "insensitive"` (supported by the Mongo connector) for friendly search.
@@ -40,6 +41,12 @@ export default async function DashboardProducts({ searchParams }) {
           <i className="fa-solid fa-plus" /> {t("dashboard.addProduct")}
         </Link>
       </div>
+
+      {deletionRequested && (
+        <div className="mb-5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3">
+          <i className="fa-solid fa-clock mr-2" />{t("dashboard.deletionRequested")}
+        </div>
+      )}
 
       <form className="mb-5">
         <div className="relative max-w-sm">

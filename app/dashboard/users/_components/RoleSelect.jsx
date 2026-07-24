@@ -29,12 +29,13 @@ const COLOR = {
   CUSTOMER:  "text-gray-700",
 };
 
-export default function RoleSelect({ userId, role, isSelf }) {
+export default function RoleSelect({ userId, role, isSelf, superAdmin = false }) {
   const t = useT();
   const router = useRouter();
   const [value, setValue] = useState(role);
   const [error, setError] = useState(null);
   const [pending, startTransition] = useTransition();
+  const locked = isSelf || superAdmin;
 
   const onChange = (e) => {
     const next = e.target.value;
@@ -57,8 +58,8 @@ export default function RoleSelect({ userId, role, isSelf }) {
       <select
         value={value}
         onChange={onChange}
-        disabled={isSelf || pending}
-        title={isSelf ? t("dashboard.cantChangeOwnRole") : undefined}
+        disabled={locked || pending}
+        title={superAdmin ? t("dashboard.superAdminLocked") : isSelf ? t("dashboard.cantChangeOwnRole") : undefined}
         className={`text-xs font-medium rounded-md border border-gray-200 bg-white px-2 py-1 disabled:opacity-60 disabled:cursor-not-allowed ${COLOR[value] || ""}`}
       >
         {ROLES.map((r) => (

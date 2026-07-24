@@ -24,8 +24,12 @@ const StatusSchema = z.object({
 // Change an order's fulfilment status. Writes three things atomically:
 // the order row, an append-only OrderStatusEvent (what the customer timeline
 // reads), and the AuditLog row every privileged write owes.
+//
+// ADMIN and MODERATOR may both move orders through their lifecycle. The one
+// exception: a MODERATOR cannot CANCEL an order directly — that files an
+// ApprovalRequest (ORDER_CANCEL) for an admin to approve instead.
 export async function updateOrderStatusAction(input) {
-  const actor = await requireRole("ADMIN", "/dashboard/orders");
+  const actor = await requireRole(["ADMIN", "MODERATOR"], "/dashboard/orders");
 
   let data;
   try { data = StatusSchema.parse(input); }
@@ -42,6 +46,24 @@ export async function updateOrderStatusAction(input) {
   // and payment state drift apart from the fulfilment state with no way back.
   if (isTerminal(order.status)) {
     return { ok: false, error: `Order is ${order.status.toLowerCase()} and can't be changed.` };
+  }
+
+  // Moderator cancellation → approval request, not an immediate cancel.
+  if (data.status === "CANCELLED" && actor.role !== "ADMIN") {
+    const existing = await prisma.approvalRequest.findFirst({
+      where: { type: "ORDER_CANCEL", entityId: order.id, status: "PENDING" },
+      select: { id: true },
+    });
+    if (!existing) {
+      await prisma.approvalRequest.create({
+        data: { type: "ORDER_CANCEL", requesterId: actor.id, entityId: order.id, entityLabel: order.number },
+      });
+      await prisma.auditLog.create({
+        data: { actorId: actor.id, action: "order.cancel.request", entity: "Order", entityId: order.id, metadata: { number: order.number } },
+      });
+    }
+    revalidatePath("/dashboard/orders");
+    return { ok: true, requested: true };
   }
 
   await prisma.$transaction(async (tx) => {

@@ -70,10 +70,13 @@ async function main() {
   const created = {};
   for (const u of TEST_USERS) {
     const passwordHash = await bcrypt.hash(u.password, 12);
+    // The seeded `admin` is the super admin (founding account — never
+    // deletable/demotable). Everyone else is a normal account.
+    const isSuperAdmin = u.username === "admin";
     created[u.role] = await prisma.user.upsert({
       where:  { username: u.username },
-      update: { email: u.email, role: u.role, passwordHash, name: u.name },
-      create: { username: u.username, email: u.email, name: u.name, role: u.role, passwordHash },
+      update: { email: u.email, role: u.role, passwordHash, name: u.name, isSuperAdmin },
+      create: { username: u.username, email: u.email, name: u.name, role: u.role, passwordHash, isSuperAdmin },
     });
   }
 

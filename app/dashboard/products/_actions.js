@@ -151,11 +151,44 @@ export async function updateProductAction(productId, formData) {
   revalidatePath("/shop");
 }
 
+// Product deletion is asymmetric by role:
+//   • ADMIN     → deletes the product immediately.
+//   • MODERATOR → cannot delete directly. Deleting one of THEIR OWN products
+//     files an ApprovalRequest (PRODUCT_DELETE) for an admin to approve; on
+//     approval the admin performs the real delete (see approvals/_actions.js).
 export async function deleteProductAction(productId) {
-  const user = await requireRole("ADMIN", `/dashboard/products/${productId}/edit`);
+  const user = await requireRole(["ADMIN", "MODERATOR"], `/dashboard/products/${productId}/edit`);
   const existing = await prisma.product.findUnique({ where: { id: productId } });
   if (!existing) return;
 
+  if (user.role !== "ADMIN") {
+    // Moderators may only request deletion of products they created.
+    if (existing.createdById !== user.id) {
+      throw new Error("You can only request deletion of products you created.");
+    }
+    // Don't stack duplicate pending requests for the same product.
+    const pending = await prisma.approvalRequest.findFirst({
+      where: { type: "PRODUCT_DELETE", entityId: productId, status: "PENDING" },
+      select: { id: true },
+    });
+    if (!pending) {
+      await prisma.approvalRequest.create({
+        data: {
+          type: "PRODUCT_DELETE",
+          requesterId: user.id,
+          entityId: productId,
+          entityLabel: existing.name,
+        },
+      });
+      await prisma.auditLog.create({
+        data: { actorId: user.id, action: "product.delete.request", entity: "Product", entityId: productId, metadata: { slug: existing.slug, name: existing.name } },
+      });
+    }
+    revalidatePath("/dashboard/products");
+    redirect("/dashboard/products?requested=1");
+  }
+
+  // ADMIN: delete now.
   await prisma.product.delete({ where: { id: productId } });
   await prisma.auditLog.create({
     data: { actorId: user.id, action: "product.delete", entity: "Product", entityId: productId, metadata: { slug: existing.slug, name: existing.name } },

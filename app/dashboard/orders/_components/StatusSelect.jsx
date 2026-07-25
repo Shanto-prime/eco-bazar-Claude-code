@@ -17,6 +17,7 @@ export default function StatusSelect({ orderId, status }) {
   const router = useRouter();
   const [value, setValue] = useState(status);
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
   const [pending, startTransition] = useTransition();
 
   // Terminal states are rejected server-side too; disabling here just avoids a
@@ -27,9 +28,16 @@ export default function StatusSelect({ orderId, status }) {
     const next = e.target.value;
     const prev = value;
     setValue(next);
-    setError(null);
+    setError(null); setNotice(null);
     startTransition(async () => {
       const res = await updateOrderStatusAction({ orderId, status: next });
+      // Moderator cancellation is queued for admin approval, not applied now:
+      // revert the select and show a note instead of refreshing.
+      if (res?.requested) {
+        setValue(prev);
+        setNotice(t("dashboard.cancelRequested"));
+        return;
+      }
       if (!res?.ok) {
         setValue(prev);
         setError(res?.error || t("dashboard.statusUpdateFailed"));
@@ -53,6 +61,7 @@ export default function StatusSelect({ orderId, status }) {
         ))}
       </select>
       {error && <span className="text-xs text-red-600 max-w-[10rem]">{error}</span>}
+      {notice && <span className="text-xs text-amber-700 max-w-[10rem]">{notice}</span>}
     </div>
   );
 }

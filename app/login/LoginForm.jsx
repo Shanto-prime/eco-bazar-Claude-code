@@ -6,9 +6,9 @@
 // hasX=true flag, which means the env vars are set.
 
 import { signIn } from "next-auth/react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { useT } from "../../lib/i18n/LanguageProvider";
 
 export default function LoginForm({ hasGoogle, hasFacebook }) {
@@ -52,10 +52,10 @@ export default function LoginForm({ hasGoogle, hasFacebook }) {
   // Quick-fill buttons for the seeded test accounts. Clicking one just fills
   // the username + password fields; you still press Login to sign in.
   const TEST_ACCOUNTS = [
-    { label: "Admin",      username: "admin",    password: "admin" },
-    { label: "Mod",        username: "mod",      password: "mod" },
-    { label: "Customer 1", username: "customer", password: "customer" },
-    { label: "Customer 2", username: "mamun",    password: "mamun" },
+    { label: "Admin",       username: "admin",    password: "admin" },
+    { label: "Moderator",         username: "mod",      password: "mod" },
+    { label: "Manna",       username: "manna", password: "customer" },
+    { label: "Mamun",       username: "mamun",    password: "mamun" },
   ];
   const fillAccount = (acc) => {
     setUsername(acc.username);

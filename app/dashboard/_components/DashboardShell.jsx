@@ -54,6 +54,9 @@ const NAV_SECTIONS = [
     titleKey: "dashboard.navAdmin",
     items: [
       { href: "/dashboard/users",            labelKey: "dashboard.users",    icon: "fa-users",          min: "ADMIN" },
+      // Moderator requests (product deletion / order cancellation) awaiting an
+      // admin's approve/reject.
+      { href: "/dashboard/approvals",        labelKey: "dashboard.approvals", icon: "fa-clipboard-check", min: "ADMIN", badge: "pendingApprovals" },
       // ADMIN-only now: moderators submit profile-change requests, only the
       // admin approves them (see lib/profile-changes.js).
       { href: "/dashboard/profile-requests", labelKey: "requests.navLabel",  icon: "fa-user-pen",       min: "ADMIN", badge: "pendingRequests" },

@@ -14,7 +14,7 @@ function specsToText(specs) {
   return Object.entries(specs).map(([k, v]) => `${k}: ${v}`).join("\n");
 }
 
-export default function ProductForm({ product, action, allowDelete = false, onDelete }) {
+export default function ProductForm({ product, action, allowDelete = false, requestMode = false, onDelete }) {
   const t = useT();
   const router = useRouter();
   const [images, setImages] = useState(product?.images?.map((i) => i.url) || []);
@@ -179,12 +179,12 @@ export default function ProductForm({ product, action, allowDelete = false, onDe
           <button
             type="button"
             onClick={async () => {
-              if (!confirm(t("productForm.confirmDelete"))) return;
+              if (!confirm(requestMode ? t("productForm.confirmRequestDelete") : t("productForm.confirmDelete"))) return;
               try { await onDelete(); } catch (e) { setError(e.message); }
             }}
             className="px-6 py-3 rounded-md border border-red-300 text-red-600 hover:bg-red-50 min-h-[44px]"
           >
-            <i className="fa-solid fa-trash mr-1" /> {t("productForm.deleteProduct")}
+            <i className="fa-solid fa-trash mr-1" /> {requestMode ? t("productForm.requestDelete") : t("productForm.deleteProduct")}
           </button>
         )}
       </div>

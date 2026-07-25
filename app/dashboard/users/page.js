@@ -1,30 +1,47 @@
 // app/dashboard/users/page.js — ADMIN only.
 //
-// TODO: user search / filter, ban flow, password reset trigger.
-// Role promote/demote is live (see RoleSelect + _actions.js).
+// Role promote/demote is live (RoleSelect), plus admin can create staff
+// accounts (CreateUserForm) and delete users (DeleteUserButton). The super
+// admin (founding account) is badged and locked against role change + deletion.
 
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
 import { getT } from "../../../lib/i18n/server";
 import RoleSelect from "./_components/RoleSelect";
+import DeleteUserButton from "./_components/DeleteUserButton";
+import CreateUserForm from "./_components/CreateUserForm";
 
 export default async function DashboardUsers() {
   const { t } = await getT();
   const me = await requireRole("ADMIN", "/dashboard/users");
 
   const users = await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ isSuperAdmin: "desc" }, { createdAt: "desc" }],
     select: {
-      id: true, email: true, name: true, role: true, createdAt: true,
+      id: true, email: true, name: true, role: true, createdAt: true, isSuperAdmin: true,
       _count: { select: { orders: true, productsAdded: true } },
     },
   });
 
+  const NameCell = ({ u }) => (
+    <span className="inline-flex items-center gap-2">
+      {u.name || "—"}
+      {u.isSuperAdmin && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-eco-green/10 text-eco-green text-[10px] font-semibold px-2 py-0.5">
+          <i className="fa-solid fa-crown" /> {t("dashboard.superAdmin")}
+        </span>
+      )}
+    </span>
+  );
+
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">{t("dashboard.users")}</h1>
-        <p className="text-sm text-gray-500 mt-1">{t("dashboard.usersSubtitle", { count: users.length })}</p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t("dashboard.users")}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t("dashboard.usersSubtitle", { count: users.length })}</p>
+        </div>
+        <CreateUserForm />
       </header>
 
       {/* Desktop table */}
@@ -38,17 +55,26 @@ export default async function DashboardUsers() {
               <th className="text-left px-4 py-3">{t("dashboard.colOrders")}</th>
               <th className="text-left px-4 py-3">{t("dashboard.colProducts")}</th>
               <th className="text-left px-4 py-3">{t("dashboard.colJoined")}</th>
+              <th className="text-right px-4 py-3">{t("dashboard.colActions")}</th>
             </tr>
           </thead>
           <tbody>
             {users.map((u) => (
               <tr key={u.id} className="border-t">
                 <td className="px-4 py-3 font-medium">{u.email}</td>
-                <td className="px-4 py-3 text-gray-600">{u.name || "—"}</td>
-                <td className="px-4 py-3"><RoleSelect userId={u.id} role={u.role} isSelf={u.id === me.id} /></td>
+                <td className="px-4 py-3 text-gray-600"><NameCell u={u} /></td>
+                <td className="px-4 py-3"><RoleSelect userId={u.id} role={u.role} isSelf={u.id === me.id} superAdmin={u.isSuperAdmin} /></td>
                 <td className="px-4 py-3 text-gray-500">{u._count.orders}</td>
                 <td className="px-4 py-3 text-gray-500">{u._count.productsAdded}</td>
                 <td className="px-4 py-3 text-gray-500">{new Date(u.createdAt).toLocaleDateString()}</td>
+                <td className="px-4 py-3 text-right">
+                  <DeleteUserButton
+                    userId={u.id}
+                    label={u.name || u.email}
+                    disabled={u.isSuperAdmin || u.id === me.id}
+                    reason={u.isSuperAdmin ? t("dashboard.superAdminLocked") : t("dashboard.cantDeleteSelf")}
+                  />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -62,14 +88,22 @@ export default async function DashboardUsers() {
             <div className="flex justify-between items-start gap-2">
               <div className="min-w-0">
                 <div className="font-medium truncate">{u.email}</div>
-                {u.name && <div className="text-xs text-gray-500 truncate">{u.name}</div>}
+                <div className="text-xs text-gray-500 truncate"><NameCell u={u} /></div>
               </div>
-              <RoleSelect userId={u.id} role={u.role} isSelf={u.id === me.id} />
+              <RoleSelect userId={u.id} role={u.role} isSelf={u.id === me.id} superAdmin={u.isSuperAdmin} />
             </div>
-            <div className="flex gap-4 mt-2 text-xs text-gray-500">
+            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
               <span>{u._count.orders}{t("dashboard.ordersSuffix")}</span>
               <span>{u._count.productsAdded}{t("dashboard.productsSuffix")}</span>
-              <span className="ml-auto">{new Date(u.createdAt).toLocaleDateString()}</span>
+              <span>{new Date(u.createdAt).toLocaleDateString()}</span>
+              <span className="ml-auto">
+                <DeleteUserButton
+                  userId={u.id}
+                  label={u.name || u.email}
+                  disabled={u.isSuperAdmin || u.id === me.id}
+                  reason={u.isSuperAdmin ? t("dashboard.superAdminLocked") : t("dashboard.cantDeleteSelf")}
+                />
+              </span>
             </div>
           </div>
         ))}

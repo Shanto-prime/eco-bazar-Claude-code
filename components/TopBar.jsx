@@ -13,14 +13,27 @@
 
 import Link from "next/link";
 import { auth, signOut } from "../auth";
+import { prisma } from "../lib/prisma";
 import { getT } from "../lib/i18n/server";
 import ThemeToggle from "./ThemeToggle";
 import UserAvatar from "./UserAvatar";
 
 export default async function TopBar() {
   const session = await auth();
-  const user = session?.user || null;
+  let user = session?.user || null;
   const { t } = await getT();
+
+  // The JWT only refreshes its cached name/avatar on a TTL (see lib/auth.js), so
+  // a just-changed photo/name in settings wouldn't show here until then. Read
+  // the current values straight from the DB so the avatar + greeting update
+  // immediately after a profile edit.
+  if (user?.id) {
+    const fresh = await prisma.user.findUnique({
+      where:  { id: user.id },
+      select: { image: true, name: true },
+    });
+    if (fresh) user = { ...user, image: fresh.image, name: fresh.name ?? user.name };
+  }
 
   return (
     <div className="topbar">

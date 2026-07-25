@@ -85,6 +85,25 @@ export async function updateProfileAction(formData) {
   return ok("Profile updated.");
 }
 
+// Set (or clear) only the avatar for the current user. Used by the sign-up flow,
+// which uploads the photo right after the new account signs in — it can't run
+// the full profile form (name/username) at that point. The value is a path our
+// own /api/upload/avatar returned, so we bound the length but don't require a
+// full URL (uploaded avatars are relative paths like /uploads/avatars/…).
+export async function updateAvatarAction(imageUrl) {
+  const session = await requireAuth("/dashboard/settings");
+  const val = (typeof imageUrl === "string" ? imageUrl.trim() : "").slice(0, 500);
+
+  await prisma.user.update({
+    where: { id: session.id },
+    data:  { image: val || null },
+  });
+
+  revalidatePath("/dashboard/settings");
+  revalidatePath("/", "layout");
+  return ok("Photo updated.");
+}
+
 // ---------------------------------------------------------------------------
 // Email / phone — reviewed before they take effect.
 // ---------------------------------------------------------------------------

@@ -1,21 +1,18 @@
 "use client";
 
 // components/HomeHotDealsCard.jsx — the big featured Hot Deals card on the
-// homepage. Has a live countdown timer and a working Add-to-Cart button.
+// homepage: the running offer that ends soonest.
 //
-// The product is passed in from app/page.js, read from the DB like every other
-// customer-facing product. It used to be looked up in lib/data.js (the static
-// starter catalogue that now only seeds the DB), which meant an admin editing
-// this product's name or price in /dashboard/products never saw the change here
-// — the card kept showing the seed values. Checkout always recomputed the real
-// price from the DB, so nobody was ever charged the stale figure, but the card
-// displayed it.
+// Everything on it is admin-driven. `product` is a live offer's product, shaped
+// by lib/products-db.js, so `price` is already the discounted price, `oldPrice`
+// the original, and `offer` carries the percentage and the deadline the countdown
+// runs to. app/page.js renders this card only when an offer is actually live, so
+// there is no "no deal" state to design for here.
 //
-// `deadline` is also a prop rather than a constant. It was hardcoded to a fixed
-// calendar date, so once that date passed the countdown sat at 00:00:00:00
-// forever — which is what it was doing. It now comes from the live HOT_DEALS
-// promo banner's deadline (admin-managed, the same field that expires the banner
-// itself); when there is no deadline the countdown is simply not rendered.
+// Two things this replaced: the product used to come from lib/data.js (the static
+// seed catalogue), so admin price edits never showed up; and the countdown ran to
+// a date hardcoded in this file, which had already passed — the timer sat at
+// 00:00:00:00 permanently.
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -32,13 +29,13 @@ function diff(target) {
   return [d, h, m, s].map((n) => String(n).padStart(2, "0"));
 }
 
-export default function HomeHotDealsCard({ product, deadline = null }) {
+export default function HomeHotDealsCard({ product }) {
   const { addItem } = useCart();
   const t = useT();
   const money = useMoney();
 
-  // Deadline arrives from the server as an ISO string (or null). Resolve it once
-  // so the value can't drift between renders.
+  // The offer's deadline, resolved once so it can't drift between renders.
+  const deadline = product?.offer?.endsAt || null;
   const [target] = useState(() => (deadline ? new Date(deadline).getTime() : null));
   const [time, setTime] = useState(() => (target ? diff(target) : null));
 
@@ -48,22 +45,34 @@ export default function HomeHotDealsCard({ product, deadline = null }) {
     return () => clearInterval(id);
   }, [target]);
 
-  // No featured product (empty catalogue) → render nothing rather than a card
-  // full of blanks.
   if (!product) return null;
 
-  // Show the timer only while there is time left on it. An elapsed promo drops
-  // the countdown instead of displaying a row of zeros.
+  // Only count down while there is time left. If the offer lapses with the page
+  // still open, the timer disappears rather than freezing on a row of zeros.
   const showCountdown = Boolean(time) && time.some((n) => n !== "00");
+  const percentOff = product.offer?.percentOff ?? null;
 
   return (
     <div className="bg-white border border-eco-green rounded-lg p-5">
       <div className="flex gap-2 mb-3">
-        <span className="bg-red-500 text-white text-xs px-2 py-1 rounded">{t("hotDeals.sale50")}</span>
+        {/* The discount pill reflects the offer the admin actually set. */}
+        {percentOff != null && (
+          <span className="bg-red-500 text-white text-xs px-2 py-1 rounded">
+            {t("hotDeals.salePercent", { percent: percentOff })}
+          </span>
+        )}
         <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded">{t("hotDeals.bestSale")}</span>
       </div>
       <div className="relative h-52">
-        <Image src="/images/hotdeal-big.jpg" alt={product.name} fill className="object-contain" sizes="(min-width:1024px) 33vw, 90vw" />
+        {/* The selected product's own image, falling back to the generic hot-deal
+            artwork when it has none uploaded. */}
+        <Image
+          src={product.image || "/images/hotdeal-big.jpg"}
+          alt={product.name}
+          fill
+          className="object-contain"
+          sizes="(min-width:1024px) 33vw, 90vw"
+        />
       </div>
       <button
         type="button"

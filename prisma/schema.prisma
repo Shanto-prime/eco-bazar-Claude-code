@@ -285,7 +285,12 @@ model StoreConfig {
 enum BannerPlacement {
   TOP          // top announcement / discount banner
   BELOW_LIST   // advertisement below the product list
-  HOT_DEALS    // hot deals promotion area
+  // LEGACY: the Hot Deals area no longer takes an uploaded image banner — it is
+  // driven by ProductOffer rows instead (see below). The value is retained so
+  // Prisma can still read banner rows created before that change; it is absent
+  // from lib/banners PLACEMENTS, so the admin can no longer pick it and the
+  // storefront never renders it.
+  HOT_DEALS
 }
 
 model PromoBanner {
@@ -304,6 +309,41 @@ model PromoBanner {
   updatedAt   DateTime        @updatedAt
 
   @@index([placement, active])
+}
+
+// ---------------------------------------------------------------------------
+// Hot Deals offers — a timed percentage discount on ONE product.
+// ---------------------------------------------------------------------------
+// This is what fills the storefront's Hot Deals area: the admin searches the
+// catalogue, picks a product, sets a percentage and an end time. The offer with
+// the soonest `endsAt` takes the big featured card, the rest become small cards,
+// and when no offer is live the whole featured card is hidden.
+//
+// The discount is REAL, not decoration: while an offer is live it becomes the
+// product's selling price everywhere (shop grid, product page, cart, checkout —
+// see lib/offers.js + the shape() in lib/products-db.js, and the price recompute
+// in lib/order-actions.js). `Product.price` is never rewritten, so expiry needs
+// no cleanup job: once `endsAt` passes, the offer stops being live and the
+// original price applies again on the very next read.
+//
+// At most one live offer per product. MongoDB can't express that as a partial
+// unique index, so it is enforced in app/dashboard/offers/_actions.js.
+model ProductOffer {
+  id          String   @id @default(cuid()) @map("_id")
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // Whole percent off the product's price, 1..90 (see OFFER_MAX_PERCENT).
+  percentOff  Int
+  // The countdown target. Required — a Hot Deals offer without an end date has
+  // nothing to count down to and could never be sorted against its siblings.
+  endsAt      DateTime
+  active      Boolean  @default(true)
+  createdById String   // actor id (audit stamp, no relation — same as PromoBanner)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([active, endsAt])
+  @@index([productId])
 }
 
 // ---------------------------------------------------------------------------
@@ -355,6 +395,7 @@ model Product {
   images      ProductImage[]
   reviews     Review[]
   orderItems  OrderItem[]
+  offers      ProductOffer[]
 
   @@index([categoryId])
   @@index([createdById])

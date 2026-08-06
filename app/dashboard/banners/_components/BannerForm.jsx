@@ -1,14 +1,33 @@
 "use client";
 
 // app/dashboard/banners/_components/BannerForm.jsx
-// Create/edit form for one promo banner. Handles the image upload (POST to
+// Create/edit form for one storefront promo. Handles the image upload (POST to
 // /api/upload/banner, store the returned URL in a hidden field), then submits
 // the rest to the server action. Used inline by the banners list page.
+//
+// The FIRST field is "where do you want to add this?", above the image uploader,
+// because the answer changes what the form should even ask for:
+//   • Top announcement / Below product list → an uploaded image banner (this file)
+//   • Hot Deals                             → a product offer, so the form is
+//     replaced by OfferForm (search a product, set a % and a deadline). That area
+//     shows the product's own image and details, so an artwork upload would be
+//     meaningless there.
+// Putting the choice last, as an ordinary field, meant filling in an image and a
+// slug before discovering the chosen area didn't want them.
 
 import { useRef, useState, useTransition } from "react";
 import { useT } from "../../../../lib/i18n/LanguageProvider";
-import { PLACEMENTS, dealsHref } from "../../../../lib/banners";
+import { dealsHref } from "../../../../lib/banners";
 import { createBannerAction, updateBannerAction } from "../_actions";
+import OfferForm from "../../offers/_components/OfferForm";
+
+// The areas an admin can add something to. `kind` decides which form renders;
+// `placement` is the BannerPlacement value for the image-banner kinds.
+const AREAS = [
+  { value: "TOP",        kind: "banner", placement: "TOP",        labelKey: "banners.areaTop" },
+  { value: "BELOW_LIST", kind: "banner", placement: "BELOW_LIST", labelKey: "banners.areaBelowList" },
+  { value: "HOT_DEALS_OFFER", kind: "offer", labelKey: "banners.areaHotDealsOffer" },
+];
 
 // Prisma Date → the value a <input type="datetime-local"> expects (local time,
 // no seconds/zone). Empty when there's no deadline.
@@ -19,15 +38,50 @@ function toLocalInput(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export default function BannerForm({ banner, onDone, onCancel }) {
+export default function BannerForm({ banner, offer, onDone, onCancel }) {
   const t = useT();
   const editing = !!banner?.id;
+
+  // Editing an existing row locks the area: a banner and an offer are different
+  // records, so "moving" one between areas would mean deleting and recreating it.
+  // Only a brand-new entry gets to choose.
+  const editingOffer = !!offer?.id;
+  const [area, setArea] = useState(
+    editingOffer ? "HOT_DEALS_OFFER" : (banner?.placement && banner.placement !== "HOT_DEALS" ? banner.placement : "TOP"),
+  );
+  const areaDef = AREAS.find((a) => a.value === area) || AREAS[0];
+
   const [image, setImage]   = useState(banner?.imageUrl || "");
   const [slug, setSlug]     = useState(banner?.slug || "");
   const [result, setResult] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [pending, start]    = useTransition();
   const fileRef = useRef(null);
+
+  // The area selector itself — shared by both modes, always the first thing on
+  // the form.
+  const areaField = (
+    <label className="block mb-5">
+      <span className="block text-[13px] font-medium mb-1.5">
+        {t("banners.areaLabel")} <span className="text-eco-green">*</span>
+      </span>
+      <select
+        value={area}
+        onChange={(e) => setArea(e.target.value)}
+        disabled={editing || editingOffer}
+        className="eco-input rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {AREAS.map((a) => <option key={a.value} value={a.value}>{t(a.labelKey)}</option>)}
+      </select>
+      <span className="block mt-1 text-xs text-gray-400">{t("banners.areaHint")}</span>
+    </label>
+  );
+
+  // Hot Deals → a product offer, not an image banner. The area selector is handed
+  // to OfferForm so it renders as that form's first field, inside the same card.
+  if (areaDef.kind === "offer") {
+    return <OfferForm offer={offer} header={areaField} onDone={onDone} onCancel={onCancel} />;
+  }
 
   const onPickFile = async (e) => {
     const file = e.target.files?.[0];
@@ -63,6 +117,11 @@ export default function BannerForm({ banner, onDone, onCancel }) {
   return (
     <form onSubmit={onSubmit} className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
       <input type="hidden" name="imageUrl" value={image} />
+      {/* The chosen area IS the placement for image banners. */}
+      <input type="hidden" name="placement" value={areaDef.placement} />
+
+      {/* Area first — it decides what the rest of this form asks for. */}
+      {areaField}
 
       {/* Image */}
       <div className="mb-5">
@@ -91,13 +150,6 @@ export default function BannerForm({ banner, onDone, onCancel }) {
         <label className="block">
           <span className="block text-[13px] font-medium mb-1.5">{t("banners.titleLabel")} <span className="text-eco-green">*</span></span>
           <input name="title" defaultValue={banner?.title || ""} required maxLength={120} className="eco-input rounded-xl" placeholder={t("banners.titlePh")} />
-        </label>
-
-        <label className="block">
-          <span className="block text-[13px] font-medium mb-1.5">{t("banners.placement")} <span className="text-eco-green">*</span></span>
-          <select name="placement" defaultValue={banner?.placement || "TOP"} className="eco-input rounded-xl">
-            {PLACEMENTS.map((p) => <option key={p.key} value={p.key}>{t(p.labelKey)}</option>)}
-          </select>
         </label>
 
         <label className="block">

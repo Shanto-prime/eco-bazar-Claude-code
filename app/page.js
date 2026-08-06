@@ -9,10 +9,9 @@ import TestimonialsSection from "../components/TestimonialsSection";
 import HomeHotDealsCard from "../components/HomeHotDealsCard";
 import PromoBanners from "../components/PromoBanners";
 import { categories, news, instagramTiles } from "../lib/data";
-import { listProducts, listBestSellers } from "../lib/products-db";
+import { listProducts, listBestSellers, listLiveOffers } from "../lib/products-db";
 import { getT } from "../lib/i18n/server";
-import { prisma } from "../lib/prisma";
-import { isBannerLive } from "../lib/banners";
+import { HOT_DEALS_TOTAL_SLOTS } from "../lib/offers";
 
 // Reusable section heading shared across the homepage.
 function SectionHead({ title, href, center, viewAllText = "View All" }) {
@@ -38,24 +37,21 @@ export default async function Home() {
   // latest). Two rows on desktop (10 items); the rest live on the shop page.
   const popular = await listBestSellers(10);
 
-  // The featured Hot Deals card. Prefer a product that is actually on offer
-  // (badge or compare-at price) so the "Sale" labels on the card are truthful;
-  // otherwise fall back to the newest product. `products` is already loaded, so
-  // this costs no extra query.
-  const hotDealProduct =
-    products.find((p) => p.badge || p.oldPrice != null) || products[0] || null;
+  // ---- Hot Deals area ----------------------------------------------------
+  // Live offers, soonest-ending first (see lib/products-db listLiveOffers). The
+  // first one takes the big featured card; the rest become small cards.
+  const liveOffers = await listLiveOffers(HOT_DEALS_TOTAL_SLOTS);
+  const [featuredDeal, ...otherDeals] = liveOffers;
 
-  // The card's countdown is driven by the live HOT_DEALS banner's deadline —
-  // the same admin-managed field that expires the banner itself. No live banner
-  // (or one with no deadline) → the card renders without a timer rather than
-  // counting down to a date baked into the code.
-  const hotDealsBanners = await prisma.promoBanner.findMany({
-    where:   { placement: "HOT_DEALS", active: true },
-    orderBy: [{ sort: "asc" }, { createdAt: "desc" }],
-    select:  { active: true, deadline: true },
-  });
-  const hotDealDeadline =
-    hotDealsBanners.find((b) => isBannerLive(b) && b.deadline)?.deadline?.toISOString() ?? null;
+  // Fill whatever the offers don't claim with ordinary products, so the grid
+  // stays a full 2×4 block instead of collapsing to one or two lonely cards.
+  // Products already shown as offers are excluded to avoid duplicates.
+  const dealSlugs = new Set(liveOffers.map((p) => p.slug));
+  const fillerCount = Math.max(0, HOT_DEALS_TOTAL_SLOTS - 1 - otherDeals.length);
+  const hotDealsGrid = [
+    ...otherDeals,
+    ...products.filter((p) => !dealSlugs.has(p.slug)).slice(0, fillerCount),
+  ];
 
   return (
     <>
@@ -143,19 +139,21 @@ export default async function Home() {
       <section className="bg-eco-bg py-10 sm:py-14 mt-10 sm:mt-14">
         <div className="max-w-[1320px] mx-auto px-4 sm:px-6">
           <SectionHead title={t("home.hotDeals")} href="/shop" viewAllText={viewAll} />
+          {/* The big featured card exists only while an offer is running. With no
+              live offer the left column is dropped entirely and the small grid
+              takes the full width, rather than leaving a placeholder card. */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
-            <div className="lg:col-span-4">
-              <HomeHotDealsCard product={hotDealProduct} deadline={hotDealDeadline} />
-            </div>
-            <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-5">
-              {products.slice(2, 10).map((p) => (
+            {featuredDeal && (
+              <div className="lg:col-span-4">
+                <HomeHotDealsCard product={featuredDeal} />
+              </div>
+            )}
+            <div className={`${featuredDeal ? "lg:col-span-8" : "lg:col-span-12"} grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-5`}>
+              {hotDealsGrid.map((p) => (
                 <ProductCard key={p.slug + "-deal"} {...p} size="sm" />
               ))}
             </div>
           </div>
-
-          {/* Admin-managed hot-deals promo banners */}
-          <PromoBanners placement="HOT_DEALS" className="mt-6 sm:mt-8 space-y-4 sm:space-y-5" />
         </div>
       </section>
 

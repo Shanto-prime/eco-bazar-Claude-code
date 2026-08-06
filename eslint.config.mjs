@@ -10,6 +10,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Playwright's generated HTML report bundles minified vendor JS. Without
+    // these, running the e2e suite once buries the app's own lint output under
+    // ~110 findings from files nobody wrote. Same paths as .gitignore.
+    "playwright-report/**",
+    "test-results/**",
+    "blob-report/**",
+    "playwright/.cache/**",
   ]),
 ]);
 

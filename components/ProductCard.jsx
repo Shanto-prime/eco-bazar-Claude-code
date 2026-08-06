@@ -13,6 +13,9 @@ import Stars from "./Stars";
 
 export default function ProductCard({
   slug, name, icon, image, price, oldPrice, badge, rating = 4, featured = false,
+  // Live Hot Deals offer ({ percentOff, endsAt }) when the product has one. Set
+  // by shape() in lib/products-db.js; `price` is already the discounted amount.
+  offer = null,
   size = "md", // "md" = standard, "sm" = compact (hot deals strip)
 }) {
   const { addItem, toggleWishlist, wishlist, hydrated } = useCart();
@@ -24,10 +27,14 @@ export default function ProductCard({
 
   const product = { slug, name, icon, price };
 
+  // A running offer takes the corner pill: its percentage is the more specific,
+  // time-bound claim, so it wins over the product's own manual badge.
+  const pill = offer ? t("hotDeals.salePercent", { percent: offer.percentOff }) : badge;
+
   return (
     <div className={`product-card relative border rounded-md p-3 bg-white ${featured ? "border-eco-green" : "border-gray-200"}`}>
-      {badge && (
-        <span className="absolute top-3 left-3 bg-red-500 text-white text-xs px-2 py-1 rounded z-10">{badge}</span>
+      {pill && (
+        <span className="absolute top-3 left-3 bg-red-500 text-white text-xs px-2 py-1 rounded z-10">{pill}</span>
       )}
 
       {/* Floating wishlist + quick-view buttons (visible on featured card) */}

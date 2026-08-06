@@ -2,17 +2,26 @@
 
 // components/HomeHotDealsCard.jsx — the big featured Hot Deals card on the
 // homepage. Has a live countdown timer and a working Add-to-Cart button.
+//
+// The product is passed in from app/page.js, read from the DB like every other
+// customer-facing product. It used to be looked up in lib/data.js (the static
+// starter catalogue that now only seeds the DB), which meant an admin editing
+// this product's name or price in /dashboard/products never saw the change here
+// — the card kept showing the seed values. Checkout always recomputed the real
+// price from the DB, so nobody was ever charged the stale figure, but the card
+// displayed it.
+//
+// `deadline` is also a prop rather than a constant. It was hardcoded to a fixed
+// calendar date, so once that date passed the countdown sat at 00:00:00:00
+// forever — which is what it was doing. It now comes from the live HOT_DEALS
+// promo banner's deadline (admin-managed, the same field that expires the banner
+// itself); when there is no deadline the countdown is simply not rendered.
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useCart } from "../lib/CartContext";
-import { findProductBySlug } from "../lib/data";
 import { useT } from "../lib/i18n/LanguageProvider";
 import { useMoney } from "../lib/currency/CurrencyProvider";
-
-// Fixed "offer ends" deadline: July 24th, 4:00 PM (local time).
-// Month is 0-indexed, so 6 = July. Adjust the year here as needed.
-const TARGET = () => new Date(2026, 6, 24, 16, 0, 0, 0).getTime();
 
 function diff(target) {
   const ms = Math.max(0, target - Date.now());
@@ -23,20 +32,29 @@ function diff(target) {
   return [d, h, m, s].map((n) => String(n).padStart(2, "0"));
 }
 
-export default function HomeHotDealsCard() {
+export default function HomeHotDealsCard({ product, deadline = null }) {
   const { addItem } = useCart();
   const t = useT();
   const money = useMoney();
-  const product = findProductBySlug("chinese-cabbage");
 
-  // Lock the target after first render so it doesn't drift between renders.
-  const [target] = useState(() => TARGET());
-  const [time, setTime] = useState(() => diff(target));
+  // Deadline arrives from the server as an ISO string (or null). Resolve it once
+  // so the value can't drift between renders.
+  const [target] = useState(() => (deadline ? new Date(deadline).getTime() : null));
+  const [time, setTime] = useState(() => (target ? diff(target) : null));
 
   useEffect(() => {
+    if (!target) return;
     const id = setInterval(() => setTime(diff(target)), 1000);
     return () => clearInterval(id);
   }, [target]);
+
+  // No featured product (empty catalogue) → render nothing rather than a card
+  // full of blanks.
+  if (!product) return null;
+
+  // Show the timer only while there is time left on it. An elapsed promo drops
+  // the countdown instead of displaying a row of zeros.
+  const showCountdown = Boolean(time) && time.some((n) => n !== "00");
 
   return (
     <div className="bg-white border border-eco-green rounded-lg p-5">
@@ -55,17 +73,27 @@ export default function HomeHotDealsCard() {
         <i className="fa-solid fa-bag-shopping mr-2" /> {t("hotDeals.addToCart")}
       </button>
       <div className="text-center mt-4 text-eco-green font-semibold">{product.name}</div>
-      <div className="text-center"><span className="font-bold">{money(product.price)}</span> <span className="text-gray-400 line-through ml-1">{money(24)}</span></div>
-      <div className="text-yellow-400 text-center my-2">★★★★★ <span className="text-gray-500 text-xs">{t("hotDeals.feedback", { count: 524 })}</span></div>
-      <div className="text-center text-xs text-gray-500 mb-2">{t("hotDeals.offerEnds")}</div>
-      <div className="countdown justify-center">
-        {[[t("hotDeals.days"), time[0]], [t("hotDeals.hours"), time[1]], [t("hotDeals.mins"), time[2]], [t("hotDeals.secs"), time[3]]].map(([lbl, num], i, arr) => (
-          <span key={lbl} className="contents">
-            <span className="unit"><div className="num">{num}</div><div className="lbl">{lbl}</div></span>
-            {i < arr.length - 1 && <span className="sep">:</span>}
-          </span>
-        ))}
+      <div className="text-center">
+        <span className="font-bold">{money(product.price)}</span>
+        {/* Struck-through compare-at price, only when the product actually has one. */}
+        {product.oldPrice != null && (
+          <span className="text-gray-400 line-through ml-1">{money(product.oldPrice)}</span>
+        )}
       </div>
+      <div className="text-yellow-400 text-center my-2">★★★★★ <span className="text-gray-500 text-xs">{t("hotDeals.feedback", { count: 524 })}</span></div>
+      {showCountdown && (
+        <>
+          <div className="text-center text-xs text-gray-500 mb-2">{t("hotDeals.offerEnds")}</div>
+          <div className="countdown justify-center">
+            {[[t("hotDeals.days"), time[0]], [t("hotDeals.hours"), time[1]], [t("hotDeals.mins"), time[2]], [t("hotDeals.secs"), time[3]]].map(([lbl, num], i, arr) => (
+              <span key={lbl} className="contents">
+                <span className="unit"><div className="num">{num}</div><div className="lbl">{lbl}</div></span>
+                {i < arr.length - 1 && <span className="sep">:</span>}
+              </span>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

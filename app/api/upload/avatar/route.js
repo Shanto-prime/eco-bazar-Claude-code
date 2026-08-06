@@ -12,6 +12,7 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { auth } from "../../../../auth";
+import { validateImageUpload } from "../../../../lib/upload";
 
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB — avatars render at 28px
 const ALLOWED   = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -26,20 +27,15 @@ export async function POST(req) {
   }
 
   const form = await req.formData();
-  const file = form.get("file");
-  if (!file || typeof file === "string") {
-    return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
-  }
-  if (!ALLOWED.has(file.type)) {
-    return NextResponse.json({ error: `Unsupported file type: ${file.type}` }, { status: 415 });
-  }
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: "File too large (max 2 MB)." }, { status: 413 });
+  const check = await validateImageUpload(form.get("file"), { allowed: ALLOWED, maxBytes: MAX_BYTES });
+  if (!check.ok) {
+    return NextResponse.json({ error: check.error }, { status: check.status });
   }
 
-  // Hashed name, same convention as the product uploader.
-  const ext  = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const buf  = Buffer.from(await file.arrayBuffer());
+  // Hashed name, same convention as the product uploader. This route is open to
+  // every signed-in user, so the extension must come from the validated MIME
+  // type rather than the client's filename — see lib/upload.js.
+  const { buf, ext } = check;
   const hash = crypto.createHash("sha1").update(buf).digest("hex").slice(0, 16);
   const filename = `${Date.now()}-${hash}.${ext}`;
 

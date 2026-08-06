@@ -15,6 +15,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
 import { ORDER_STATUSES, isTerminal } from "../../../lib/order-status";
+import { restockCancelledOrder } from "../../../lib/inventory";
 
 const StatusSchema = z.object({
   orderId: z.string().min(1),
@@ -71,6 +72,13 @@ export async function updateOrderStatusAction(input) {
       where: { id: data.orderId },
       data:  { status: data.status },
     });
+    // Cancelling releases the stock checkout reserved for this order. Same
+    // transaction as the status flip so the two can never disagree. CANCELLED is
+    // terminal and the no-op check above returns early, so an order can only
+    // reach this branch once — no double-crediting.
+    if (data.status === "CANCELLED") {
+      await restockCancelledOrder(tx, data.orderId);
+    }
     await tx.orderStatusEvent.create({
       data: { orderId: data.orderId, status: data.status, actorId: actor.id },
     });

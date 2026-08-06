@@ -11,6 +11,8 @@ import PromoBanners from "../components/PromoBanners";
 import { categories, news, instagramTiles } from "../lib/data";
 import { listProducts, listBestSellers } from "../lib/products-db";
 import { getT } from "../lib/i18n/server";
+import { prisma } from "../lib/prisma";
+import { isBannerLive } from "../lib/banners";
 
 // Reusable section heading shared across the homepage.
 function SectionHead({ title, href, center, viewAllText = "View All" }) {
@@ -35,6 +37,25 @@ export default async function Home() {
   // Popular Products shows the best-selling items (falls back to on-sale, then
   // latest). Two rows on desktop (10 items); the rest live on the shop page.
   const popular = await listBestSellers(10);
+
+  // The featured Hot Deals card. Prefer a product that is actually on offer
+  // (badge or compare-at price) so the "Sale" labels on the card are truthful;
+  // otherwise fall back to the newest product. `products` is already loaded, so
+  // this costs no extra query.
+  const hotDealProduct =
+    products.find((p) => p.badge || p.oldPrice != null) || products[0] || null;
+
+  // The card's countdown is driven by the live HOT_DEALS banner's deadline —
+  // the same admin-managed field that expires the banner itself. No live banner
+  // (or one with no deadline) → the card renders without a timer rather than
+  // counting down to a date baked into the code.
+  const hotDealsBanners = await prisma.promoBanner.findMany({
+    where:   { placement: "HOT_DEALS", active: true },
+    orderBy: [{ sort: "asc" }, { createdAt: "desc" }],
+    select:  { active: true, deadline: true },
+  });
+  const hotDealDeadline =
+    hotDealsBanners.find((b) => isBannerLive(b) && b.deadline)?.deadline?.toISOString() ?? null;
 
   return (
     <>
@@ -124,7 +145,7 @@ export default async function Home() {
           <SectionHead title={t("home.hotDeals")} href="/shop" viewAllText={viewAll} />
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
             <div className="lg:col-span-4">
-              <HomeHotDealsCard />
+              <HomeHotDealsCard product={hotDealProduct} deadline={hotDealDeadline} />
             </div>
             <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-5">
               {products.slice(2, 10).map((p) => (

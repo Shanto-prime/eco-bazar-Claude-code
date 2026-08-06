@@ -11,6 +11,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
 import { isTerminal } from "../../../lib/order-status";
+import { restockCancelledOrder } from "../../../lib/inventory";
 
 export async function approveRequest(input) {
   const admin = await requireRole("ADMIN", "/dashboard/approvals");
@@ -36,6 +37,9 @@ export async function approveRequest(input) {
         const order = await tx.order.findUnique({ where: { id: req.entityId }, select: { id: true, status: true, number: true } });
         if (order && !isTerminal(order.status)) {
           await tx.order.update({ where: { id: order.id }, data: { status: "CANCELLED" } });
+          // Release the stock this order reserved — same rule as an admin
+          // cancelling directly (see dashboard/orders/_actions.js).
+          await restockCancelledOrder(tx, order.id);
           await tx.orderStatusEvent.create({ data: { orderId: order.id, status: "CANCELLED", actorId: admin.id } });
           await tx.auditLog.create({
             data: { actorId: admin.id, action: "order.status.update", entity: "Order", entityId: order.id,

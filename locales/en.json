@@ -192,7 +192,8 @@
     "days": "DAYS",
     "hours": "HOURS",
     "mins": "MINS",
-    "secs": "SECS"
+    "secs": "SECS",
+    "salePercent": "Sale {percent}%"
   },
   "cart": {
     "title": "Shopping Cart",
@@ -586,7 +587,6 @@
     "edit": "Edit",
     "delete": "Delete",
     "notSet": "Not set",
-
     "profile": "Profile",
     "profileHelp": "Your name, handle and photo. These apply immediately.",
     "name": "Full name",
@@ -596,7 +596,6 @@
     "uploading": "Uploading…",
     "uploadFailed": "Upload failed.",
     "removePhoto": "Remove photo",
-
     "contact": "Email & phone",
     "contactHelp": "These are your account-recovery channels, so a change has to be approved by an admin or moderator before it takes effect.",
     "contactHelpSelf": "Your account-recovery channels. As an admin, changes you make here take effect immediately.",
@@ -618,7 +617,6 @@
     "statusAPPROVED": "Approved",
     "statusREJECTED": "Rejected",
     "statusCANCELLED": "Cancelled",
-
     "password": "Password",
     "passwordHelp": "Change the password you sign in with.",
     "currentPassword": "Current password",
@@ -626,7 +624,6 @@
     "confirmPassword": "Confirm new password",
     "passwordHint": "At least 8 characters.",
     "changePassword": "Change password",
-
     "addresses": "Addresses",
     "addressesHelp": "Saved delivery addresses. Your default one prefills checkout.",
     "noAddresses": "No saved addresses yet.",
@@ -639,7 +636,6 @@
     "makeDefault": "Use as default",
     "default": "Default",
     "confirmDeleteAddress": "Delete this address?",
-
     "appearance": "Appearance",
     "appearanceHelp": "Choose how Ecobazar looks to you.",
     "signedInAs": "Signed in as",
@@ -652,7 +648,6 @@
     "lightHelp": "Bright background",
     "dark": "Dark",
     "darkHelp": "Easier on the eyes at night",
-
     "storeCurrency": "Store currency",
     "storeCurrencyHelp": "Store-wide. Sets the currency and exchange rates every price on the site is shown in. Prices are stored in BDT and converted for display.",
     "displayCurrency": "Display currency",
@@ -716,7 +711,13 @@
     "sort": "Sort order",
     "active": "Show on storefront",
     "tagShort": "tag:",
-    "until": "until"
+    "until": "until",
+    "areaLabel": "Where do you want to add this?",
+    "areaHint": "This decides what the rest of the form asks for.",
+    "areaTop": "Top announcement banner (image)",
+    "areaBelowList": "Below product list (image)",
+    "areaHotDealsOffer": "Hot Deals product offer (pick a product + discount + timer)",
+    "placementHotDealsLegacy": "Hot Deals (old image banner)"
   },
   "deals": {
     "breadcrumb": "Deals",
@@ -802,5 +803,38 @@
     "deleteProduct": "Delete product",
     "requestDelete": "Request deletion",
     "confirmRequestDelete": "Request an admin to delete this product? It stays live until approved."
+  },
+  "offers": {
+    "navLabel": "Hot Deals offers",
+    "sectionTitle": "Hot Deals offers",
+    "sectionSubtitle": "Timed discounts on a single product. The offer ending soonest gets the big featured card; the rest show as small cards.",
+    "addOffer": "Add offer",
+    "product": "Product",
+    "productHint": "Search your catalogue and pick the product this offer applies to.",
+    "searchPlaceholder": "Search your products by name…",
+    "searching": "Searching…",
+    "noResults": "No products matched that search.",
+    "searchHint": "Type at least 2 characters to search.",
+    "change": "Change product",
+    "percentOff": "Discount %",
+    "percentHint": "Whole percent, {min}–{max}. This becomes the real price the customer pays.",
+    "endsAt": "Offer ends",
+    "endsAtHint": "The countdown target. Must be in the future; the offer disappears by itself afterwards.",
+    "active": "Active",
+    "createOffer": "Create offer",
+    "saveOffer": "Save offer",
+    "cancel": "Cancel",
+    "pricePreview": "Customer pays {now} instead of {was}",
+    "none": "No Hot Deals offers yet. The featured card stays hidden until you add one.",
+    "live": "Live",
+    "paused": "Paused",
+    "ended": "Ended",
+    "endsLabel": "Ends",
+    "pause": "Pause",
+    "resume": "Resume",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Delete this offer? The product goes back to its normal price straight away.",
+    "offLabel": "{percent}% off"
   }
 }

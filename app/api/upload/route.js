@@ -1,14 +1,13 @@
 // app/api/upload/route.js
-// Image upload endpoint. Writes files to /public/uploads/products with a
-// hashed filename, returns { url }. Only signed-in moderators/admins can
-// upload.
+// Product-image upload endpoint, returns { url }. ADMIN + MODERATOR only.
+//
+// Storage backend is chosen in lib/upload-store.js: Vercel Blob in production,
+// public/uploads/products in local development.
 
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import crypto from "crypto";
 import { auth } from "../../../auth";
 import { validateImageUpload } from "../../../lib/upload";
+import { storeImage } from "../../../lib/upload-store";
 
 const MAX_BYTES = 4 * 1024 * 1024; // 4 MB
 const ALLOWED   = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -30,17 +29,14 @@ export async function POST(req) {
     return NextResponse.json({ error: check.error }, { status: check.status });
   }
 
-  // Hashed name to avoid collisions and hide the original filename. The
-  // extension comes from the validated MIME type, never from the client's
-  // filename — see lib/upload.js.
-  const { buf, ext } = check;
-  const hash = crypto.createHash("sha1").update(buf).digest("hex").slice(0, 16);
-  const filename = `${Date.now()}-${hash}.${ext}`;
+  // `ext` comes from the validated MIME type, never from the client's filename
+  // — see lib/upload.js for why that matters.
+  const url = await storeImage(check.buf, {
+    ext:       check.ext,
+    localDir:  UPLOAD_DIR,
+    urlPrefix: UPLOAD_URL_PREFIX,
+    blobDir:   "products",
+  });
 
-  const absDir = path.resolve(process.cwd(), UPLOAD_DIR);
-  await mkdir(absDir, { recursive: true });
-  await writeFile(path.join(absDir, filename), buf);
-
-  const url = `${UPLOAD_URL_PREFIX}/${filename}`;
   return NextResponse.json({ ok: true, url });
 }

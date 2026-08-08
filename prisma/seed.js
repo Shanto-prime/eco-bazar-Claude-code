@@ -169,10 +169,12 @@ async function main() {
   // One example banner per placement, reusing existing storefront images, so the
   // promo areas are populated and immediately editable in the dashboard. Each
   // targets the "Sale 50%" badge → its /deals/<slug> page lists those products.
+  // NOTE: there is deliberately no HOT_DEALS banner here. That area is no longer
+  // image-driven — it is filled by ProductOffer rows (seeded just below), so a
+  // HOT_DEALS banner would be stored and never rendered.
   const BANNERS = [
     { slug: "summer-sale", title: "Summer Sale — up to 50% off", placement: "TOP",        image: "/images/hero-summer.jpg",  promoCode: "SUMMER25", targetTag: "Sale 50%" },
     { slug: "top-deals",   title: "Top Deals of the Week",       placement: "BELOW_LIST", image: "/images/banner-37off.jpg", promoCode: "SAVE37",   targetTag: "Sale 50%" },
-    { slug: "hot-deals",   title: "Hot Deals — limited time",    placement: "HOT_DEALS",  image: "/images/hotdeal-big.jpg",  promoCode: "HOT10",    targetTag: "Sale 50%" },
   ];
   for (const b of BANNERS) {
     await prisma.promoBanner.upsert({
@@ -185,9 +187,46 @@ async function main() {
       },
     });
   }
-  console.log(`• ${BANNERS.length} promo banners seeded (one per placement).`);
+  console.log(`• ${BANNERS.length} promo banners seeded (one per image placement).`);
+
+  // ---- Hot Deals offers ----------------------------------------------------
+  // Timed percentage discounts on real products — this is what fills the
+  // storefront's Hot Deals area. Two offers with different deadlines so the
+  // ordering is visible immediately: the soonest-ending one takes the big
+  // featured card, the other becomes a small card.
+  //
+  // While an offer is live it is the product's real selling price everywhere
+  // (see lib/offers.js), so these also demonstrate the struck-through pricing.
+  const HOUR = 60 * 60 * 1000;
+  const OFFERS = [
+    { slug: "green-apple",     percentOff: 50, endsInMs: 24 * HOUR },
+    { slug: "chinese-cabbage", percentOff: 25, endsInMs: 72 * HOUR },
+  ];
+
+  let offersSeeded = 0;
+  for (const o of OFFERS) {
+    const product = await prisma.product.findUnique({ where: { slug: o.slug }, select: { id: true } });
+    if (!product) continue; // catalogue changed — skip rather than fail the seed
+
+    // Only one live offer per product is allowed (enforced in the dashboard
+    // actions), so clear any previous rows before inserting. Keeps re-seeding
+    // idempotent; ProductOffer has no natural unique key to upsert on.
+    await prisma.productOffer.deleteMany({ where: { productId: product.id } });
+    await prisma.productOffer.create({
+      data: {
+        productId:   product.id,
+        percentOff:  o.percentOff,
+        endsAt:      new Date(Date.now() + o.endsInMs),
+        active:      true,
+        createdById: owner.id,
+      },
+    });
+    offersSeeded++;
+  }
+  console.log(`• ${offersSeeded} Hot Deals offers seeded (soonest-ending takes the featured card).`);
+
   console.log("");
-  console.log("Sign in at /login with any of the three test accounts above.");
+  console.log("Sign in at /login with any of the test accounts above.");
 }
 
 main()

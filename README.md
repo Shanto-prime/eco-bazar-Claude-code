@@ -331,11 +331,15 @@ UPLOAD_URL_PREFIX       /uploads/products
 Three endpoints, differing only in who may call them, the size cap and the target
 directory. Shared safety rules live in `lib/upload.js`:
 
-| Endpoint              | Who            | Max   | Directory                  |
-|-----------------------|----------------|-------|----------------------------|
-| `/api/upload`         | ADMIN + MOD    | 4 MB  | `public/uploads/products`  |
-| `/api/upload/avatar`  | any signed-in  | 2 MB  | `public/uploads/avatars`   |
-| `/api/upload/banner`  | ADMIN          | 6 MB  | `public/uploads/banners`   |
+| Endpoint              | Who            | Max   | Dev directory / Blob folder |
+|-----------------------|----------------|-------|-----------------------------|
+| `/api/upload`         | ADMIN + MOD    | 4 MB  | `public/uploads/products` / `products/` |
+| `/api/upload/avatar`  | any signed-in  | 2 MB  | `public/uploads/avatars` / `avatars/`   |
+| `/api/upload/banner`  | ADMIN          | 6 MB  | `public/uploads/banners` / `banners/`   |
+
+Where the bytes land is decided by `lib/upload-store.js`: Vercel Blob when
+`BLOB_READ_WRITE_TOKEN` is set, otherwise the local `public/uploads` directory.
+See the deployment section for why.
 
 The stored filename is `<timestamp>-<sha1>.<ext>`, and **the extension comes from
 the validated MIME type, never from the uploaded filename** — which is also
@@ -388,9 +392,6 @@ npm run test:e2e:report
 - **Password reset does not invalidate existing sessions.** With JWT sessions,
   someone already signed in stays signed in after the owner resets the password.
   Fixing it needs a token-version field on `User`, checked in the `jwt` callback.
-- **`prisma/seed.js` still seeds a `HOT_DEALS` image banner.** That placement is
-  retired, so the row is created but never renders. It should seed a
-  `ProductOffer` instead.
 - **Rate limiting is in-memory** (`lib/rate-limit.js`), so it does not coordinate
   across instances — it is ineffective on serverless. Needs Redis/Upstash.
 - **Lint reports 8 React Compiler advisories** (`set-state-in-effect` in
@@ -403,24 +404,100 @@ npm run test:e2e:report
 
 ---
 
-## Deploying to Vercel
+## Deploying to MongoDB Atlas + Vercel
 
-The build is Vercel-compatible — every route is dynamic (`ƒ`), so nothing needs
-the database at build time — but read these first:
+Every route is dynamic (`ƒ`), so the build never touches the database — a missing
+or wrong `DATABASE_URL` fails at request time, not build time.
 
-- **File uploads will break.** All three upload routes `writeFile` into
-  `./public/uploads`, and Vercel's filesystem is read-only at runtime and
-  ephemeral. Uploads will error or vanish on redeploy. Move to blob storage
-  (Vercel Blob, S3, Cloudinary) before relying on it. Already-committed images
-  under `public/uploads/` still serve fine.
-- **Use MongoDB Atlas** — the checkout transaction needs a replica set.
-- **Wire up a real mail provider**, or password reset silently goes nowhere.
-- **Replace the in-memory rate limiter**, or brute-force protection on login
-  effectively disappears.
-- Set `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL` (your deployment URL) and
-  `AUTH_TRUST_HOST=true`.
-- `next.config.mjs` applies `images.minimumCacheTTL: 0` **in development only** —
-  it exists for the local image-overwrite workflow and would make every image
-  request re-run optimization in production.
+### 1. Atlas
+
+1. In your cluster: **Database Access** → create a user with *Read and write to any
+   database*.
+2. **Network Access** → add `0.0.0.0/0` (Vercel's build and function IPs are not
+   fixed, so an allowlist of specific addresses will not work).
+3. Copy the connection string and **add the database name** before the `?`:
+
+   ```
+   ✗ mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/?retryWrites=true
+   ✓ mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/ecobazar?retryWrites=true
+                                                        ^^^^^^^^^
+   ```
+
+   Without it every query fails with
+   `AtlasError: empty database name not allowed`. URL-encode the password if it
+   contains `@ : / ? # [ ] %`.
+4. Point your local `.env` at Atlas and seed it once:
+
+   ```bash
+   npm run db:push
+   npm run db:seed
+   ```
+
+> **`DATABASE_URL` belongs in `.env`, not `.env.local`.** The Prisma CLI
+> (`db:push`, `db:seed`, `db:studio`) reads `.env` only, while Next.js gives
+> `.env.local` **higher** precedence. Defining it in both lets the CLI and the app
+> talk to different databases — seeding appears to succeed while every page errors.
+
+### 2. Vercel Blob (uploads)
+
+Vercel's filesystem is read-only at runtime and wiped on each deploy, so uploads
+cannot be written to `public/`. `lib/upload-store.js` picks its backend from the
+environment:
+
+| `BLOB_READ_WRITE_TOKEN` | Backend       | Returned URL                                  |
+|-------------------------|---------------|-----------------------------------------------|
+| set (Vercel)            | Vercel Blob   | `https://<id>.public.blob.vercel-storage.com/…` |
+| not set (local dev)     | `public/uploads/…` | `/uploads/products/…`                     |
+
+In the Vercel dashboard: **Storage** → **Create Database** → **Blob**, then
+connect it to the project. Vercel injects `BLOB_READ_WRITE_TOKEN` automatically —
+you do not paste it by hand. Leave it unset locally so `npm run dev` keeps writing
+to `public/uploads` as before.
+
+Blob URLs are a remote host, so `next.config.mjs` allows
+`*.public.blob.vercel-storage.com` in `images.remotePatterns`. Images already
+committed under `public/uploads/` keep serving as static assets either way.
+
+### 3. Deploy
+
+```bash
+git push -u origin feature/auth-hardening     # or merge to main first
+```
+
+Then on vercel.com: **Add New → Project → Import Git Repository**, pick the repo,
+and add these environment variables before the first deploy:
+
+| Variable          | Value                                                    |
+|-------------------|----------------------------------------------------------|
+| `DATABASE_URL`    | your Atlas string, **including `/ecobazar`**              |
+| `NEXTAUTH_SECRET` | a long random string (`openssl rand -base64 32`)          |
+| `NEXTAUTH_URL`    | `https://<your-project>.vercel.app`                       |
+| `AUTH_TRUST_HOST` | `true`                                                    |
+
+`BLOB_READ_WRITE_TOKEN` arrives on its own once the Blob store is connected. The
+OAuth and `UPLOAD_*` variables are optional — omit them and Google/Facebook simply
+aren't offered, and uploads use the defaults.
+
+Framework preset, build command and install command are all auto-detected. `npm run
+build` runs `prisma generate` first, and `postinstall` runs it again on install, so
+the client is always generated against the deployed schema. The repo's `.npmrc`
+sets `legacy-peer-deps=true`, which Vercel respects — it is required while
+`next-auth@5` beta still declares a `next@14 || 15` peer range.
+
+`NEXTAUTH_URL` needs the real deployment URL. For OAuth, also add
+`https://<your-project>.vercel.app/api/auth/callback/google` (and `/facebook`) to
+the provider's authorised redirect URIs.
+
+### Still true after deploying
+
+- **Password reset emails go nowhere.** `lib/mailer.js` only logs, so the reset
+  link is visible in Vercel's runtime logs and nowhere else. Swap its body for
+  Resend/SMTP/SES when you need it — no call site changes.
+- **Rate limiting is per-instance.** `lib/rate-limit.js` keeps counters in process
+  memory, so the login brute-force protection is effectively absent across
+  serverless invocations. Needs Redis/Upstash.
+- `images.minimumCacheTTL: 0` is applied **in development only** — it exists for
+  the local image-overwrite workflow and would make every production image request
+  re-run optimization.
 
 There is **no test runner** for unit tests; Playwright covers e2e only.

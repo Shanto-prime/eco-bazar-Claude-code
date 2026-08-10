@@ -8,11 +8,9 @@
 // files at 2 MB and rejects GIF (an animated avatar in the top bar is noise).
 
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import crypto from "crypto";
 import { auth } from "../../../../auth";
 import { validateImageUpload } from "../../../../lib/upload";
+import { storeImage } from "../../../../lib/upload-store";
 
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB — avatars render at 28px
 const ALLOWED   = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -32,16 +30,14 @@ export async function POST(req) {
     return NextResponse.json({ error: check.error }, { status: check.status });
   }
 
-  // Hashed name, same convention as the product uploader. This route is open to
-  // every signed-in user, so the extension must come from the validated MIME
-  // type rather than the client's filename — see lib/upload.js.
-  const { buf, ext } = check;
-  const hash = crypto.createHash("sha1").update(buf).digest("hex").slice(0, 16);
-  const filename = `${Date.now()}-${hash}.${ext}`;
+  // This route is open to every signed-in user, so the extension must come from
+  // the validated MIME type rather than the client's filename — see lib/upload.js.
+  const url = await storeImage(check.buf, {
+    ext:       check.ext,
+    localDir:  UPLOAD_DIR,
+    urlPrefix: UPLOAD_URL_PREFIX,
+    blobDir:   "avatars",
+  });
 
-  const absDir = path.resolve(process.cwd(), UPLOAD_DIR);
-  await mkdir(absDir, { recursive: true });
-  await writeFile(path.join(absDir, filename), buf);
-
-  return NextResponse.json({ ok: true, url: `${UPLOAD_URL_PREFIX}/${filename}` });
+  return NextResponse.json({ ok: true, url });
 }

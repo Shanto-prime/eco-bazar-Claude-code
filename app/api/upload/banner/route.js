@@ -4,11 +4,9 @@
 // own directory. Same hashed-filename convention as the product uploader.
 
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import crypto from "crypto";
 import { auth } from "../../../../auth";
 import { validateImageUpload } from "../../../../lib/upload";
+import { storeImage } from "../../../../lib/upload-store";
 
 const MAX_BYTES = 6 * 1024 * 1024; // 6 MB — full-width banner art
 const ALLOWED   = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -33,13 +31,12 @@ export async function POST(req) {
 
   // Extension from the validated MIME type, not the client's filename — see
   // lib/upload.js.
-  const { buf, ext } = check;
-  const hash = crypto.createHash("sha1").update(buf).digest("hex").slice(0, 16);
-  const filename = `${Date.now()}-${hash}.${ext}`;
+  const url = await storeImage(check.buf, {
+    ext:       check.ext,
+    localDir:  UPLOAD_DIR,
+    urlPrefix: UPLOAD_URL_PREFIX,
+    blobDir:   "banners",
+  });
 
-  const absDir = path.resolve(process.cwd(), UPLOAD_DIR);
-  await mkdir(absDir, { recursive: true });
-  await writeFile(path.join(absDir, filename), buf);
-
-  return NextResponse.json({ ok: true, url: `${UPLOAD_URL_PREFIX}/${filename}` });
+  return NextResponse.json({ ok: true, url });
 }

@@ -13,6 +13,8 @@ import { getT } from "../../../lib/i18n/server";
 import { prisma } from "../../../lib/prisma";
 import { canSelfApprove } from "../../../lib/profile-changes";
 import { getStoreConfig } from "../../../lib/store-config";
+import { sanitizeBdGeo } from "../../../lib/bd-geo";
+import LocalTime from "../../../components/LocalTime";
 import AppearanceSettings from "./_components/AppearanceSettings";
 import ProfileSettings from "./_components/ProfileSettings";
 import ContactSettings from "./_components/ContactSettings";
@@ -76,9 +78,10 @@ export default async function DashboardSettings() {
   const visibleRequests = requests.filter((r) => r.status === "PENDING" || r.status === "REJECTED");
 
   // Sign-in timestamp + the role-based inactivity window shown to the user.
-  const lastSignIn = user.lastLoginAt
-    ? new Date(user.lastLoginAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
-    : null;
+  // Rendered via <LocalTime> below rather than formatted here: this is the one
+  // timestamp a user checks to spot an unfamiliar login, so showing it in the
+  // server's timezone (UTC on Vercel) is exactly where it must not be wrong.
+  const lastSignIn = user.lastLoginAt ? user.lastLoginAt.toISOString() : null;
   const idleHours = user.role === "ADMIN" || user.role === "MODERATOR" ? 12 : 6;
 
   return (
@@ -105,7 +108,15 @@ export default async function DashboardSettings() {
           }))}
         />
         {user.passwordHash ? <PasswordSettings /> : null}
-        <AddressBook addresses={addresses.map((a) => ({ ...a, createdAt: null, updatedAt: null }))} />
+        {/* Geography sanitised on the way out for the same reason checkout does
+            it: rows saved before the bd-geo fix hold values ("Illinois", "USA")
+            that no <option> matches, and a controlled <select> would blank them
+            anyway. Showing them empty is honest, and saving the row corrects it. */}
+        <AddressBook
+          addresses={addresses.map((a) => ({
+            ...a, ...sanitizeBdGeo(a), createdAt: null, updatedAt: null,
+          }))}
+        />
         <AppearanceSettings />
         {/* Store-wide currency — ADMIN only. */}
         {user.role === "ADMIN" && (
@@ -120,7 +131,7 @@ export default async function DashboardSettings() {
           </div>
           <div className="mt-2 text-sm text-gray-700">
             {lastSignIn ? (
-              <span className="font-medium">{lastSignIn}</span>
+              <LocalTime value={lastSignIn} className="font-medium" />
             ) : (
               <span className="text-gray-500">{t("settings.lastSignInNever")}</span>
             )}

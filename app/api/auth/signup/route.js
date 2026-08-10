@@ -10,10 +10,12 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../../../../lib/prisma";
+import { BCRYPT_COST } from "../../../../lib/password";
 import { rateLimit, clientIp } from "../../../../lib/rate-limit";
 import { promoteIfFirstUser } from "../../../../lib/user-service";
 import { issueToken, appBaseUrl } from "../../../../lib/tokens";
 import { sendMail } from "../../../../lib/mailer";
+import { isSafeImageUrl } from "../../../../lib/upload";
 
 const Schema = z.object({
   name:     z.string().min(1).max(80),
@@ -22,7 +24,11 @@ const Schema = z.object({
   password: z.string().min(8).max(128),
   // Optional profile fields.
   phone:    z.string().max(30).optional().or(z.literal("").transform(() => undefined)),
-  image:    z.string().url().max(500).optional().or(z.literal("").transform(() => undefined)),
+  // NOT z.string().url() — that only checks the string parses as a URL, and
+  // `javascript:alert(1)` and `data:text/html,…` both do. This value is rendered
+  // into an <img src>, so it must be one of our own upload paths or https.
+  image:    z.string().max(500).refine(isSafeImageUrl, "Invalid image link.")
+              .optional().or(z.literal("").transform(() => undefined)),
 });
 
 export async function POST(req) {
@@ -48,7 +54,7 @@ export async function POST(req) {
     return NextResponse.json({ error: `An account with this ${which} already exists.` }, { status: 409 });
   }
 
-  const passwordHash = await bcrypt.hash(data.password, 12);
+  const passwordHash = await bcrypt.hash(data.password, BCRYPT_COST);
 
   const user = await prisma.user.create({
     data:   { name: data.name, username: data.username, email: data.email, passwordHash, phone: data.phone ?? null, image: data.image ?? null },

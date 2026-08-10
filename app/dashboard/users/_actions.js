@@ -13,6 +13,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { prisma } from "../../../lib/prisma";
+import { BCRYPT_COST } from "../../../lib/password";
 import { requireRole } from "../../../lib/auth-helpers";
 
 const RoleSchema = z.object({
@@ -102,7 +103,7 @@ export async function createUserAction(input) {
     return { ok: false, error: `That ${which} is already in use.` };
   }
 
-  const passwordHash = await bcrypt.hash(data.password, 12);
+  const passwordHash = await bcrypt.hash(data.password, BCRYPT_COST);
 
   const created = await prisma.$transaction(async (tx) => {
     const u = await tx.user.create({

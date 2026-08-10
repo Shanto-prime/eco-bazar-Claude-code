@@ -20,7 +20,9 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "../../../lib/prisma";
 import { requireAuth, requireRole } from "../../../lib/auth-helpers";
-import { COUNTRIES, STATES } from "../../../lib/geo";
+import { BCRYPT_COST } from "../../../lib/password";
+import { isSafeImageUrl } from "../../../lib/upload";
+import { BD_COUNTRY, isValidDivision, isValidDistrict, isValidThana } from "../../../lib/bd-geo";
 import { canSelfApprove, applyContactChange, notifyContactChange } from "../../../lib/profile-changes";
 import { CURRENCY_CODES, BASE_CURRENCY, isValidCurrency } from "../../../lib/currency";
 import { saveStoreConfig, getStoreConfig } from "../../../lib/store-config";
@@ -44,7 +46,10 @@ const ProfileSchema = z.object({
     .regex(/^[a-z0-9._-]+$/, "Use lowercase letters, digits, dot, underscore or dash.")
     .optional()
     .or(z.literal("").transform(() => undefined)),
-  image: z.string().max(500).optional().or(z.literal("").transform(() => undefined)),
+  // Must be one of our own upload paths or an https URL — see isSafeImageUrl.
+  // Previously any 500-char string was stored and rendered into an <img src>.
+  image: z.string().max(500).refine(isSafeImageUrl, "That image link isn't valid.")
+    .optional().or(z.literal("").transform(() => undefined)),
 });
 
 export async function updateProfileAction(formData) {
@@ -92,11 +97,16 @@ export async function updateProfileAction(formData) {
 // full URL (uploaded avatars are relative paths like /uploads/avatars/…).
 export async function updateAvatarAction(imageUrl) {
   const session = await requireAuth("/dashboard/settings");
-  const val = (typeof imageUrl === "string" ? imageUrl.trim() : "").slice(0, 500);
+  const raw = typeof imageUrl === "string" ? imageUrl.trim() : "";
+
+  // "" clears the avatar; anything else must pass the same check the profile form
+  // applies. This is a directly-callable server action, so it cannot rely on the
+  // caller having validated.
+  if (raw && !isSafeImageUrl(raw)) return fail("That image link isn't valid.");
 
   await prisma.user.update({
     where: { id: session.id },
-    data:  { image: val || null },
+    data:  { image: raw || null },
   });
 
   revalidatePath("/dashboard/settings");
@@ -292,9 +302,11 @@ export async function changePasswordAction(formData) {
   const matches = await bcrypt.compare(data.currentPassword, me.passwordHash);
   if (!matches) return fail("Current password is incorrect.");
 
+  // Cost 12, matching signup, password reset and admin-created accounts. This
+  // was 10, so changing your password silently WEAKENED its hash.
   await prisma.user.update({
     where: { id: session.id },
-    data:  { passwordHash: await bcrypt.hash(data.newPassword, 10) },
+    data:  { passwordHash: await bcrypt.hash(data.newPassword, BCRYPT_COST) },
   });
 
   await prisma.auditLog.create({
@@ -312,36 +324,63 @@ export async function changePasswordAction(formData) {
 // ---------------------------------------------------------------------------
 // Address book
 // ---------------------------------------------------------------------------
+// Geography is the Bangladesh hierarchy from lib/bd-geo.js — the SAME source the
+// checkout form renders its selects from. It used to be lib/geo.js
+// (USA/Illinois/…), which meant a saved address could never prefill checkout:
+// React drops a <select value> with no matching <option>, so the division came
+// back blank and the user silently lost the prefill.
+//
+// `state` = Division, `city` = District, `thana` = Thana/Upazila, matching the
+// column names Order already uses.
 const AddressSchema = z.object({
   label:     z.string().trim().max(40).optional().or(z.literal("").transform(() => undefined)),
   firstName: z.string().trim().min(1, "First name is required.").max(80),
   lastName:  z.string().trim().min(1, "Last name is required.").max(80),
   company:   z.string().trim().max(120).optional().or(z.literal("").transform(() => undefined)),
   street:    z.string().trim().min(1, "Street address is required.").max(200),
+  state:     z.string().trim().max(80).optional().or(z.literal("").transform(() => undefined)),
   city:      z.string().trim().max(80).optional().or(z.literal("").transform(() => undefined)),
-  // Constrained to the shared option sets so a saved address always prefills
-  // checkout's <select>s cleanly — see lib/geo.js.
-  state:     z.enum(STATES).optional().or(z.literal("").transform(() => undefined)),
-  country:   z.enum(COUNTRIES).optional().or(z.literal("").transform(() => undefined)),
+  thana:     z.string().trim().max(80).optional().or(z.literal("").transform(() => undefined)),
   zip:       z.string().trim().max(20).optional().or(z.literal("").transform(() => undefined)),
   phone:     z.string().trim().max(40).optional().or(z.literal("").transform(() => undefined)),
   isDefault: z.coerce.boolean().optional().default(false),
-});
+})
+  // Cross-field check: each level must actually belong to the one above it, so a
+  // hand-crafted POST can't store "Dhaka / Barguna / Amtali". Geography is
+  // optional overall (a partial address is allowed), but what IS supplied must
+  // be internally consistent, or the prefill breaks in a different way.
+  .superRefine((d, ctx) => {
+    if (d.state && !isValidDivision(d.state)) {
+      ctx.addIssue({ code: "custom", path: ["state"], message: "Choose a valid division." });
+      return;
+    }
+    if (d.city && !isValidDistrict(d.state, d.city)) {
+      ctx.addIssue({ code: "custom", path: ["city"], message: "Choose a district inside the selected division." });
+      return;
+    }
+    if (d.thana && !isValidThana(d.state, d.city, d.thana)) {
+      ctx.addIssue({ code: "custom", path: ["thana"], message: "Choose a thana inside the selected district." });
+    }
+  });
 
 function parseAddress(formData) {
-  return AddressSchema.parse({
+  const data = AddressSchema.parse({
     label:     formData.get("label")     || undefined,
     firstName: formData.get("firstName"),
     lastName:  formData.get("lastName"),
     company:   formData.get("company")   || undefined,
     street:    formData.get("street"),
-    city:      formData.get("city")      || undefined,
     state:     formData.get("state")     || undefined,
-    country:   formData.get("country")   || undefined,
+    city:      formData.get("city")      || undefined,
+    thana:     formData.get("thana")     || undefined,
     zip:       formData.get("zip")       || undefined,
     phone:     formData.get("phone")     || undefined,
     isDefault: formData.get("isDefault") === "on" || formData.get("isDefault") === "true",
   });
+  // Country isn't a form field — the store ships within Bangladesh only, and
+  // checkout renders it read-only. Stamped here so saved rows carry the same
+  // value Order does.
+  return { ...data, country: BD_COUNTRY };
 }
 
 // Address.isDefault has no DB-level "only one true" constraint (Mongo), so

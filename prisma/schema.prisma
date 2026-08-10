@@ -167,7 +167,12 @@ model Address {
   lastName  String
   company   String?
   street    String
+  // Bangladesh administrative hierarchy, matching the fields Order stores and
+  // the option sets lib/bd-geo.js provides — the checkout form prefills these,
+  // so the two must agree exactly:
+  //   state = Division (বিভাগ), city = District (জেলা), thana = Thana/Upazila
   city      String?
+  thana     String?
   state     String?
   zip       String?
   country   String?

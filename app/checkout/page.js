@@ -10,6 +10,7 @@
 
 import { getCurrentUser } from "../../lib/auth-helpers";
 import { prisma } from "../../lib/prisma";
+import { sanitizeBdGeo } from "../../lib/bd-geo";
 import CheckoutClient from "./CheckoutClient";
 
 export default async function CheckoutPage() {
@@ -31,14 +32,24 @@ export default async function CheckoutPage() {
 
   // Email/phone fall back to the account when the address carries none, so a
   // signed-in buyer with no saved address still gets those two filled in.
+  // Field names match the Address columns, which in turn match the option sets
+  // lib/bd-geo.js gives both this form and the settings address book — so a saved
+  // address prefills every selector, including thana.
+  //
+  // Sanitised first: addresses saved before the geography fix can hold old US
+  // values ("Illinois"/"USA"). Passing those through would set a <select value>
+  // with no matching <option>, which React silently blanks — the same broken
+  // prefill, just moved. An invalid triple becomes empty instead.
+  const geo = sanitizeBdGeo(address || {});
+
   const initialBilling = {
     firstName: address?.firstName || "",
     lastName:  address?.lastName  || "",
     company:   address?.company   || "",
     street:    address?.street    || "",
-    country:   address?.country   || "",
-    state:     address?.state     || "",   // Division (বিভাগ)
-    city:      address?.city      || "",   // District / Jella (জেলা)
+    state:     geo.state,   // Division (বিভাগ)
+    city:      geo.city,    // District / Jella (জেলা)
+    thana:     geo.thana,   // Thana / Upazila (থানা/উপজেলা)
     zip:       address?.zip       || "",
     email:     user?.email        || "",
     phone:     address?.phone || user?.phone || "",

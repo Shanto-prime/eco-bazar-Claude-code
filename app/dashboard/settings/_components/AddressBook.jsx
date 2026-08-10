@@ -1,8 +1,13 @@
 "use client";
 
 // Saved addresses. One is flagged default and prefills checkout — see
-// app/checkout/page.js. Country/state come from lib/geo.js so the values here
-// always match the <option>s checkout renders.
+// app/checkout/page.js.
+//
+// Geography is the SAME Bangladesh hierarchy checkout uses (lib/bd-geo.js):
+// Division → District → Thana, cascading. It used to render lib/geo.js's
+// USA/Canada/UK + Illinois/California/New York, which meant checkout received a
+// division like "Illinois", found no matching <option>, and silently dropped the
+// prefill. Keep these two forms on one source.
 //
 // This is where the edit + delete pattern genuinely applies: addresses are a
 // list, so each row carries Edit and Delete (and "Make default" when it isn't
@@ -11,7 +16,7 @@
 
 import { useState, useTransition } from "react";
 import { useT } from "../../../../lib/i18n/LanguageProvider";
-import { COUNTRIES, STATES } from "../../../../lib/geo";
+import { divisions, districtsOf, thanasOf, geoLabel } from "../../../../lib/bd-geo";
 import {
   createAddressAction, updateAddressAction,
   deleteAddressAction, setDefaultAddressAction,
@@ -20,11 +25,21 @@ import { Card, Field, Notice, SubmitButton, GhostButton } from "./ui";
 
 const EMPTY = {
   id: null, label: "", firstName: "", lastName: "", company: "",
-  street: "", city: "", state: "", zip: "", country: "", phone: "", isDefault: false,
+  street: "", state: "", city: "", thana: "", zip: "", phone: "", isDefault: false,
 };
 
 function AddressForm({ value, onCancel, onSubmit, pending, t }) {
   const editing = !!value.id;
+
+  // Controlled so choosing a division can reset the levels below it. Seeded from
+  // the address being edited, which is why the parent remounts on target change.
+  const [division, setDivision] = useState(value.state || "");
+  const [district, setDistrict] = useState(value.city  || "");
+  const [thana,    setThana]    = useState(value.thana || "");
+
+  const districtOptions = division ? districtsOf(division) : [];
+  const thanaOptions    = division && district ? thanasOf(division, district) : [];
+
   return (
     <form onSubmit={onSubmit} className="rounded-xl border border-gray-200 p-4 mt-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -46,23 +61,41 @@ function AddressForm({ value, onCancel, onSubmit, pending, t }) {
         <Field label={t("checkout.street")} required wide>
           <input name="street" className="eco-input rounded-xl" defaultValue={value.street} required maxLength={200} />
         </Field>
-        <Field label={t("settings.city")}>
-          <input name="city" className="eco-input rounded-xl" defaultValue={value.city || ""} maxLength={80} />
+        {/* Division → District → Thana. Changing a level clears the ones below
+            it, so a stale child value can never be submitted with a new parent
+            (the server action rejects that combination anyway). */}
+        <Field label={t("checkout.division")}>
+          <select
+            name="state" className="eco-input rounded-xl"
+            value={division}
+            onChange={(e) => { setDivision(e.target.value); setDistrict(""); setThana(""); }}
+          >
+            <option value="">{t("checkout.selectDivision")}</option>
+            {divisions().map((d) => <option key={d.name} value={d.name}>{geoLabel(d)}</option>)}
+          </select>
+        </Field>
+        <Field label={t("checkout.district")}>
+          <select
+            name="city" className="eco-input rounded-xl"
+            value={district} disabled={!division}
+            onChange={(e) => { setDistrict(e.target.value); setThana(""); }}
+          >
+            <option value="">{division ? t("checkout.selectDistrict") : t("checkout.selectDistrictFirst")}</option>
+            {districtOptions.map((d) => <option key={d.name} value={d.name}>{geoLabel(d)}</option>)}
+          </select>
+        </Field>
+        <Field label={t("checkout.thana")}>
+          <select
+            name="thana" className="eco-input rounded-xl"
+            value={thana} disabled={!district}
+            onChange={(e) => setThana(e.target.value)}
+          >
+            <option value="">{district ? t("checkout.selectThana") : t("checkout.selectThanaFirst")}</option>
+            {thanaOptions.map((tItem) => <option key={tItem.name} value={tItem.name}>{geoLabel(tItem)}</option>)}
+          </select>
         </Field>
         <Field label={t("checkout.zip")}>
           <input name="zip" className="eco-input rounded-xl" defaultValue={value.zip || ""} maxLength={20} />
-        </Field>
-        <Field label={t("checkout.country")}>
-          <select name="country" className="eco-input rounded-xl" defaultValue={value.country || ""}>
-            <option value="">{t("checkout.select")}</option>
-            {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </Field>
-        <Field label={t("checkout.state")}>
-          <select name="state" className="eco-input rounded-xl" defaultValue={value.state || ""}>
-            <option value="">{t("checkout.select")}</option>
-            {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
         </Field>
       </div>
 
@@ -130,8 +163,9 @@ export default function AddressBook({ addresses }) {
                         </span>
                       )}
                     </div>
+                    {/* Narrowest → widest, the order a Bangladeshi address reads in. */}
                     <p className="text-sm text-gray-500 mt-1">
-                      {[a.street, a.city, a.state, a.zip, a.country].filter(Boolean).join(", ")}
+                      {[a.street, a.thana, a.city, a.state, a.zip, a.country].filter(Boolean).join(", ")}
                     </p>
                     {a.phone && <p className="text-sm text-gray-500">{a.phone}</p>}
                   </div>

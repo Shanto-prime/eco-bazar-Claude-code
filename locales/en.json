@@ -221,7 +221,8 @@
     "shippingLabel": "Shipping:",
     "free": "Free",
     "totalLabel": "Total:",
-    "proceedToCheckout": "Proceed to checkout"
+    "proceedToCheckout": "Proceed to checkout",
+    "discount": "Discount"
   },
   "wishlist": {
     "breadcrumb": "Wishlist",
@@ -728,7 +729,8 @@
     "applicableTo": "{count} products in this promotion",
     "noProducts": "No products in this promotion right now.",
     "browseShop": "Browse the shop",
-    "notFoundTitle": "Deal not found — Ecobazar"
+    "notFoundTitle": "Deal not found — Ecobazar",
+    "endsLabel": "Ends"
   },
   "requests": {
     "navLabel": "Profile requests",
@@ -836,5 +838,15 @@
     "delete": "Delete",
     "confirmDelete": "Delete this offer? The product goes back to its normal price straight away.",
     "offLabel": "{percent}% off"
+  },
+  "lookup": {
+    "metaTitle": "Track your order — Ecobazar",
+    "breadcrumb": "Track order",
+    "heading": "Track your order",
+    "subtitle": "Enter the order number from your confirmation and the email you used at checkout. Guest orders can only be found this way.",
+    "orderNumber": "Order number",
+    "email": "Email used at checkout",
+    "submit": "Find my order",
+    "trackThisOrder": "Track this order"
   }
 }

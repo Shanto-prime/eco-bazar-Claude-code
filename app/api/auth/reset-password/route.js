@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../../../../lib/prisma";
+import { BCRYPT_COST } from "../../../../lib/password";
 import { rateLimit, clientIp } from "../../../../lib/rate-limit";
 import { consumeToken } from "../../../../lib/tokens";
 
@@ -34,7 +35,7 @@ export async function POST(req) {
     return NextResponse.json({ error: "This reset link is invalid or has expired." }, { status: 400 });
   }
 
-  const passwordHash = await bcrypt.hash(data.password, 12);
+  const passwordHash = await bcrypt.hash(data.password, BCRYPT_COST);
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: user.id }, data: { passwordHash } });
     await tx.auditLog.create({

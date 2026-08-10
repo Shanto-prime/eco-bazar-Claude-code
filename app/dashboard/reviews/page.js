@@ -6,6 +6,7 @@
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
 import { getT } from "../../../lib/i18n/server";
+import LocalTime from "../../../components/LocalTime";
 
 export default async function DashboardReviews() {
   const { t } = await getT();
@@ -38,7 +39,7 @@ export default async function DashboardReviews() {
               <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                 <div>
                   <div className="font-medium">{r.product.name} <span className="text-xs text-gray-400">/{r.product.slug}</span></div>
-                  <div className="text-xs text-gray-500">{t("dashboard.reviewBy")}{r.user.name || r.user.email} · {new Date(r.createdAt).toLocaleDateString()}</div>
+                  <div className="text-xs text-gray-500">{t("dashboard.reviewBy")}{r.user.name || r.user.email} · <LocalTime value={r.createdAt} dateOnly /></div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-amber-500 text-sm">{"★".repeat(r.rating)}<span className="text-gray-300">{"★".repeat(5 - r.rating)}</span></span>

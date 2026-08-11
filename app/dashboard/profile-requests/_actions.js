@@ -1,9 +1,11 @@
 "use server";
 
 // app/dashboard/profile-requests/_actions.js
-// ADMIN + MODERATOR review of pending email/phone changes raised from
-// /dashboard/settings. Both actions are privileged writes on somebody else's
-// account, so both append an AuditLog row.
+// ADMIN-only review of pending email/phone changes raised from
+// /dashboard/settings — including changes requested by MODERATORs, who cannot
+// approve their own (see SELF_APPROVE_ROLES in lib/profile-changes.js). Both
+// actions are privileged writes on somebody else's account, so both append an
+// AuditLog row.
 //
 // Approving an EMAIL change deliberately does NOT mark the address verified —
 // it clears User.emailVerified and mails a fresh verification link instead.

@@ -73,9 +73,15 @@ async function main() {
     // The seeded `admin` is the super admin (founding account — never
     // deletable/demotable). Everyone else is a normal account.
     const isSuperAdmin = u.username === "admin";
+    // Keyed on EMAIL, not username. Email is required and unique; username is
+    // nullable and users can change theirs in /dashboard/settings. Upserting by
+    // username meant that renaming a seeded account (say "customer" → "manna")
+    // made the next `npm run db:seed` try to CREATE a second user with the same
+    // email, which died on the unique index (P2002 User_email_key) and aborted
+    // the whole seed. Keying on email reconciles the rename instead.
     created[u.role] = await prisma.user.upsert({
-      where:  { username: u.username },
-      update: { email: u.email, role: u.role, passwordHash, name: u.name, isSuperAdmin },
+      where:  { email: u.email },
+      update: { username: u.username, role: u.role, passwordHash, name: u.name, isSuperAdmin },
       create: { username: u.username, email: u.email, name: u.name, role: u.role, passwordHash, isSuperAdmin },
     });
   }

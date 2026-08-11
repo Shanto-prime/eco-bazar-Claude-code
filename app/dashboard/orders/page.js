@@ -10,7 +10,8 @@
 // because it moves on any write to the row.
 //
 // TODO: date-range + customer search.
-// TODO: order detail page with line items.
+// Line items + status timeline render inline via _components/OrderDetails.jsx.
+// Still outstanding: a dedicated per-order route.
 
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";

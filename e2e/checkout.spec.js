@@ -6,6 +6,7 @@
 // product's stock to the snapshot taken before the run.
 import { test, expect } from "@playwright/test";
 import { newPrisma } from "./db";
+import { fillCheckoutAddress, ORDER_NUMBER_RE } from "./helpers";
 
 const SLUG = "green-apple";
 const TEST_EMAIL = "e2e-checkout@ecobazar.test";
@@ -51,9 +52,13 @@ test.describe("Checkout — order placement", () => {
     await page.locator('input[name="firstName"]').fill("E2E");
     await page.locator('input[name="lastName"]').fill("Tester");
     await page.locator('input[name="street"]').fill("123 Test Street");
-    await page.locator('select[name="country"]').selectOption("USA");
-    await page.locator('select[name="state"]').selectOption("Illinois");
-    await page.locator('input[name="zip"]').fill("60601");
+    // Bangladesh cascading address: Division -> District -> Thana. This spec used
+    // to select country="USA" / state="Illinois", which stopped existing when
+    // checkout moved to lib/bd-geo.js — the selector simply never resolved.
+    // Country is fixed ("Bangladesh") and rendered read-only, so there is nothing
+    // to choose.
+    await fillCheckoutAddress(page);
+    await page.locator('input[name="zip"]').fill("1200");
     await page.locator('input[name="email"]').fill(TEST_EMAIL);
     await page.locator('input[name="phone"]').fill("01712345678");
 
@@ -62,8 +67,10 @@ test.describe("Checkout — order placement", () => {
 
     // 4) Thank-you screen with a real ECO-###### order number.
     await expect(page.getByRole("heading", { name: /thank you/i })).toBeVisible();
-    // The order number shows in both the confirmation text and a toast — either is fine.
-    await expect(page.getByText(/ECO-\d{6}/).first()).toBeVisible();
+    // The order number shows in both the confirmation text and a toast — either is
+    // fine. Format is ECO- + 8 CSPRNG characters (see ORDER_NUMBER_RE); it was
+    // previously the last 6 digits of Date.now().
+    await expect(page.getByText(ORDER_NUMBER_RE).first()).toBeVisible();
 
     // 5) The order actually persisted to the DB with the right email.
     await expect

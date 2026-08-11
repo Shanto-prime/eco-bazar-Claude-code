@@ -44,6 +44,27 @@ export default function ShopClient({ initial, initialQ = "", initialCat = "", ca
   // Reset to page 1 whenever a non-page filter changes.
   useEffect(() => { setPage(1); }, [query, activeCat, maxPrice, minRating, sort]);
 
+  // Keep ?cat= and ?q= in the address bar in step with the sidebar/search.
+  //
+  // The URL was previously ENTRY-ONLY: the homepage category tiles link to
+  // /shop?cat=<slug> and the server seeds state from it, but clicking a category
+  // here only changed React state. So a filtered view could not be shared,
+  // reloading lost it, and Back didn't undo it.
+  //
+  // Uses history.replaceState rather than router.replace on purpose: this is a
+  // presentational sync of state the client already holds. A router navigation
+  // would re-run the server component and refetch the page we just fetched.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (activeCat) params.set("cat", activeCat);
+    if (query)     params.set("q", query);
+    const qs = params.toString();
+    const next = qs ? `/shop?${qs}` : "/shop";
+    if (window.location.pathname + window.location.search !== next) {
+      window.history.replaceState(null, "", next);
+    }
+  }, [activeCat, query]);
+
   // Fetch the current page from the API whenever filters or page change.
   // The first render is seeded by the server (props), so we skip it. A request
   // id guards against out-of-order responses overwriting newer results.

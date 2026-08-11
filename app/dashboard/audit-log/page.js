@@ -47,8 +47,13 @@ export default async function DashboardAuditLog() {
                   <tr key={e.id} className="border-t align-top">
                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap"><LocalTime value={e.createdAt} /></td>
                     <td className="px-4 py-3">
-                      <div className="font-medium">{e.actor.name || e.actor.email}</div>
-                      <div className="text-xs text-gray-500">{e.actor.role}</div>
+                      {/* actor is NULLABLE by design: AuditLog.actorId is SetNull
+                          on user delete so the trail survives the account (see
+                          prisma/schema.prisma). Reading e.actor.name unguarded
+                          threw a TypeError, which took this whole page down the
+                          moment any audited user was deleted. */}
+                      <div className="font-medium">{e.actor?.name || e.actor?.email || t("dashboard.deletedActor")}</div>
+                      <div className="text-xs text-gray-500">{e.actor?.role || "—"}</div>
                     </td>
                     <td className="px-4 py-3"><code className="text-xs bg-gray-100 rounded px-1.5 py-0.5">{e.action}</code></td>
                     <td className="px-4 py-3"><code className="text-xs bg-gray-100 rounded px-1.5 py-0.5">{e.entity}{e.entityId ? ` #${e.entityId.slice(0, 8)}…` : ""}</code></td>
@@ -66,7 +71,7 @@ export default async function DashboardAuditLog() {
                 <div className="flex justify-between items-start gap-2">
                   <div className="min-w-0">
                     <div className="text-xs text-gray-500"><LocalTime value={e.createdAt} /></div>
-                    <div className="font-medium truncate">{e.actor.name || e.actor.email}</div>
+                    <div className="font-medium truncate">{e.actor?.name || e.actor?.email || t("dashboard.deletedActor")}</div>
                   </div>
                   <code className="text-[10px] bg-gray-100 rounded px-1.5 py-0.5 whitespace-nowrap">{e.action}</code>
                 </div>

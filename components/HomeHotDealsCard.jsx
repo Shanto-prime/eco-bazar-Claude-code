@@ -37,10 +37,22 @@ export default function HomeHotDealsCard({ product }) {
   // The offer's deadline, resolved once so it can't drift between renders.
   const deadline = product?.offer?.endsAt || null;
   const [target] = useState(() => (deadline ? new Date(deadline).getTime() : null));
-  const [time, setTime] = useState(() => (target ? diff(target) : null));
+
+  // Starts null so the SERVER renders no countdown, and the first client render
+  // matches it. Seeding this with diff(target) instead produced a genuine
+  // hydration mismatch: diff() reads Date.now(), so the server rendered one
+  // second and the browser rendered another moments later, and React threw
+  // "server rendered text didn't match the client" and rebuilt the tree on every
+  // homepage load. (It only became visible once seeded offers made the countdown
+  // render at all.)
+  //
+  // A ticking clock is stale the instant it is serialised, so there is nothing to
+  // gain from server-rendering it — the trade is a first paint without the timer.
+  const [time, setTime] = useState(null);
 
   useEffect(() => {
     if (!target) return;
+    setTime(diff(target)); // first real value, now that we're in the browser
     const id = setInterval(() => setTime(diff(target)), 1000);
     return () => clearInterval(id);
   }, [target]);

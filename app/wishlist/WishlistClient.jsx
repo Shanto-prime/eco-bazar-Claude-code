@@ -1,8 +1,12 @@
 "use client";
 
 // app/wishlist/WishlistClient.jsx — Saved items UI.
-// Receives the full DB catalogue from the server page and filters it by the
-// wishlist slugs held in CartContext (localStorage).
+//
+// The server page sends exactly the saved products (read from Cart.wishlist in
+// the DB — the wishlist is deliberately never kept in localStorage; see
+// lib/CartContext.jsx). The intersection below is still needed: removing an item
+// updates CartContext immediately, so filtering against it makes the card
+// disappear without waiting for a server round-trip.
 
 import Link from "next/link";
 import Breadcrumb from "../../components/Breadcrumb";
@@ -15,6 +19,7 @@ export default function WishlistClient({ products }) {
   const { wishlist, hydrated, toggleWishlist, addItem } = useCart();
   if (!hydrated) return null;
 
+  // Optimistic removal: drop anything the context no longer holds.
   const items = products.filter((p) => wishlist.includes(p.slug));
 
   return (

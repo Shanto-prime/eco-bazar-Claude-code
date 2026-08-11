@@ -10,6 +10,7 @@ import { getT } from "../../../lib/i18n/server";
 import RoleSelect from "./_components/RoleSelect";
 import DeleteUserButton from "./_components/DeleteUserButton";
 import CreateUserForm from "./_components/CreateUserForm";
+import LocalTime from "../../../components/LocalTime";
 
 export default async function DashboardUsers() {
   const { t } = await getT();
@@ -66,7 +67,7 @@ export default async function DashboardUsers() {
                 <td className="px-4 py-3"><RoleSelect userId={u.id} role={u.role} isSelf={u.id === me.id} superAdmin={u.isSuperAdmin} /></td>
                 <td className="px-4 py-3 text-gray-500">{u._count.orders}</td>
                 <td className="px-4 py-3 text-gray-500">{u._count.productsAdded}</td>
-                <td className="px-4 py-3 text-gray-500">{new Date(u.createdAt).toLocaleDateString()}</td>
+                <td className="px-4 py-3 text-gray-500"><LocalTime value={u.createdAt} dateOnly /></td>
                 <td className="px-4 py-3 text-right">
                   <DeleteUserButton
                     userId={u.id}
@@ -95,7 +96,7 @@ export default async function DashboardUsers() {
             <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
               <span>{u._count.orders}{t("dashboard.ordersSuffix")}</span>
               <span>{u._count.productsAdded}{t("dashboard.productsSuffix")}</span>
-              <span>{new Date(u.createdAt).toLocaleDateString()}</span>
+              <span><LocalTime value={u.createdAt} dateOnly /></span>
               <span className="ml-auto">
                 <DeleteUserButton
                   userId={u.id}

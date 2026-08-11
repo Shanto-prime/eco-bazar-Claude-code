@@ -17,18 +17,17 @@ import { useCart } from "../../lib/CartContext";
 import { placeOrderAction } from "../../lib/order-actions";
 import { useT } from "../../lib/i18n/LanguageProvider";
 import { useMoney } from "../../lib/currency/CurrencyProvider";
-import { divisions, districtsOf, thanasOf } from "../../lib/bd-geo";
+import { divisions, districtsOf, thanasOf, geoLabel, BD_COUNTRY } from "../../lib/bd-geo";
 
 // Bangladesh-based store: a fixed country plus the cascading
 // Division → District (Jella) → Thana/Upazila selectors below.
-const COUNTRY = "Bangladesh";
+const COUNTRY = BD_COUNTRY;
 const REQUIRED = ["firstName", "lastName", "street", "division", "district", "thana", "email", "phone"];
 
 // UI radio value → PaymentMethod enum expected by the server action.
 const PAYMENT_MAP = { cod: "COD", bkash: "BKASH", nagad: "NAGAD" };
 
 // Label a geo option as "English (বাংলা)" so both scripts are clear.
-const geoLabel = (o) => (o.bn ? `${o.name} (${o.bn})` : o.name);
 
 export default function CheckoutClient({ initialBilling = {} }) {
   const router = useRouter();
@@ -36,8 +35,10 @@ export default function CheckoutClient({ initialBilling = {} }) {
   const money = useMoney();
   const { items, subtotal, discount, total, coupon, clearCart, hydrated, showToast } = useCart();
 
-  // A saved address stores Division as `state` and District as `city`, so we
-  // seed the BD selectors from those. Thana isn't kept on saved addresses yet.
+  // A saved address stores Division as `state`, District as `city` and Thana as
+  // `thana`, using the same lib/bd-geo values these selectors render — so all
+  // three prefill. (They used to come from lib/geo.js's US states, which matched
+  // no <option> here and left the selectors blank.)
   const [form, setForm] = useState(() => ({
     firstName: initialBilling.firstName || "",
     lastName:  initialBilling.lastName  || "",
@@ -45,7 +46,7 @@ export default function CheckoutClient({ initialBilling = {} }) {
     street:    initialBilling.street    || "",
     division:  initialBilling.state      || "",
     district:  initialBilling.city       || "",
-    thana:     "",
+    thana:     initialBilling.thana      || "",
     zip:       initialBilling.zip        || "",
     email:     initialBilling.email      || "",
     phone:     initialBilling.phone      || "",
@@ -106,7 +107,7 @@ export default function CheckoutClient({ initialBilling = {} }) {
       });
 
       clearCart();
-      setPlaced({ id: res.number, total: res.total, items: itemCount, payment: form.payment });
+      setPlaced({ id: res.number, total: res.total, items: itemCount, payment: form.payment, signedIn: res.signedIn });
       showToast(t("checkout.placedMsg", { id: res.number }));
       // Only signed-in buyers can reach /dashboard (middleware gates it), so
       // guests stay on the thank-you screen instead of being bounced to
@@ -136,9 +137,22 @@ export default function CheckoutClient({ initialBilling = {} }) {
             {t(placed.items === 1 ? "checkout.items_one" : "checkout.items_other", { count: placed.items })} · {money(placed.total)} ·{" "}
             {t(`checkout.${placed.payment}`)}
           </p>
-          <Link href="/shop" className="inline-block px-6 py-3 rounded-full bg-eco-green text-white font-medium">
-            {t("checkout.continueShopping")} <i className="fa-solid fa-arrow-right ml-1" />
-          </Link>
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Link href="/shop" className="inline-block px-6 py-3 rounded-full bg-eco-green text-white font-medium">
+              {t("checkout.continueShopping")} <i className="fa-solid fa-arrow-right ml-1" />
+            </Link>
+            {/* A guest has no /dashboard/orders, so without this the number on
+                screen would be unusable. Signed-in buyers are redirected to their
+                dashboard a moment later and don't need it. */}
+            {!placed.signedIn && (
+              <Link
+                href={`/orders/lookup?number=${encodeURIComponent(placed.id)}`}
+                className="inline-block px-6 py-3 rounded-full border border-gray-200 font-medium hover:border-eco-green"
+              >
+                <i className="fa-solid fa-truck-fast mr-1.5" /> {t("lookup.trackThisOrder")}
+              </Link>
+            )}
+          </div>
         </section>
       </>
     );

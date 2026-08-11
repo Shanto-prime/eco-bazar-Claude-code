@@ -13,6 +13,7 @@ import { getT } from "../../../lib/i18n/server";
 import { isExpired } from "../../../lib/banners";
 import Breadcrumb from "../../../components/Breadcrumb";
 import ProductCard from "../../../components/ProductCard";
+import LocalTime from "../../../components/LocalTime";
 import CopyCode from "./_components/CopyCode";
 
 export async function generateMetadata({ params }) {
@@ -62,7 +63,11 @@ export default async function DealPage({ params }) {
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-eco-green/10 text-eco-green px-3 py-1 text-sm font-medium">
-                <i className="fa-regular fa-clock" /> {t("deals.endsOn", { date: new Date(banner.deadline).toLocaleString() })}
+                {/* The date is rendered by <LocalTime> rather than interpolated
+                    into the string: formatting it here would use the server's
+                    timezone (UTC on Vercel), so a customer in Dhaka would read a
+                    deadline six hours off. */}
+                <i className="fa-regular fa-clock" /> {t("deals.endsLabel")} <LocalTime value={banner.deadline} />
               </span>
             )
           )}

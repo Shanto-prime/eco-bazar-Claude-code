@@ -8,7 +8,7 @@
 
 import { createContext, useContext, useEffect, useRef, useReducer, useState, useCallback } from "react";
 import { useT } from "./i18n/LanguageProvider";
-import { getCart, saveCart, mergeCart } from "./cart-actions";
+import { getCart, saveCart, mergeCart, repriceCart } from "./cart-actions";
 
 // ---------- Coupons -----------------------------------------------------------
 const COUPONS = {
@@ -40,6 +40,32 @@ function reducer(state, action) {
 
     case "REMOVE_ITEM":
       return { ...state, items: state.items.filter((i) => i.slug !== action.slug) };
+
+    // Refresh prices/names from the DB and drop products that no longer exist.
+    //
+    // MUST return the SAME state object when nothing changed: the effect that
+    // dispatches this runs off the cart contents, so returning a new object
+    // unconditionally would re-trigger it forever.
+    case "REPRICE": {
+      const fresh = action.bySlug;          // Map<slug, {name, price, image}>
+      const missing = action.missing;       // Set<slug>
+      let changed = false;
+
+      const items = [];
+      for (const it of state.items) {
+        if (missing.has(it.slug)) { changed = true; continue; }
+        const f = fresh.get(it.slug);
+        if (!f) { items.push(it); continue; }
+        if (f.price !== it.price || f.name !== it.name) {
+          changed = true;
+          items.push({ ...it, price: f.price, name: f.name });
+        } else {
+          items.push(it);
+        }
+      }
+
+      return changed ? { ...state, items } : state;
+    }
 
     case "UPDATE_QTY": {
       const qty = Math.max(1, action.qty);
@@ -203,6 +229,41 @@ export function CartProvider({ children, user = null }) {
     }, 600);
     return () => clearTimeout(id);
   }, [state.items, state.coupon, state.wishlist, hydrated, userId, cloudReady]);
+
+  // ---- Keep cart prices honest ---------------------------------------------
+  // Items carry the price they had when they were added. A Hot Deals offer
+  // starting or ending afterwards would leave the cart showing a figure checkout
+  // won't use — and when an offer EXPIRES, the buyer would be charged more than
+  // the summary said. Re-read the authoritative prices whenever the set of items
+  // changes (and once on load).
+  //
+  // The dependency is the sorted SLUG list, not `state.items`: repricing changes
+  // item prices, so depending on the items themselves would re-run this on its
+  // own result. Paired with the REPRICE reducer case returning the same state
+  // object when nothing changed, that keeps it from looping.
+  const slugKey = state.items.map((i) => i.slug).sort().join("|");
+
+  useEffect(() => {
+    if (!hydrated || !slugKey) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await repriceCart(stateRef.current.items);
+        if (cancelled || !res) return;
+        dispatch({
+          type:    "REPRICE",
+          bySlug:  new Map((res.items || []).map((i) => [i.slug, i])),
+          missing: new Set(res.missing || []),
+        });
+      } catch {
+        // Offline or a transient failure — keep showing what we have. Checkout
+        // still recomputes, so this can never cause a wrong charge.
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [slugKey, hydrated]);
 
   // Toast helper — pushes onto a queue (newest first). The Toast component owns
   // each toast's countdown/auto-dismiss (so it can pause on hover), then calls

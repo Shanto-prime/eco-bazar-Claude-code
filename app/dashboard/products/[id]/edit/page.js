@@ -8,6 +8,7 @@ import { prisma } from "../../../../../lib/prisma";
 import { requireRole, isAdmin } from "../../../../../lib/auth-helpers";
 import { toDollars } from "../../../../../lib/money";
 import { getT } from "../../../../../lib/i18n/server";
+import LocalTime from "../../../../../components/LocalTime";
 
 export default async function EditProduct({ params }) {
   const { t } = await getT();
@@ -45,7 +46,7 @@ export default async function EditProduct({ params }) {
       </div>
       <h1 className="text-2xl sm:text-3xl font-bold mb-1">{t("dashboard.editProduct")}</h1>
       <div className="text-sm text-gray-500 mb-6">
-        {t("dashboard.addedBy")}<b>{product.createdBy?.name || product.createdBy?.email}</b>{t("dashboard.addedOn")}{new Date(product.createdAt).toLocaleString()}
+        {t("dashboard.addedBy")}<b>{product.createdBy?.name || product.createdBy?.email}</b>{t("dashboard.addedOn")}<LocalTime value={product.createdAt} />
       </div>
       <ProductForm
         product={{ ...product, price: toDollars(product.price), oldPrice: toDollars(product.oldPrice) }}

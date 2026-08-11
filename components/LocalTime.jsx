@@ -12,18 +12,21 @@
 // suppressHydrationWarning acknowledges. React keeps the client value after
 // hydration, which is the correct one.
 
-const OPTS = {
-  dateStyle: "medium",
-  timeStyle: "short",
-};
+const DATE_TIME = { dateStyle: "medium", timeStyle: "short" };
+const DATE_ONLY = { dateStyle: "medium" };
 
-export default function LocalTime({ value, className }) {
+// `dateOnly` drops the clock time, for columns that only ever showed a date
+// (previously `toLocaleDateString()`). Worth having here rather than at the call
+// site: a bare toLocaleDateString on the server can land on the WRONG DAY for a
+// viewer whose offset crosses midnight relative to the server, which on Vercel
+// is always UTC.
+export default function LocalTime({ value, className, dateOnly = false }) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
 
   return (
     <time dateTime={d.toISOString()} className={className} suppressHydrationWarning>
-      {d.toLocaleString(undefined, OPTS)}
+      {d.toLocaleString(undefined, dateOnly ? DATE_ONLY : DATE_TIME)}
     </time>
   );
 }

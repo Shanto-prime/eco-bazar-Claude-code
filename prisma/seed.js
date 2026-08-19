@@ -1,186 +1,149 @@
 // prisma/seed.js
-// Seed the MongoDB database with:
-//   1. Test users (login with the username OR the email + password):
-//        admin    / admin@ecobazar.test    / admin    / ADMIN
+// DEV seed — the one npm run db:seed / npx prisma db seed runs.
+//
+// What it does:
+//   1. Upserts the four test users (login with the username OR email + password):
+//        admin    / admin@ecobazar.test    / admin    / ADMIN (isSuperAdmin)
 //        mod      / mod@ecobazar.test      / mod      / MODERATOR
 //        customer / customer@ecobazar.test / customer / CUSTOMER
 //        mamun    / mamun@ecobazar.test    / mamun    / CUSTOMER
-//   2. The storefront CATEGORIES (from lib/data.js).
-//   3. The 10 starter products, each assigned to a category.
-//   4. DEMO products (no image) for any category that would otherwise be empty,
-//      so every category shows something in the shop. Admin can add images to
-//      these later from the dashboard.
+//   2. Upserts the 12 categories + realistic product catalogue from
+//      prisma/seed-data.js (Bangladeshi organic-grocery items, prices in Taka).
+//   3. Attaches one placeholder image per product (deterministic URL from
+//      seed-data.js `img()`).
+//   4. Seeds two promo banners (TOP + BELOW_LIST) using storefront hero images.
+//   5. Seeds two live Hot Deals offers on catalogue products.
 //
-// Run with:    npx prisma db seed   (or: npm run db:seed)
-// Idempotent:  re-running won't duplicate; uses `upsert` everywhere.
+// The seed is idempotent — every write uses upsert (or delete-then-create for
+// images/offers) so re-running never duplicates rows. Old products left over
+// from previous seed runs are NOT deleted here; use prisma/seed.prod.js with
+// SEED_WIPE_EXISTING=true (or the /dashboard/products UI) to clean those up.
+//
+// For a production install, don't run this. Use prisma/seed.prod.js instead —
+// it takes admin credentials from env vars and never creates test accounts.
 
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
+const fs = require("node:fs");
+const path = require("node:path");
+const { CATEGORIES, PRODUCTS, toCents, productImageUrl, ratingFor } = require("./seed-data");
+
+// Directory that holds real product photos, same folder admin uploads
+// through /dashboard/products write to.
+const IMAGE_DIR = path.join(__dirname, "..", "public", "uploads", "products");
+
+// Absolute paths for the primary image and any numbered extras that make
+// up a product's gallery.
+//   primary:  public/uploads/products/<slug>.jpeg
+//   extras:   public/uploads/products/<slug>-2.jpeg, -3.jpeg, ...
+// Returns [{ path, url }] in gallery order (primary first, then -2, -3, ...).
+function galleryFiles(slug) {
+  const out = [];
+  const primary = path.join(IMAGE_DIR, `${slug}.jpeg`);
+  if (fs.existsSync(primary)) {
+    out.push({ path: primary, url: productImageUrl(slug) });
+  }
+  for (let n = 2; ; n++) {
+    const p = path.join(IMAGE_DIR, `${slug}-${n}.jpeg`);
+    if (!fs.existsSync(p)) break;
+    out.push({ path: p, url: `/uploads/products/${slug}-${n}.jpeg` });
+  }
+  return out;
+}
 
 const prisma = new PrismaClient();
 
-// Prices below are written in DOLLARS for readability; the DB stores integer
-// cents (see lib/money.js), so we convert on the way in.
-const toCents = (dollars) => Math.round(Number(dollars) * 100);
-
-// The 12 storefront categories (kept in sync with lib/data.js `categories`).
-const CATEGORIES = [
-  { slug: "fresh-fruit",      name: "Fresh Fruit",     icon: "🍍" },
-  { slug: "fresh-vegetables", name: "Fresh Vegetables", icon: "🥦" },
-  { slug: "meat-fish",        name: "Meat & Fish",     icon: "🍖" },
-  { slug: "snacks",           name: "Snacks",          icon: "🍪" },
-  { slug: "beverages",        name: "Beverages",       icon: "🥤" },
-  { slug: "beauty-health",    name: "Beauty & Health", icon: "🧴" },
-  { slug: "bread-bakery",     name: "Bread & Bakery",  icon: "🥖" },
-  { slug: "baking-needs",     name: "Baking Needs",    icon: "🥚" },
-  { slug: "cooking",          name: "Cooking",         icon: "🍳" },
-  { slug: "diabetic-food",    name: "Diabetic Food",   icon: "🥗" },
-  { slug: "dish-detergents",  name: "Dish Detergents", icon: "🧼" },
-  { slug: "oil",              name: "Oil",             icon: "🛢️" },
+const DEV_USERS = [
+  { username: "admin",    email: "admin@ecobazar.test",    password: "admin",    role: "ADMIN",     name: "Site Admin",     isSuperAdmin: true },
+  { username: "mod",      email: "mod@ecobazar.test",      password: "mod",      role: "MODERATOR", name: "Demo Moderator", isSuperAdmin: false },
+  { username: "customer", email: "customer@ecobazar.test", password: "customer", role: "CUSTOMER",  name: "Demo Customer",  isSuperAdmin: false },
+  { username: "mamun",    email: "mamun@ecobazar.test",    password: "mamun",    role: "CUSTOMER",  name: "Mamun",          isSuperAdmin: false },
 ];
 
-// Each real product is assigned to a category so category filtering works.
-const PRODUCTS = [
-  { slug: "green-apple",        name: "Green Apple",         category: "fresh-fruit",      price: 14.99, oldPrice: 20.99, badge: "Sale 50%", stock: 50,  image: "/images/prod1.jpg" },
-  { slug: "fresh-indian-malta", name: "Fresh Indian Malta",  category: "fresh-fruit",      price: 20.00, stock: 40,  image: "/images/prod2.jpg" },
-  { slug: "chinese-cabbage",    name: "Chinese cabbage",     category: "fresh-vegetables", price: 12.00, stock: 100, image: "/images/prod3.jpg" },
-  { slug: "green-lettuce",      name: "Green Lettuce",       category: "fresh-vegetables", price:  9.00, stock: 80,  image: "/images/prod4.jpg" },
-  { slug: "eggplant",           name: "Eggplant",            category: "fresh-vegetables", price: 34.00, stock: 25,  image: "/images/prod5.jpg" },
-  { slug: "big-potatoes",       name: "Big Potatoes",        category: "fresh-vegetables", price: 20.00, stock: 200, image: "/images/prod6.jpg" },
-  { slug: "corn",               name: "Corn",                category: "fresh-vegetables", price: 20.00, stock: 60,  image: "/images/prod7.jpg" },
-  { slug: "fresh-cauliflower",  name: "Fresh Cauliflower",   category: "fresh-vegetables", price: 12.00, stock: 40,  image: "/images/prod8.jpg" },
-  { slug: "green-capsicum",     name: "Green Capsicum",      category: "fresh-vegetables", price:  9.00, oldPrice: 20.99, badge: "Sale 50%", stock: 70, image: "/images/prod9.jpg" },
-  { slug: "green-chili",        name: "Green Chili",         category: "fresh-vegetables", price: 34.00, stock: 30,  image: "/images/prod10.jpg" },
-];
-
-const DEFAULT_DESC =
-  "Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. " +
-  "Fresh, organically grown produce delivered to your door.";
-
-const TEST_USERS = [
-  { username: "admin",    email: "admin@ecobazar.test",    password: "admin",    role: "ADMIN",     name: "Site Admin" },
-  { username: "mod",      email: "mod@ecobazar.test",      password: "mod",      role: "MODERATOR", name: "Demo Moderator" },
-  { username: "customer", email: "customer@ecobazar.test", password: "customer", role: "CUSTOMER",  name: "Demo Customer" },
-  // Second customer for testing (auto-generated details).
-  { username: "mamun",    email: "mamun@ecobazar.test",    password: "mamun",    role: "CUSTOMER",  name: "Mamun" },
-];
-
-async function main() {
-  // ---- Users ---------------------------------------------------------------
+async function seedUsers() {
   const created = {};
-  for (const u of TEST_USERS) {
+  for (const u of DEV_USERS) {
     const passwordHash = await bcrypt.hash(u.password, 12);
-    // The seeded `admin` is the super admin (founding account — never
-    // deletable/demotable). Everyone else is a normal account.
-    const isSuperAdmin = u.username === "admin";
-    // Keyed on EMAIL, not username. Email is required and unique; username is
-    // nullable and users can change theirs in /dashboard/settings. Upserting by
-    // username meant that renaming a seeded account (say "customer" → "manna")
-    // made the next `npm run db:seed` try to CREATE a second user with the same
-    // email, which died on the unique index (P2002 User_email_key) and aborted
-    // the whole seed. Keying on email reconciles the rename instead.
-    created[u.role] = await prisma.user.upsert({
+    created[u.username] = await prisma.user.upsert({
       where:  { email: u.email },
-      update: { username: u.username, role: u.role, passwordHash, name: u.name, isSuperAdmin },
-      create: { username: u.username, email: u.email, name: u.name, role: u.role, passwordHash, isSuperAdmin },
+      update: { username: u.username, role: u.role, passwordHash, name: u.name, isSuperAdmin: u.isSuperAdmin },
+      create: { username: u.username, email: u.email, name: u.name, role: u.role, passwordHash, isSuperAdmin: u.isSuperAdmin },
     });
   }
-
-  console.log("• Users (username / email / password):");
-  for (const u of TEST_USERS) {
+  console.log("• Test users (username / email / password):");
+  for (const u of DEV_USERS) {
     console.log(`    ${u.username.padEnd(10)} / ${u.email.padEnd(24)} / ${u.password}  (${u.role})`);
   }
+  return created;
+}
 
-  // ---- Categories ----------------------------------------------------------
-  const catBySlug = {};
+async function seedCategories() {
+  const bySlug = {};
   for (const c of CATEGORIES) {
-    catBySlug[c.slug] = await prisma.category.upsert({
+    bySlug[c.slug] = await prisma.category.upsert({
       where:  { slug: c.slug },
       update: { name: c.name, icon: c.icon },
       create: { slug: c.slug, name: c.name, icon: c.icon },
     });
   }
   console.log(`• ${CATEGORIES.length} categories seeded.`);
+  return bySlug;
+}
 
-  // ---- Products ------------------------------------------------------------
-  const owner = created.ADMIN;
+async function seedProducts(catBySlug, ownerId) {
+  let withImage = 0;
+  let noImage = 0;
+  const missing = [];
   for (const p of PRODUCTS) {
-    const categoryId = p.category ? catBySlug[p.category]?.id ?? null : null;
+    const categoryId = catBySlug[p.category]?.id ?? null;
+    if (!categoryId) throw new Error(`Unknown category "${p.category}" for product "${p.slug}"`);
+
+    const rating = p.rating != null ? p.rating : ratingFor(p.slug);
+    const data = {
+      name:           p.name,
+      description:    p.description || null,
+      price:          toCents(p.price),
+      oldPrice:       p.oldPrice == null ? null : toCents(p.oldPrice),
+      badge:          p.badge ?? null,
+      stock:          p.stock,
+      brand:          p.brand ?? null,
+      tags:           p.tags ?? [],
+      rating,
+      categoryId,
+    };
+
     const product = await prisma.product.upsert({
-      where: { slug: p.slug },
-      update: {
-        name:     p.name,
-        price:    toCents(p.price),
-        oldPrice: p.oldPrice == null ? null : toCents(p.oldPrice),
-        badge:    p.badge ?? null,
-        stock:    p.stock,
-        categoryId,
-      },
-      create: {
-        slug:          p.slug,
-        name:          p.name,
-        description:   DEFAULT_DESC,
-        price:         toCents(p.price),
-        oldPrice:      p.oldPrice == null ? null : toCents(p.oldPrice),
-        badge:         p.badge ?? null,
-        stock:         p.stock,
-        rating:        4,
-        categoryId,
-        createdById:   owner.id,
-      },
+      where:  { slug: p.slug },
+      update: data,
+      create: { ...data, slug: p.slug, createdById: ownerId },
     });
 
-    // Attach the demo product image (idempotent: reset to exactly one image).
-    if (p.image) {
-      await prisma.productImage.deleteMany({ where: { productId: product.id } });
-      await prisma.productImage.create({ data: { productId: product.id, url: p.image, alt: p.name, sort: 0 } });
+    // Attach the primary photo + any numbered gallery extras. Products
+    // without any file stay image-less so the storefront's ProductCard
+    // shows a placeholder instead of a broken image.
+    await prisma.productImage.deleteMany({ where: { productId: product.id } });
+    const gallery = galleryFiles(p.slug);
+    if (gallery.length === 0) {
+      noImage++;
+      missing.push(p.slug);
+      continue;
     }
-  }
-  console.log(`• ${PRODUCTS.length} products seeded.`);
-
-  // ---- Demo products for empty categories ----------------------------------
-  // Any category with no products yet gets 3 placeholder products (NO image —
-  // the admin adds real photos + prices later). This guarantees every category
-  // in the shop shows something instead of an empty grid.
-  let demoTotal = 0;
-  for (const c of CATEGORIES) {
-    const count = await prisma.product.count({ where: { categoryId: catBySlug[c.slug].id } });
-    if (count > 0) continue;
-
-    for (let i = 1; i <= 3; i++) {
-      const slug = `demo-${c.slug}-${i}`;
-      await prisma.product.upsert({
-        where:  { slug },
-        update: { name: `${c.name} Demo ${i}`, categoryId: catBySlug[c.slug].id },
-        create: {
-          slug,
-          name:        `${c.name} Demo ${i}`,
-          description: `Placeholder product in ${c.name}. Add a real image and details from the dashboard.`,
-          // Modest placeholder price (in DOLLARS → cents). Vary a little by i.
-          price:       toCents(4.99 + i),
-          stock:       25,
-          rating:      0,
-          badge:       "Demo",
-          categoryId:  catBySlug[c.slug].id,
-          createdById: owner.id,
-          // No ProductImage rows → the card/gallery falls back to a placeholder.
-        },
+    for (let i = 0; i < gallery.length; i++) {
+      await prisma.productImage.create({
+        data: { productId: product.id, url: gallery[i].url, alt: p.name, sort: i },
       });
-      demoTotal++;
     }
+    withImage++;
+    if (gallery.length > 1) console.log(`  ${p.slug}: ${gallery.length}-image gallery`);
   }
-  console.log(`• ${demoTotal} demo products seeded (image-less, for empty categories).`);
+  console.log(`• ${PRODUCTS.length} products seeded (${withImage} with real photo, ${noImage} image-less).`);
+  if (missing.length) console.log(`  Image-less: ${missing.join(", ")}`);
+}
 
-  // ---- Promo banners -------------------------------------------------------
-  // One example banner per placement, reusing existing storefront images, so the
-  // promo areas are populated and immediately editable in the dashboard. Each
-  // targets the "Sale 50%" badge → its /deals/<slug> page lists those products.
-  // NOTE: there is deliberately no HOT_DEALS banner here. That area is no longer
-  // image-driven — it is filled by ProductOffer rows (seeded just below), so a
-  // HOT_DEALS banner would be stored and never rendered.
+async function seedBanners(ownerId) {
   const BANNERS = [
-    { slug: "summer-sale", title: "Summer Sale — up to 50% off", placement: "TOP",        image: "/images/hero-summer.jpg",  promoCode: "SUMMER25", targetTag: "Sale 50%" },
-    { slug: "top-deals",   title: "Top Deals of the Week",       placement: "BELOW_LIST", image: "/images/banner-37off.jpg", promoCode: "SAVE37",   targetTag: "Sale 50%" },
+    { slug: "seasonal-picks",  title: "Seasonal picks — up to 25% off", placement: "TOP",        image: "/images/hero-summer.jpg",  promoCode: "SEASON25", targetTag: "seasonal" },
+    { slug: "premium-selection", title: "Premium selection — Hilsa, Sundarban honey & more", placement: "BELOW_LIST", image: "/images/banner-37off.jpg", promoCode: "PREMIUM", targetTag: "premium" },
   ];
   for (const b of BANNERS) {
     await prisma.promoBanner.upsert({
@@ -189,50 +152,46 @@ async function main() {
       create: {
         slug: b.slug, title: b.title, imageUrl: b.image, placement: b.placement,
         promoCode: b.promoCode, targetTag: b.targetTag, active: true, sort: 0,
-        createdById: owner.id,
+        createdById: ownerId,
       },
     });
   }
-  console.log(`• ${BANNERS.length} promo banners seeded (one per image placement).`);
+  console.log(`• ${BANNERS.length} promo banners seeded.`);
+}
 
-  // ---- Hot Deals offers ----------------------------------------------------
-  // Timed percentage discounts on real products — this is what fills the
-  // storefront's Hot Deals area. Two offers with different deadlines so the
-  // ordering is visible immediately: the soonest-ending one takes the big
-  // featured card, the other becomes a small card.
-  //
-  // While an offer is live it is the product's real selling price everywhere
-  // (see lib/offers.js), so these also demonstrate the struck-through pricing.
+async function seedOffers(ownerId) {
   const HOUR = 60 * 60 * 1000;
   const OFFERS = [
-    { slug: "green-apple",     percentOff: 50, endsInMs: 24 * HOUR },
-    { slug: "chinese-cabbage", percentOff: 25, endsInMs: 72 * HOUR },
+    { slug: "dragon-fruit",   percentOff: 30, endsInMs: 24 * HOUR },
+    { slug: "chinigura-rice", percentOff: 20, endsInMs: 72 * HOUR },
   ];
 
-  let offersSeeded = 0;
+  let seeded = 0;
   for (const o of OFFERS) {
     const product = await prisma.product.findUnique({ where: { slug: o.slug }, select: { id: true } });
-    if (!product) continue; // catalogue changed — skip rather than fail the seed
-
-    // Only one live offer per product is allowed (enforced in the dashboard
-    // actions), so clear any previous rows before inserting. Keeps re-seeding
-    // idempotent; ProductOffer has no natural unique key to upsert on.
+    if (!product) continue;
     await prisma.productOffer.deleteMany({ where: { productId: product.id } });
     await prisma.productOffer.create({
       data: {
-        productId:   product.id,
-        percentOff:  o.percentOff,
-        endsAt:      new Date(Date.now() + o.endsInMs),
-        active:      true,
-        createdById: owner.id,
+        productId: product.id,
+        percentOff: o.percentOff,
+        endsAt:    new Date(Date.now() + o.endsInMs),
+        active:    true,
+        createdById: ownerId,
       },
     });
-    offersSeeded++;
+    seeded++;
   }
-  console.log(`• ${offersSeeded} Hot Deals offers seeded (soonest-ending takes the featured card).`);
+  console.log(`• ${seeded} Hot Deals offers seeded.`);
+}
 
-  console.log("");
-  console.log("Sign in at /login with any of the test accounts above.");
+async function main() {
+  const users = await seedUsers();
+  const catBySlug = await seedCategories();
+  await seedProducts(catBySlug, users.admin.id);
+  await seedBanners(users.admin.id);
+  await seedOffers(users.admin.id);
+  console.log("\nSign in at /login with any of the test accounts above.");
 }
 
 main()

@@ -12,6 +12,8 @@ import { categories, news, instagramTiles } from "../lib/data";
 import { listProducts, listBestSellers, listLiveOffers } from "../lib/products-db";
 import { getT } from "../lib/i18n/server";
 import { HOT_DEALS_TOTAL_SLOTS } from "../lib/offers";
+import { prisma } from "../lib/prisma";
+import { isBannerLive, dealsHref } from "../lib/banners";
 
 // Reusable section heading shared across the homepage.
 function SectionHead({ title, href, center, viewAllText = "View All" }) {
@@ -53,30 +55,52 @@ export default async function Home() {
     ...products.filter((p) => !dealSlugs.has(p.slug)).slice(0, fillerCount),
   ];
 
+  // Top-right hero slot: if there's a live TOP promo banner, it takes over the
+  // slot as a clickable image linking to its /deals/<slug> landing page. When
+  // there isn't one, the static `hero-summer.jpg` shows through as a fallback.
+  // Only the FIRST live TOP banner is used here; additional TOP banners are not
+  // rendered anywhere else on the homepage (the previous PromoBanners strip
+  // below the hero was removed).
+  const heroTopBannerRow = await prisma.promoBanner.findFirst({
+    where:   { placement: "TOP", active: true },
+    orderBy: [{ sort: "asc" }, { createdAt: "desc" }],
+  });
+  const heroTopBanner = heroTopBannerRow && isBannerLive(heroTopBannerRow) ? heroTopBannerRow : null;
+
   return (
     <>
       {/* ============ HERO  =========================================== */}
+      {/* Each hero card is a link. The "Shop now" button visible in the JPGs is
+          part of the artwork itself — clicking it works because the whole card
+          is the click target. Left card → /shop (the organic-food catalogue);
+          top-right → the live TOP promo banner's /deals/<slug> (falls back to a
+          static image with no link when no banner is live); bottom-right → the
+          Hot Deals section further down this same page. */}
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-4 sm:mt-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
-          <div className="lg:col-span-8 rounded-xl overflow-hidden relative aspect-[16/11]">
+          <Link href="/shop" aria-label={t("home.heroAlt")} className="lg:col-span-8 rounded-xl overflow-hidden relative aspect-[16/11] block hover:opacity-95 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-eco-green">
             <Image src="/images/hero-main.jpg" alt={t("home.heroAlt")} fill className="object-cover" priority sizes="(min-width:1024px) 66vw, 100vw" />
-          </div>
+          </Link>
           <div className="lg:col-span-4 grid grid-cols-2 lg:grid-cols-1 gap-4 sm:gap-6">
             <div className="rounded-xl overflow-hidden relative aspect-[3/2]">
-              <Image src="/images/hero-summer.jpg" alt={t("home.summerSale75Alt")} fill className="object-cover" sizes="(min-width:1024px) 33vw, 50vw" />
+              {heroTopBanner ? (
+                <Link href={dealsHref(heroTopBanner.slug)} aria-label={heroTopBanner.title} className="block absolute inset-0 hover:opacity-95 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-eco-green">
+                  {/* Uploaded banner files (Vercel Blob or /uploads/banners) aren't in
+                      next.config images.remotePatterns for arbitrary hosts, so use a
+                      plain <img> for consistency with components/PromoBanners.jsx. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={heroTopBanner.imageUrl} alt={heroTopBanner.title} className="absolute inset-0 w-full h-full object-cover" />
+                </Link>
+              ) : (
+                <Image src="/images/hero-summer.jpg" alt={t("home.summerSale75Alt")} fill className="object-cover" sizes="(min-width:1024px) 33vw, 50vw" />
+              )}
             </div>
-            <div className="rounded-xl overflow-hidden relative aspect-[3/2]">
+            <Link href="/#hot-deals" aria-label={t("home.dealOfMonthAlt")} className="rounded-xl overflow-hidden relative aspect-[3/2] block hover:opacity-95 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-eco-green">
               <Image src="/images/hero-special.jpg" alt={t("home.dealOfMonthAlt")} fill className="object-cover" sizes="(min-width:1024px) 33vw, 50vw" />
-            </div>
+            </Link>
           </div>
         </div>
       </section>
-
-      {/* ============ TOP PROMO BANNERS (admin-managed) ============== */}
-      <PromoBanners
-        placement="TOP"
-        className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-6 sm:mt-8 space-y-4 sm:space-y-5"
-      />
 
       {/* ============ SERVICE BAR ===================================== */}
       <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-6 sm:mt-8">
@@ -136,7 +160,8 @@ export default async function Home() {
       </section>
 
       {/* ============ HOT DEALS  ====================================== */}
-      <section className="bg-eco-bg py-10 sm:py-14 mt-10 sm:mt-14">
+      {/* id="hot-deals" is the anchor target for the bottom-right hero card. */}
+      <section id="hot-deals" className="bg-eco-bg py-10 sm:py-14 mt-10 sm:mt-14 scroll-mt-20">
         <div className="max-w-[1320px] mx-auto px-4 sm:px-6">
           <SectionHead title={t("home.hotDeals")} href="/shop" viewAllText={viewAll} />
           {/* The big featured card exists only while an offer is running. With no

@@ -4,11 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import ProductCard from "../components/ProductCard";
 import CategoryTile from "../components/CategoryTile";
-import NewsCard from "../components/NewsCard";
 import TestimonialsSection from "../components/TestimonialsSection";
 import HomeHotDealsCard from "../components/HomeHotDealsCard";
 import PromoBanners from "../components/PromoBanners";
-import { categories, news, instagramTiles } from "../lib/data";
+import { categories } from "../lib/data";
 import { listProducts, listBestSellers, listLiveOffers } from "../lib/products-db";
 import { getT } from "../lib/i18n/server";
 import { HOT_DEALS_TOTAL_SLOTS } from "../lib/offers";
@@ -148,17 +147,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ============ SALE OF THE MONTH =============================== */}
-      <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-10 sm:mt-14">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
-          {["sale-month1.jpg","sale-month2.jpg","sale-month3.jpg"].map((f) => (
-            <div key={f} className="rounded-xl overflow-hidden relative aspect-[3/2]">
-              <Image src={`/images/${f}`} alt="" fill className="object-cover" sizes="(min-width:768px) 33vw, 100vw" />
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* ============ HOT DEALS  ====================================== */}
       {/* id="hot-deals" is the anchor target for the bottom-right hero card. */}
       <section id="hot-deals" className="bg-eco-bg py-10 sm:py-14 mt-10 sm:mt-14 scroll-mt-20">
@@ -198,40 +186,8 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ============ LATEST NEWS ===================================== */}
-      <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-10 sm:mt-14">
-        <SectionHead title={t("home.latestNews")} center />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
-          {news.map((n) => <NewsCard key={n.id} {...n} />)}
-        </div>
-      </section>
-
-      {/* ============ TESTIMONIALS ==================================== */}
+      {/* ============ CUSTOMER REVIEWS =============================== */}
       <TestimonialsSection />
-
-      {/* ============ BRAND STRIP ===================================== */}
-      <section className="max-w-[1320px] mx-auto px-4 sm:px-6 my-10 sm:my-12">
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-4 sm:gap-6 items-center text-gray-300 text-base sm:text-xl font-bold">
-          <div className="text-eco-green italic text-xl sm:text-2xl">steps</div>
-          <div className="text-center">MANGO</div>
-          <div className="text-center italic">food</div>
-          <div className="text-center">FOOD</div>
-          <div className="text-center">BOOK-OFF</div>
-          <div className="text-center">G Series</div>
-        </div>
-      </section>
-
-      {/* ============ INSTAGRAM ======================================= */}
-      <section className="max-w-[1320px] mx-auto px-4 sm:px-6 mt-10 sm:mt-14 mb-10 sm:mb-14">
-        <SectionHead title={t("home.followInstagram")} center />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-          {instagramTiles.map((src, i) => (
-            <a key={i} href="#" className="block rounded-md overflow-hidden relative aspect-square">
-              <Image src={src} alt="" fill className="object-cover" sizes="(min-width:1024px) 16vw, (min-width:640px) 33vw, 50vw" />
-            </a>
-          ))}
-        </div>
-      </section>
     </>
   );
 }

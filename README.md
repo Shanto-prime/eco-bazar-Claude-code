@@ -467,12 +467,20 @@ git push -u origin feature/auth-hardening     # or merge to main first
 Then on vercel.com: **Add New → Project → Import Git Repository**, pick the repo,
 and add these environment variables before the first deploy:
 
-| Variable          | Value                                                    |
-|-------------------|----------------------------------------------------------|
-| `DATABASE_URL`    | your Atlas string, **including `/ecobazar`**              |
-| `NEXTAUTH_SECRET` | a long random string (`openssl rand -base64 32`)          |
-| `NEXTAUTH_URL`    | `https://<your-project>.vercel.app`                       |
-| `AUTH_TRUST_HOST` | `true`                                                    |
+| Variable          | Required | Value                                            |
+|-------------------|----------|--------------------------------------------------|
+| `DATABASE_URL`    | yes      | your Atlas string, **including `/ecobazar`**      |
+| `NEXTAUTH_SECRET` | yes      | a long random string (`openssl rand -base64 32`)  |
+| `AUTH_TRUST_HOST` | yes      | `true`                                            |
+| `NEXTAUTH_URL`    | no       | `https://<your-project>.vercel.app` — only needed once you have a custom domain; otherwise `VERCEL_URL` is used automatically for email links (see `appBaseUrl()` in lib/tokens.js) |
+
+Set each one for **Production, Preview and Development**, then redeploy —
+environment variables are read at build time, so an existing deployment does not
+pick them up.
+
+If `DATABASE_URL` is missing or has no database name, the build now **fails with a
+message naming the fix** (see `assertDatabaseUrl()` in lib/prisma.js) rather than
+deploying an app that throws Prisma internals on every page.
 
 `BLOB_READ_WRITE_TOKEN` arrives on its own once the Blob store is connected. The
 OAuth and `UPLOAD_*` variables are optional — omit them and Google/Facebook simply

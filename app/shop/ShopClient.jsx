@@ -18,14 +18,27 @@ import { useT } from "../../lib/i18n/LanguageProvider";
 
 const PER_PAGE = 9;
 
-export default function ShopClient({ initial, initialQ = "", initialCat = "", categories = [] }) {
+// Default bounds if the server didn't pass any (defensive — the shop page
+// always sends real ones drawn from lib/products-db `getPriceBounds`).
+const DEFAULT_PRICE_BOUNDS = { min: 0, max: 100 };
+
+export default function ShopClient({
+  initial,
+  initialQ = "",
+  initialCat = "",
+  categories = [],
+  priceBounds = DEFAULT_PRICE_BOUNDS,
+}) {
   const t = useT();
 
-  // Filters.
+  // Filters. Price range is expressed in Taka (BDT major units) because that's
+  // the store's base currency (see lib/currency.js BASE_CURRENCY) and what the
+  // DB stores. The slider tracks the CURRENT maximum threshold; its endpoints
+  // are the catalogue's cheapest and most expensive product prices, so the
+  // knob is always in range.
   const [query, setQuery]      = useState(initialQ);
   const [activeCat, setCat]    = useState(initialCat || null);
-  const [minPrice]             = useState(0); // lower bound is fixed at 0 in the UI
-  const [maxPrice, setMax]     = useState(100);
+  const [maxPrice, setMax]     = useState(priceBounds.max);
   const [minRating, setRating] = useState(0);
   const [sort, setSort]        = useState("latest");
   const [page, setPage]        = useState(1);
@@ -44,6 +57,27 @@ export default function ShopClient({ initial, initialQ = "", initialCat = "", ca
   // Reset to page 1 whenever a non-page filter changes.
   useEffect(() => { setPage(1); }, [query, activeCat, maxPrice, minRating, sort]);
 
+  // Keep ?cat= and ?q= in the address bar in step with the sidebar/search.
+  //
+  // The URL was previously ENTRY-ONLY: the homepage category tiles link to
+  // /shop?cat=<slug> and the server seeds state from it, but clicking a category
+  // here only changed React state. So a filtered view could not be shared,
+  // reloading lost it, and Back didn't undo it.
+  //
+  // Uses history.replaceState rather than router.replace on purpose: this is a
+  // presentational sync of state the client already holds. A router navigation
+  // would re-run the server component and refetch the page we just fetched.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (activeCat) params.set("cat", activeCat);
+    if (query)     params.set("q", query);
+    const qs = params.toString();
+    const next = qs ? `/shop?${qs}` : "/shop";
+    if (window.location.pathname + window.location.search !== next) {
+      window.history.replaceState(null, "", next);
+    }
+  }, [activeCat, query]);
+
   // Fetch the current page from the API whenever filters or page change.
   // The first render is seeded by the server (props), so we skip it. A request
   // id guards against out-of-order responses overwriting newer results.
@@ -60,8 +94,9 @@ export default function ShopClient({ initial, initialQ = "", initialCat = "", ca
         const params = new URLSearchParams();
         if (query.trim())   params.set("q", query.trim());
         if (activeCat)      params.set("cat", activeCat);
-        if (minPrice > 0)   params.set("minPrice", String(minPrice));
-        if (maxPrice < 100) params.set("maxPrice", String(maxPrice));
+        // Only send maxPrice when it's actually restricting the range;
+        // equal to the catalogue max = "any", no server-side filter needed.
+        if (maxPrice < priceBounds.max) params.set("maxPrice", String(maxPrice));
         if (minRating > 0)  params.set("minRating", String(minRating));
         if (sort !== "latest") params.set("sort", sort);
         params.set("page", String(page));
@@ -84,7 +119,7 @@ export default function ShopClient({ initial, initialQ = "", initialCat = "", ca
     }, 250); // debounce rapid changes (typing, slider drag)
 
     return () => clearTimeout(id);
-  }, [query, activeCat, minPrice, maxPrice, minRating, sort, page]);
+  }, [query, activeCat, maxPrice, minRating, sort, page, priceBounds.max]);
 
   const selectCategory = (slug) => {
     // Toggle: clicking the active category again clears it.
@@ -93,7 +128,7 @@ export default function ShopClient({ initial, initialQ = "", initialCat = "", ca
   };
 
   const resetAll = () => {
-    setQuery(""); setMax(100); setRating(0); setSort("latest"); setCat(null);
+    setQuery(""); setMax(priceBounds.max); setRating(0); setSort("latest"); setCat(null);
   };
 
   const pageCount = Math.max(1, Math.ceil(total / PER_PAGE));
@@ -145,9 +180,17 @@ export default function ShopClient({ initial, initialQ = "", initialCat = "", ca
       <div>
         <div className="font-semibold mb-3">{t("shop.priceRange")}</div>
         <div className="flex items-center gap-2 text-xs text-gray-500">
-          <span>${minPrice}</span>
-          <input type="range" min={0} max={100} value={maxPrice} onChange={(e) => setMax(Number(e.target.value))} className="price-range flex-1" />
-          <span>{maxPrice === 100 ? t("shop.any") : `$${maxPrice}`}</span>
+          <span>৳{priceBounds.min}</span>
+          <input
+            type="range"
+            min={priceBounds.min}
+            max={priceBounds.max}
+            step={1}
+            value={Math.min(Math.max(maxPrice, priceBounds.min), priceBounds.max)}
+            onChange={(e) => setMax(Number(e.target.value))}
+            className="price-range flex-1"
+          />
+          <span>{maxPrice >= priceBounds.max ? t("shop.any") : `৳${maxPrice}`}</span>
         </div>
       </div>
 

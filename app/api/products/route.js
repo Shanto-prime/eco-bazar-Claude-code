@@ -16,12 +16,20 @@ export async function GET(req) {
     const v = Number(raw);
     return Number.isFinite(v) ? v : fallback;
   };
+  // Price params are optional; absence means "no bound on this side" — the
+  // catalogue's own min/max drive the slider now, so there is no magic default.
+  const numOpt = (key) => {
+    const raw = sp.get(key);
+    if (raw === null || raw === "") return undefined;
+    const v = Number(raw);
+    return Number.isFinite(v) ? v : undefined;
+  };
 
   const result = await queryProducts({
     q:         sp.get("q") || undefined,
     cat:       sp.get("cat") || undefined,
-    minPrice:  num("minPrice", 0),
-    maxPrice:  num("maxPrice", 100),
+    minPrice:  numOpt("minPrice"),
+    maxPrice:  numOpt("maxPrice"),
     minRating: num("minRating", 0),
     sort:      sp.get("sort") || "latest",
     page:      num("page", 1),

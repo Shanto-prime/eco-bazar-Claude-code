@@ -1,7 +1,9 @@
 // app/dashboard/_components/CustomerDashboard.jsx
 // Customer overview: profile snapshot, recent order list, wishlist link.
 //
-// TODO: full order history filters, saved addresses CRUD, password change UI.
+// Saved-address CRUD and the password-change UI now live in /dashboard/settings
+// (AddressBook.jsx / PasswordSettings.jsx). Still outstanding here: order
+// history filters.
 
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
@@ -100,7 +102,7 @@ export default async function CustomerDashboard({ user }) {
       <section>
         <h2 className="text-lg sm:text-xl font-bold mb-3">{t("dashboard.savedAddresses")}</h2>
         <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-500 bg-white">
-          {/* TODO: implement saved-addresses CRUD (Address model + page). */}
+          {/* Saved addresses are managed in /dashboard/settings#addresses. */}
           {t("dashboard.noAddresses")}
         </div>
       </section>

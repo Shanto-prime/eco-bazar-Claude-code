@@ -33,7 +33,16 @@ export default defineConfig({
   },
 
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    // Signs in once per account and writes the session to test-results/.auth.
+    // Everything else depends on it, so specs adopt a session with
+    // `test.use({ storageState: authFile("customer") })` instead of logging in
+    // per test — which would blow through the 10-logins-per-15-minutes limiter.
+    { name: "setup", testMatch: /.*\.setup\.js/ },
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      dependencies: ["setup"],
+    },
   ],
 
   // Boot the app for the tests. reuseExistingServer lets you keep a dev server

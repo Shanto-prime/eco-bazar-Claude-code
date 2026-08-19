@@ -578,7 +578,8 @@
     "colActor": "Actor",
     "colAction": "Action",
     "colEntity": "Entity",
-    "colMetadata": "Metadata"
+    "colMetadata": "Metadata",
+    "deletedActor": "Deleted user"
   },
   "settings": {
     "subtitle": "Manage your account details, addresses and display preferences.",

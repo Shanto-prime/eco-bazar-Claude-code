@@ -174,10 +174,14 @@ export async function requestContactChangeAction(formData) {
     return fail("You already have a pending request for this field. Cancel it first.");
   }
 
-  // ADMIN / MODERATOR change their own contact details with no review — they
-  // are exactly the people who would otherwise approve the request, so routing
-  // it through the queue would just be them approving themselves. The change is
-  // applied immediately and logged as self-approved (auditable, not silent).
+  // ADMIN changes their own contact details with no review — they are the person
+  // who would otherwise approve the request, so routing it through the queue
+  // would just be them approving themselves. The change is applied immediately
+  // and logged as self-approved (auditable, not silent).
+  //
+  // A MODERATOR does NOT self-approve: their request goes to the queue like a
+  // customer's, and an admin decides. The single source of that rule is
+  // SELF_APPROVE_ROLES in lib/profile-changes.js — check there, not here.
   if (canSelfApprove(me.role)) {
     await prisma.$transaction(async (tx) => {
       await applyContactChange(tx, data.field, session.id, value);

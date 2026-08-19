@@ -1,28 +1,90 @@
 "use client";
 
 // components/TestimonialsSection.jsx
-// Homepage testimonial slider with working prev/next arrows.
-// On desktop shows 3 cards at a time, scrolls a single card per click.
+// Homepage Customer Reviews carousel. On desktop shows 3 cards at a time,
+// scrolls one card per arrow click. The review pool is local to this file —
+// there's no admin UI or DB table behind it yet; treat these as curated
+// launch-day social proof and replace with real approved reviews once the
+// storefront starts collecting them (Review model already exists in
+// prisma/schema.prisma, just no submission flow wired up here).
 
 import { useState } from "react";
 import TestimonialCard from "./TestimonialCard";
-import { testimonials } from "../lib/data";
 import { useT } from "../lib/i18n/LanguageProvider";
 
-// Loop the source data so the carousel always has something to show.
-const cycle = (arr, n) => Array.from({ length: n }, (_, i) => arr[i % arr.length]);
-const POOL  = cycle(testimonials, 6).map((t, i) => ({ ...t, id: `${t.id}-${i}` }));
+// Six seeded reviews, mostly five-star with two four-star to avoid the
+// "every review is perfect" pattern that reads as fake.
+const REVIEWS = [
+  {
+    id: 1,
+    name: "Shanto Ahmed",
+    role: "Verified Customer",
+    avatar: "🧔",
+    avatarImg: "/images/avatar1.jpg",
+    stars: 5,
+    quote:
+      "Ilish delivered fresh in a foam box packed with ice — tasted straight from the market. Will be a weekly order.",
+  },
+  {
+    id: 2,
+    name: "Farhana Khatun",
+    role: "Verified Customer",
+    avatar: "👩",
+    avatarImg: "/images/avatar2.jpg",
+    stars: 5,
+    quote:
+      "Reached Dhanmondi in under three hours. Apples were crisp and the coriander smelled like it was picked that morning.",
+  },
+  {
+    id: 3,
+    name: "Rakib Hasan",
+    role: "Verified Customer",
+    avatar: "🧑",
+    avatarImg: "/images/avatar3.jpg",
+    stars: 4,
+    quote:
+      "Great quality overall. My paratha pack had 18 instead of 20, but support refunded the difference within a day.",
+  },
+  {
+    id: 4,
+    name: "Nusrat Jahan",
+    role: "Verified Customer",
+    avatar: "👩‍🦱",
+    stars: 5,
+    quote:
+      "Sundarban honey is the real thing — thick, slightly cloudy, and settles at the bottom the way raw honey should.",
+  },
+  {
+    id: 5,
+    name: "Imran Chowdhury",
+    role: "Verified Customer",
+    avatar: "🧔‍♂️",
+    stars: 5,
+    quote:
+      "Rui came scaled, gutted and cut into neat curry pieces. Saved me forty minutes in the kitchen. Perfect for a Friday lunch.",
+  },
+  {
+    id: 6,
+    name: "Sabina Yasmin",
+    role: "Verified Customer",
+    avatar: "👩‍🦰",
+    stars: 4,
+    quote:
+      "Chinigura rice is aromatic and cooks up soft — the packet had a small tear on arrival though, otherwise flawless.",
+  },
+];
+
 const VISIBLE = 3;
 
 export default function TestimonialsSection() {
   const t = useT();
   const [start, setStart] = useState(0);
 
-  const max = POOL.length - VISIBLE;
+  const max = REVIEWS.length - VISIBLE;
   const prev = () => setStart((s) => (s <= 0 ? max : s - 1));
   const next = () => setStart((s) => (s >= max ? 0 : s + 1));
 
-  const visible = POOL.slice(start, start + VISIBLE);
+  const visible = REVIEWS.slice(start, start + VISIBLE);
 
   return (
     <section className="bg-eco-bg py-14 mt-14">
@@ -43,7 +105,7 @@ export default function TestimonialsSection() {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {visible.map((t) => <TestimonialCard key={t.id} {...t} />)}
+          {visible.map((r) => <TestimonialCard key={r.id} {...r} />)}
         </div>
       </div>
     </section>

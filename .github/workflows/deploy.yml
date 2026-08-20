@@ -66,16 +66,40 @@ jobs:
         # on the same next-auth peer.
         run: npm prune --omit=dev --legacy-peer-deps --no-audit --no-fund
 
-      - name: Install SSH deploy key
+      - name: Install SSH deploy key + verify auth
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
+          set -e
           mkdir -p ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          # tr -d '\r' scrubs CRLF that sneak in when secrets are pasted from
+          # Windows Notepad / PowerShell — a common cause of "Load key … invalid
+          # format" and exit 255. Same for known_hosts.
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
+
+          echo "=== Key file sanity ==="
+          echo "  size: $(wc -c < ~/.ssh/deploy_key) bytes"
+          echo "  first line: $(head -1 ~/.ssh/deploy_key)"
+          echo "  last line:  $(tail -1 ~/.ssh/deploy_key)"
+          echo "  fingerprint of installed key:"
+          ssh-keygen -y -f ~/.ssh/deploy_key | ssh-keygen -lf - || echo "    (couldn't read pubkey from priv)"
+          echo
+          echo "=== known_hosts sanity ==="
+          echo "  size: $(wc -c < ~/.ssh/known_hosts) bytes"
+          cat ~/.ssh/known_hosts | sed 's/^/    /'
+
+          echo
+          echo "=== Diagnostic SSH: verbose auth to $DEPLOY_USER@$DEPLOY_HOST ==="
+          ssh -vv -o BatchMode=yes -o ConnectTimeout=10 \
+              -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts \
+              "$DEPLOY_USER@$DEPLOY_HOST" 'echo "auth-ok from runner, user=$(whoami)"' 2>&1 | \
+            tail -30 | sed 's/^/    /'
 
       - name: Rsync .next, node_modules, public → VPS
         env:

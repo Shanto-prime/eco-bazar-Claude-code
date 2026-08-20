@@ -45,6 +45,20 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: '1'
           # Runners have 7 GB RAM; no need to cap old-space here.
+          #
+          # The runner has no .env — but lib/prisma.js's assertDatabaseUrl()
+          # runs at module load time and throws when DATABASE_URL is missing
+          # or malformed. Every route is dynamic (ƒ in the routes manifest),
+          # so no DB call actually fires at build time, but the URL still has
+          # to pass the shape check. Same for NEXTAUTH_SECRET — Auth.js is
+          # imported by middleware.js which is analysed at build time.
+          #
+          # None of these values leak to runtime; the real values live in the
+          # VPS's /home/ecobazar/app/.env (unchanged, never rsync'd over).
+          DATABASE_URL: "mongodb://build.local:27017/build?replicaSet=rs0"
+          NEXTAUTH_SECRET: "build-time-placeholder-not-used-at-runtime"
+          NEXTAUTH_URL: "https://eco.shanto.dev"
+          AUTH_TRUST_HOST: "true"
         run: npm run build
 
       - name: Prune to production deps (drops testing/lint/typescript toolchain)

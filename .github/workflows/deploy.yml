@@ -115,28 +115,49 @@ jobs:
           # otherwise reject it. Diagnostic step proved the key + host resolve.
           RSYNC_RSH: "ssh -i /home/runner/.ssh/deploy_key -o UserKnownHostsFile=/home/runner/.ssh/known_hosts -o StrictHostKeyChecking=accept-new -o BatchMode=yes"
         run: |
-          set -e
+          # pipefail so `rsync | tail` propagates rsync's non-zero exit —
+          # without this, tail always succeeds and `set -e` misses the error.
+          # This was the reason a previous run reported rsync green while
+          # nothing actually transferred.
+          set -eo pipefail
           REMOTE="$DEPLOY_USER@$DEPLOY_HOST:/home/ecobazar/app"
 
-          # -v so any transfer/permission problem surfaces in the log.
-          # -a preserves symlinks (critical: node_modules/.bin/next is a
-          # symlink on Linux). --delete-after only prunes after the transfer
-          # succeeds, so a mid-stream drop keeps the old tree intact.
+          echo "=== Runner source sanity ==="
+          echo "  pwd: $(pwd)"
+          echo "  .next/BUILD_ID: $(cat .next/BUILD_ID 2>/dev/null || echo MISSING)"
+          echo "  .next size:     $(du -sh .next 2>/dev/null | cut -f1)"
+          ls -la node_modules/.bin/next 2>&1 | sed 's/^/  bin/next: /'
+          file node_modules/.bin/next 2>&1 | sed 's/^/  bin/next type: /'
+          echo
+
+          # -v so transfers show; --stats prints totals per rsync so a
+          # silent skip is immediately obvious ("0 bytes transferred").
+          RSYNC_FLAGS="-avz --stats --delete-after"
 
           echo "=== 1/4 .next/ ==="
-          rsync -avz --delete-after --exclude '.next/cache' .next/ "$REMOTE/.next/" | tail -20
+          rsync $RSYNC_FLAGS --exclude '.next/cache' .next/ "$REMOTE/.next/"
 
           echo "=== 2/4 node_modules/ ==="
-          rsync -avz --delete-after node_modules/ "$REMOTE/node_modules/" | tail -10
+          rsync $RSYNC_FLAGS node_modules/ "$REMOTE/node_modules/"
 
-          echo "=== 3/4 public/ ==="
-          rsync -avz public/ "$REMOTE/public/" | tail -20
+          echo "=== 3/4 public/ (no --delete so admin uploads survive) ==="
+          rsync -avz --stats public/ "$REMOTE/public/"
 
           echo "=== 4/4 source tree ==="
-          rsync -avz --delete \
+          rsync -avz --stats --delete \
             --exclude '.next' --exclude 'node_modules' --exclude 'public' \
             --exclude '.env' --exclude '.git' \
-            ./ "$REMOTE/" | tail -20
+            ./ "$REMOTE/"
+
+          echo
+          echo "=== Post-transfer verification on VPS ==="
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<'REMOTE_VERIFY'
+            cd /home/ecobazar/app
+            echo "  VPS .next/BUILD_ID: $(cat .next/BUILD_ID)"
+            echo "  VPS .next size:     $(du -sh .next 2>/dev/null | cut -f1)"
+            echo "  VPS bin/next:       $(readlink -f node_modules/.bin/next || echo NOT_A_SYMLINK)"
+            echo "  VPS bin/next type:  $(file node_modules/.bin/next 2>&1)"
+          REMOTE_VERIFY
 
       - name: Restart PM2 (or start if the process doesn't exist yet)
         env:

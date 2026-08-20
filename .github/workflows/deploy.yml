@@ -81,34 +81,37 @@ jobs:
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          # RSYNC_RSH tells rsync which command to spawn for the remote shell.
+          # Absolute paths — tilde doesn't expand inside rsync's -e argv, and
+          # earlier single-quoted `-e '…~…'` was resolved to a literal "~"
+          # string by ssh, making auth fail with exit 255.
+          RSYNC_RSH: "ssh -i /home/runner/.ssh/deploy_key -o UserKnownHostsFile=/home/runner/.ssh/known_hosts -o StrictHostKeyChecking=yes"
         run: |
-          # -a preserves symlinks (critical: .bin/next is a symlink on Linux;
-          # a plain file copy would break it). --delete-after removes files that
-          # no longer exist on the runner, but only after the transfer succeeds
-          # (partial transfer + connection drop = old files kept, safer).
-          RSYNC="rsync -az --delete-after -e 'ssh -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts'"
+          set -e
+          REMOTE="$DEPLOY_USER@$DEPLOY_HOST:/home/ecobazar/app"
 
-          # .next/ — the built server + client bundles (excluding cache dir,
-          # which is only useful across REBUILDS on the same box, not at runtime).
-          eval "$RSYNC --exclude '.next/cache' .next/ '$DEPLOY_USER@$DEPLOY_HOST:/home/ecobazar/app/.next/'"
+          # -a preserves symlinks (critical: node_modules/.bin/next is a
+          # symlink on Linux). --delete-after only prunes after the transfer
+          # succeeds, so a mid-stream drop keeps the old tree intact.
 
-          # node_modules/ — Linux-native runtime deps (bigger, but only the
-          # deltas transfer on subsequent deploys thanks to rsync's block algo).
-          eval "$RSYNC node_modules/ '$DEPLOY_USER@$DEPLOY_HOST:/home/ecobazar/app/node_modules/'"
+          # .next/ — built bundles (exclude cache; only useful across REBUILDS
+          # on the same box, wasteful at runtime).
+          rsync -az --delete-after --exclude '.next/cache' .next/ "$REMOTE/.next/"
 
-          # public/ — static assets and product photos. Excluded from --delete
-          # so admin-uploaded photos survive the sync.
-          rsync -az \
-            -e "ssh -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts" \
-            public/ "$DEPLOY_USER@$DEPLOY_HOST:/home/ecobazar/app/public/"
+          # node_modules/ — Linux-native runtime deps. Rsync's block algo
+          # transfers only deltas on subsequent runs.
+          rsync -az --delete-after node_modules/ "$REMOTE/node_modules/"
 
-          # Source tree — for debugging + git history. Never overwrite .env or
-          # anything under the app's runtime state.
+          # public/ — static assets and product photos. NO --delete so
+          # admin-uploaded images survive.
+          rsync -az public/ "$REMOTE/public/"
+
+          # Source tree — for debugging / git parity. Never overwrite .env or
+          # the app's runtime state.
           rsync -az --delete \
             --exclude '.next' --exclude 'node_modules' --exclude 'public' \
             --exclude '.env' --exclude '.git' \
-            -e "ssh -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts" \
-            ./ "$DEPLOY_USER@$DEPLOY_HOST:/home/ecobazar/app/"
+            ./ "$REMOTE/"
 
       - name: Restart PM2 (or start if the process doesn't exist yet)
         env:

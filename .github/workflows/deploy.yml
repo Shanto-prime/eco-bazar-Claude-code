@@ -126,8 +126,10 @@ jobs:
           echo "  pwd: $(pwd)"
           echo "  .next/BUILD_ID: $(cat .next/BUILD_ID 2>/dev/null || echo MISSING)"
           echo "  .next size:     $(du -sh .next 2>/dev/null | cut -f1)"
-          ls -la node_modules/.bin/next 2>&1 | sed 's/^/  bin/next: /'
-          file node_modules/.bin/next 2>&1 | sed 's/^/  bin/next type: /'
+          # `|` as sed separator — replacement text contains `/`, which would
+          # break `s/.../.../` syntax with "unknown option to `s'".
+          ls -la node_modules/.bin/next 2>&1 | sed 's|^|  bin-next: |'
+          file node_modules/.bin/next 2>&1 | sed 's|^|  bin-next type: |'
           echo
 
           # -v so transfers show; --stats prints totals per rsync so a

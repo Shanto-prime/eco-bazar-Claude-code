@@ -8,13 +8,17 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useT } from "../lib/i18n/LanguageProvider";
 
+// The /blog slot was never wired to real content; repurposed to "Tracker"
+// which links to the guest order-lookup / tracking flow. Any logged-in user
+// hitting it lands on their own /dashboard/orders instead (LookupClient
+// redirects when a session is present).
 const ITEMS = [
-  { href: "/",         key: "nav.home",    hasChildren: false },
-  { href: "/shop",     key: "nav.shop",    hasChildren: true  },
-  { href: "/pages",    key: "nav.pages",   hasChildren: true  },
-  { href: "/blog",     key: "nav.blog",    hasChildren: true  },
-  { href: "/about",    key: "nav.about",   hasChildren: false },
-  { href: "/contact",  key: "nav.contact", hasChildren: false },
+  { href: "/",              key: "nav.home",    hasChildren: false },
+  { href: "/shop",          key: "nav.shop",    hasChildren: true  },
+  { href: "/pages",         key: "nav.pages",   hasChildren: true  },
+  { href: "/orders/lookup", key: "nav.tracker", hasChildren: false },
+  { href: "/about",         key: "nav.about",   hasChildren: false },
+  { href: "/contact",       key: "nav.contact", hasChildren: false },
 ];
 
 export default function PrimaryNav() {

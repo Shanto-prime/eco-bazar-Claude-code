@@ -1,0 +1,134 @@
+name: Deploy to eco.shanto.dev
+
+# Runs on every push to main (and any PR merge into main). Also exposed as a
+# manual button under Actions → "Deploy to eco.shanto.dev" → Run workflow, so
+# a bad deploy can be redone without a spurious commit.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# Only one deploy at a time — a second push while one is in flight queues, does
+# not cancel. Cancelling mid-deploy could leave the VPS with a torn .next/ tree.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build on runner, rsync to VPS
+    # Ubuntu 24.04 matches the VPS exactly, so the node_modules the runner builds
+    # against is layout-identical to what runs at runtime. This is what killed
+    # the previous Windows→Linux ship (Turbopack cache-busted @prisma/client to a
+    # hash that only matched the Windows install).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          # Cache the ~/.npm store keyed on package-lock — makes subsequent
+          # deploys skip the download step and shave 30–60 s off wall time.
+          cache: npm
+
+      - name: npm ci (full deps for build)
+        # next-auth beta.25 declares peer next@^14||^15 but works fine with
+        # next@16; --legacy-peer-deps accepts the noise without downgrading next.
+        run: npm ci --legacy-peer-deps --no-audit --no-fund --progress=false
+
+      - name: Build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+          # Runners have 7 GB RAM; no need to cap old-space here.
+        run: npm run build
+
+      - name: Prune to production deps (drops testing/lint/typescript toolchain)
+        # Runs AFTER build. Also --legacy-peer-deps to keep npm from re-erroring
+        # on the same next-auth peer.
+        run: npm prune --omit=dev --legacy-peer-deps --no-audit --no-fund
+
+      - name: Install SSH deploy key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Rsync .next, node_modules, public → VPS
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          # -a preserves symlinks (critical: .bin/next is a symlink on Linux;
+          # a plain file copy would break it). --delete-after removes files that
+          # no longer exist on the runner, but only after the transfer succeeds
+          # (partial transfer + connection drop = old files kept, safer).
+          RSYNC="rsync -az --delete-after -e 'ssh -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts'"
+
+          # .next/ — the built server + client bundles (excluding cache dir,
+          # which is only useful across REBUILDS on the same box, not at runtime).
+          eval "$RSYNC --exclude '.next/cache' .next/ '$DEPLOY_USER@$DEPLOY_HOST:/home/ecobazar/app/.next/'"
+
+          # node_modules/ — Linux-native runtime deps (bigger, but only the
+          # deltas transfer on subsequent deploys thanks to rsync's block algo).
+          eval "$RSYNC node_modules/ '$DEPLOY_USER@$DEPLOY_HOST:/home/ecobazar/app/node_modules/'"
+
+          # public/ — static assets and product photos. Excluded from --delete
+          # so admin-uploaded photos survive the sync.
+          rsync -az \
+            -e "ssh -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts" \
+            public/ "$DEPLOY_USER@$DEPLOY_HOST:/home/ecobazar/app/public/"
+
+          # Source tree — for debugging + git history. Never overwrite .env or
+          # anything under the app's runtime state.
+          rsync -az --delete \
+            --exclude '.next' --exclude 'node_modules' --exclude 'public' \
+            --exclude '.env' --exclude '.git' \
+            -e "ssh -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts" \
+            ./ "$DEPLOY_USER@$DEPLOY_HOST:/home/ecobazar/app/"
+
+      - name: Restart PM2 (or start if the process doesn't exist yet)
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<'REMOTE'
+            set -e
+            cd /home/ecobazar/app
+            if pm2 describe ecobazar >/dev/null 2>&1; then
+              pm2 restart ecobazar --update-env
+            else
+              # First-ever start (or after a delete) — cap RAM at 500 MB so a
+              # runaway node process can't OOM-kill the 1 GB VPS.
+              pm2 start node_modules/.bin/next --name ecobazar \
+                --max-memory-restart 500M \
+                -- start -H 127.0.0.1 -p 3000
+            fi
+            pm2 save
+          REMOTE
+
+      - name: Smoke test https://eco.shanto.dev/
+        run: |
+          # 5 attempts, 5 s apart — Next 16 cold start on the 1 GB VPS takes
+          # a few seconds. If the site still isn't 200 by then, fail the job.
+          for i in 1 2 3 4 5; do
+            code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 20 https://eco.shanto.dev/)
+            if [ "$code" = "200" ]; then
+              echo "✓ Deploy OK — HTTP 200 on attempt $i"
+              exit 0
+            fi
+            echo "attempt $i: HTTP $code, retrying in 5 s..."
+            sleep 5
+          done
+          echo "✗ Deploy verification failed — site still not 200 after 25 s"
+          exit 1

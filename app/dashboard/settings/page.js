@@ -12,7 +12,6 @@ import { requireAuth } from "../../../lib/auth-helpers";
 import { getT } from "../../../lib/i18n/server";
 import { prisma } from "../../../lib/prisma";
 import { canSelfApprove } from "../../../lib/profile-changes";
-import { getStoreConfig } from "../../../lib/store-config";
 import { sanitizeBdGeo } from "../../../lib/bd-geo";
 import LocalTime from "../../../components/LocalTime";
 import AppearanceSettings from "./_components/AppearanceSettings";
@@ -20,13 +19,13 @@ import ProfileSettings from "./_components/ProfileSettings";
 import ContactSettings from "./_components/ContactSettings";
 import PasswordSettings from "./_components/PasswordSettings";
 import AddressBook from "./_components/AddressBook";
-import StoreCurrencySettings from "./_components/StoreCurrencySettings";
+// StoreCurrencySettings removed — the store is BDT-only now (see lib/store-config.js).
 
 export default async function DashboardSettings() {
   const { t } = await getT();
   const session = await requireAuth("/dashboard/settings");
 
-  const [user, addresses, requests, storeConfig] = await Promise.all([
+  const [user, addresses, requests] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.id },
       select: {
@@ -46,8 +45,6 @@ export default async function DashboardSettings() {
       orderBy: { createdAt: "desc" },
       take:    25,
     }),
-    // Store-wide currency config — only rendered/used for admins below.
-    getStoreConfig(),
   ]);
 
   if (!user) {
@@ -118,10 +115,8 @@ export default async function DashboardSettings() {
           }))}
         />
         <AppearanceSettings />
-        {/* Store-wide currency — ADMIN only. */}
-        {user.role === "ADMIN" && (
-          <StoreCurrencySettings currency={storeConfig.currency} rates={storeConfig.rates} />
-        )}
+        {/* Store-wide currency section was here — removed when the project
+            moved to BDT-only pricing. See lib/store-config.js. */}
 
         {/* Account activity — sign-in timestamp + auto-logout policy. */}
         <section className="rounded-lg border border-gray-200 bg-white p-5">

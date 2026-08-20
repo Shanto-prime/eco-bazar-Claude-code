@@ -20,18 +20,52 @@ import { formatMoney } from "../../../lib/money";
 import { getActiveCurrency } from "../../../lib/store-config";
 import { getT } from "../../../lib/i18n/server";
 import { ORDER_STATUSES, STATUS_PILL, statusKey } from "../../../lib/order-status";
+import { canRequestReturn, RETURN_WINDOW_DAYS } from "../../../lib/order-return";
 import LocalTime from "../../../components/LocalTime";
 import StatusSelect from "./_components/StatusSelect";
 import OrderDetails from "./_components/OrderDetails";
 
 // Flatten one order's history into the plain, serialisable shape OrderDetails
 // (a client component) expects — dates as ISO strings, actor pre-resolved.
-function toDetails(o) {
+//
+// `viewer` is passed in from the caller; the customer flow (return + reviews)
+// only triggers when the viewer is the order's owner. `reviewedProductIds` is
+// the set of productIds this viewer has already reviewed — used to swap the
+// "Write review" CTA for "You reviewed this" without an extra client fetch.
+function toDetails(o, viewer, reviewedProductIds) {
+  const now = Date.now();
+  const ret = canRequestReturn({ viewerId: viewer.id, order: o, now });
   return {
+    id:        o.id,
     number:    o.number,
     status:    o.status,
     notes:     o.notes || null,
     createdAt: o.createdAt.toISOString(),
+    subtotal:  o.subtotal,
+    discount:  o.discount,
+    shipping:  o.shipping,
+    total:     o.total,
+    // Ownership + return + review eligibility, all pre-computed server-side so
+    // the client modal doesn't need auth checks of its own.
+    viewerIsOwner:    !!viewer && o.userId === viewer.id,
+    canReturn:        ret.ok,
+    returnDeadline:   ret.deadline ? ret.deadline.toISOString() : null,
+    returnReason:     ret.reason || null,
+    // Reviews are only meaningful once delivered AND for the buyer.
+    canReviewItems:   o.status === "DELIVERED" && !!viewer && o.userId === viewer.id,
+    items: (o.items || []).map((it) => ({
+      id:          it.id,
+      productId:   it.productId,
+      productSlug: it.productSlug,
+      productName: it.productName,
+      unitPrice:   it.unitPrice,
+      qty:         it.qty,
+      // Convenience for the modal — line total in the same integer minor units.
+      lineTotal:   it.unitPrice * it.qty,
+      // True if this viewer has already reviewed this product elsewhere OR
+      // through this order. Suppresses the Write-review CTA in the modal.
+      reviewed:    !!it.productId && reviewedProductIds.has(it.productId),
+    })),
     history: (o.history || []).map((h) => ({
       id:        h.id,
       status:    h.status,
@@ -66,8 +100,12 @@ export default async function DashboardOrders({ searchParams }) {
       take: 50,
       select: {
         id: true, number: true, total: true, status: true, createdAt: true,
+        subtotal: true, discount: true, shipping: true,
         email: true, firstName: true, lastName: true, notes: true,
         _count: { select: { items: true } },
+        items: {
+          select: { id: true, productId: true, productSlug: true, productName: true, unitPrice: true, qty: true },
+        },
         history: {
           orderBy: { createdAt: "asc" },
           select: { id: true, status: true, createdAt: true, note: true, actor: { select: { name: true, email: true } } },
@@ -81,6 +119,22 @@ export default async function DashboardOrders({ searchParams }) {
 
   const countOf = (s) => grouped.find((g) => g.status === s)?._count ?? 0;
   const totalCount = grouped.reduce((sum, g) => sum + g._count, 0);
+
+  // Reviewed-product set for THIS viewer, restricted to products appearing in
+  // the orders we're rendering — so the modal can suppress the "Write review"
+  // CTA on items the customer already reviewed without another round trip per
+  // item. Empty when the viewer is anonymous, or on a page with no items.
+  const productIdsOnPage = Array.from(new Set(
+    orders.flatMap((o) => (o.items || []).map((it) => it.productId).filter(Boolean)),
+  ));
+  const reviewedProductIds = user.id && productIdsOnPage.length
+    ? new Set(
+        (await prisma.review.findMany({
+          where:  { userId: user.id, productId: { in: productIdsOnPage } },
+          select: { productId: true },
+        })).map((r) => r.productId),
+      )
+    : new Set();
 
   return (
     <div>
@@ -158,7 +212,7 @@ export default async function DashboardOrders({ searchParams }) {
                       {user.role === "CUSTOMER"
                         ? <LastUpdate history={o.history} t={t} />
                         : <Timeline history={o.history} t={t} />}
-                      <div className="mt-2"><OrderDetails order={toDetails(o)} /></div>
+                      <div className="mt-2"><OrderDetails order={toDetails(o, user, reviewedProductIds)} /></div>
                     </td>
                   </tr>
                 ))}
@@ -188,7 +242,7 @@ export default async function DashboardOrders({ searchParams }) {
                 {user.role === "CUSTOMER"
                   ? <LastUpdate history={o.history} t={t} />
                   : <Timeline history={o.history} t={t} />}
-                <div className="mt-2"><OrderDetails order={toDetails(o)} /></div>
+                <div className="mt-2"><OrderDetails order={toDetails(o, user, reviewedProductIds)} /></div>
               </div>
             ))}
           </div>

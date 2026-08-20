@@ -12,7 +12,7 @@ import { z } from "zod";
 import { prisma } from "../../../../lib/prisma";
 import { BCRYPT_COST } from "../../../../lib/password";
 import { rateLimit, clientIp } from "../../../../lib/rate-limit";
-import { promoteIfFirstUser } from "../../../../lib/user-service";
+import { promoteIfFirstUser, claimGuestOrdersForUser } from "../../../../lib/user-service";
 import { issueToken, appBaseUrl } from "../../../../lib/tokens";
 import { sendMail } from "../../../../lib/mailer";
 import { isSafeImageUrl } from "../../../../lib/upload";
@@ -64,6 +64,12 @@ export async function POST(req) {
   // First user in the system is promoted to ADMIN (single source of truth in
   // lib/user-service). No-op for every signup after the first.
   const promotedRole = await promoteIfFirstUser(user.id);
+
+  // Any past guest orders with this email get bound to the new account, so a
+  // customer who checked out as a guest and later signed up sees their history
+  // in the dashboard immediately (no manual link step). Non-fatal — a failure
+  // here doesn't block the signup response.
+  await claimGuestOrdersForUser(user.id, user.email);
 
   // Best-effort email verification — never blocks signup or login.
   try {

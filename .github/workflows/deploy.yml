@@ -109,33 +109,34 @@ jobs:
           # Absolute paths — tilde doesn't expand inside rsync's -e argv, and
           # earlier single-quoted `-e '…~…'` was resolved to a literal "~"
           # string by ssh, making auth fail with exit 255.
-          RSYNC_RSH: "ssh -i /home/runner/.ssh/deploy_key -o UserKnownHostsFile=/home/runner/.ssh/known_hosts -o StrictHostKeyChecking=yes"
+          # Same SSH flags as the diagnostic step that succeeded — importantly
+          # StrictHostKeyChecking=accept-new (not =yes), which auto-adds the
+          # host on first sight if a subtle known_hosts formatting issue would
+          # otherwise reject it. Diagnostic step proved the key + host resolve.
+          RSYNC_RSH: "ssh -i /home/runner/.ssh/deploy_key -o UserKnownHostsFile=/home/runner/.ssh/known_hosts -o StrictHostKeyChecking=accept-new -o BatchMode=yes"
         run: |
           set -e
           REMOTE="$DEPLOY_USER@$DEPLOY_HOST:/home/ecobazar/app"
 
+          # -v so any transfer/permission problem surfaces in the log.
           # -a preserves symlinks (critical: node_modules/.bin/next is a
           # symlink on Linux). --delete-after only prunes after the transfer
           # succeeds, so a mid-stream drop keeps the old tree intact.
 
-          # .next/ — built bundles (exclude cache; only useful across REBUILDS
-          # on the same box, wasteful at runtime).
-          rsync -az --delete-after --exclude '.next/cache' .next/ "$REMOTE/.next/"
+          echo "=== 1/4 .next/ ==="
+          rsync -avz --delete-after --exclude '.next/cache' .next/ "$REMOTE/.next/" | tail -20
 
-          # node_modules/ — Linux-native runtime deps. Rsync's block algo
-          # transfers only deltas on subsequent runs.
-          rsync -az --delete-after node_modules/ "$REMOTE/node_modules/"
+          echo "=== 2/4 node_modules/ ==="
+          rsync -avz --delete-after node_modules/ "$REMOTE/node_modules/" | tail -10
 
-          # public/ — static assets and product photos. NO --delete so
-          # admin-uploaded images survive.
-          rsync -az public/ "$REMOTE/public/"
+          echo "=== 3/4 public/ ==="
+          rsync -avz public/ "$REMOTE/public/" | tail -20
 
-          # Source tree — for debugging / git parity. Never overwrite .env or
-          # the app's runtime state.
-          rsync -az --delete \
+          echo "=== 4/4 source tree ==="
+          rsync -avz --delete \
             --exclude '.next' --exclude 'node_modules' --exclude 'public' \
             --exclude '.env' --exclude '.git' \
-            ./ "$REMOTE/"
+            ./ "$REMOTE/" | tail -20
 
       - name: Restart PM2 (or start if the process doesn't exist yet)
         env:

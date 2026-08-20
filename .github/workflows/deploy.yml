@@ -166,7 +166,11 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts \
+          # Same absolute-path SSH options as the rsync step for consistency.
+          ssh -i /home/runner/.ssh/deploy_key \
+              -o UserKnownHostsFile=/home/runner/.ssh/known_hosts \
+              -o StrictHostKeyChecking=accept-new \
+              -o BatchMode=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<'REMOTE'
             set -e
             cd /home/ecobazar/app

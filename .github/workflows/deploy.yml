@@ -153,7 +153,15 @@ jobs:
 
           echo
           echo "=== Post-transfer verification on VPS ==="
-          ssh "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<'REMOTE_VERIFY'
+          # Same absolute-path SSH options as RSYNC_RSH above. The previous
+          # version's bare `ssh` here fell back to a nonexistent default key
+          # and returned 255, killing the whole step under set -eo pipefail
+          # even though the rsyncs above had actually succeeded.
+          ssh -i /home/runner/.ssh/deploy_key \
+              -o UserKnownHostsFile=/home/runner/.ssh/known_hosts \
+              -o StrictHostKeyChecking=accept-new \
+              -o BatchMode=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<'REMOTE_VERIFY'
             cd /home/ecobazar/app
             echo "  VPS .next/BUILD_ID: $(cat .next/BUILD_ID)"
             echo "  VPS .next size:     $(du -sh .next 2>/dev/null | cut -f1)"

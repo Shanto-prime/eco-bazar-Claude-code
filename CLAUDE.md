@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Next.js 16 (App Router) + React 19, Tailwind CSS v4, Prisma + **MongoDB** (via the Prisma `mongodb` connector), NextAuth v5 (Auth.js). E-commerce store for organic groceries, with a role-based `/dashboard` living on the same domain as the storefront.
 
-> **DB requires a replica set.** Prisma's MongoDB connector needs the server run as a replica set — a standalone `mongod` cannot execute the checkout inventory transaction. Use Atlas, or a local single-node replica set (`?replicaSet=rs0` + a one-time `rs.initiate()`).
+> **DB requires a replica set.** Prisma's MongoDB connector needs the server run as a replica set a standalone `mongod` cannot execute the checkout inventory transaction. Use Atlas, or a local single-node replica set (`?replicaSet=rs0` + a one-time `rs.initiate()`).
 
 ## Commands
 
@@ -16,27 +16,27 @@ npm run build        # runs `prisma generate` first, then `next build`
 npm start            # serve the production build
 npm run lint         # eslint (flat config, eslint-config-next)
 
-npm run db:push      # prisma db push — sync schema to MongoDB (the way to apply changes)
-npm run db:migrate   # prisma migrate dev — NOT supported on MongoDB; use db:push instead
+npm run db:push      # prisma db push   sync schema to MongoDB (the way to apply changes)
+npm run db:migrate   # prisma migrate dev   NOT supported on MongoDB; use db:push instead
 npm run db:studio    # Prisma Studio
-npm run db:seed      # node prisma/seed.js — seeds 3 test users + 10 products
+npm run db:seed      # node prisma/seed.js   seeds 3 test users + 10 products
 ```
 
 There is **no test runner** configured. `postinstall` runs `prisma generate`, so the Prisma client is regenerated on every `npm install`.
 
-Seeded logins (sign in at `/login` with username **or** email, plus password): `admin` / `admin@ecobazar.test` / `admin` (ADMIN), `mod` / `mod@ecobazar.test` / `mod` (MODERATOR), `customer` / `customer@ecobazar.test` / `customer` (CUSTOMER). `User` has a distinct `username` (unique login handle, nullable — OAuth users have none) and a real `email` (unique, used for password reset + verification). The credentials `authorize` lowercases the identifier and matches it against `username OR email` (`findFirst`). Password reset/verification tokens live in the `VerificationToken` table (see `lib/tokens.js`); email delivery goes through `lib/mailer.js` (dev = console log). Email verification is issued at signup but **not** enforced at login.
+Seeded logins (sign in at `/login` with username **or** email, plus password): `admin` / `admin@ecobazar.test` / `admin` (ADMIN), `mod` / `mod@ecobazar.test` / `mod` (MODERATOR), `customer` / `customer@ecobazar.test` / `customer` (CUSTOMER). `User` has a distinct `username` (unique login handle, nullable OAuth users have none) and a real `email` (unique, used for password reset + verification). The credentials `authorize` lowercases the identifier and matches it against `username OR email` (`findFirst`). Password reset/verification tokens live in the `VerificationToken` table (see `lib/tokens.js`); email delivery goes through `lib/mailer.js` (dev = console log). Email verification is issued at signup but **not** enforced at login.
 
 ## Authorization model (three enforcement layers)
 
-Access control is deliberately layered — do not rely on any single layer:
+Access control is deliberately layered do not rely on any single layer:
 
-1. **`middleware.js`** — only matches `/dashboard/:path*`. It checks *signed-in or not* and bounces anonymous users to `/unauthorized?next=...`. It does **not** do per-role checks.
-2. **Server components / pages** — call `requireRole(...)` / `requireAuth(...)` from `lib/auth-helpers.js` to enforce the actual role per route (e.g. `/dashboard/users` is ADMIN-only, `/dashboard/products` is ADMIN+MODERATOR).
-3. **Server actions & API routes** — re-check the role again (defence in depth) even though the route is already protected. See `app/dashboard/products/_actions.js` and `app/api/upload/route.js`.
+1. **`middleware.js`** only matches `/dashboard/:path*`. It checks _signed-in or not_ and bounces anonymous users to `/unauthorized?next=...`. It does **not** do per-role checks.
+2. **Server components / pages** call `requireRole(...)` / `requireAuth(...)` from `lib/auth-helpers.js` to enforce the actual role per route (e.g. `/dashboard/users` is ADMIN-only, `/dashboard/products` is ADMIN+MODERATOR).
+3. **Server actions & API routes** re-check the role again (defence in depth) even though the route is already protected. See `app/dashboard/products/_actions.js` and `app/api/upload/route.js`.
 
 `session.user` carries `id` and `role`, threaded through the JWT (`lib/auth.js` callbacks) so role checks never hit the DB on a normal request. Session strategy is `jwt`.
 
-**Moderator ownership rule:** MODERATORs may create products but may only edit/delete products where `Product.createdById === user.id`; ADMIN can edit/delete any. This is enforced inside the server actions, not the schema — preserve it when touching product mutations.
+**Moderator ownership rule:** MODERATORs may create products but may only edit/delete products where `Product.createdById === user.id`; ADMIN can edit/delete any. This is enforced inside the server actions, not the schema preserve it when touching product mutations.
 
 **Every privileged write must append an `AuditLog` row** (`actorId`, `action` like `"product.update"`, `entity`, `entityId`, `metadata`). Follow the existing pattern in `_actions.js` when adding new mutating actions.
 
@@ -44,17 +44,27 @@ Access control is deliberately layered — do not rely on any single layer:
 
 `lib/auth.js` always registers the Credentials provider. Google/Facebook are registered **only** when their `*_CLIENT_ID` + `*_CLIENT_SECRET` env vars are non-empty (`hasGoogle`/`hasFacebook`). Empty envs → provider not mounted, no warnings, and the login page hides the corresponding button. The app boots clean with no OAuth config. The `createUser` event promotes the very first user in the system to ADMIN.
 
-## Data sources — two of them, don't confuse them
+## Data sources
 
-- **`lib/products-db.js`** — DB-backed Prisma reads for customer pages (`listProducts`, `getProductBySlug`, `listFeatured`). This is the source of truth. It `shape()`s rows into the plain object the React components expect (Prisma `Decimal` → JS `number`, images → `{type, src, label}`).
-- **`lib/data.js`** — the *static* starter catalogue. It is now used **only by `prisma/seed.js`** as seed input. Do not wire customer pages back to it.
+- **`lib/products-db.js`** DB-backed Prisma reads for customer pages (`listProducts`, `getProductBySlug`, `listFeatured`, `queryProducts`, `listCategories`, `getPriceBounds`). This is the source of truth. `shape()`s rows into the plain object the React components expect (integer poisha → Taka `number`, images → `{type, src, label}`, live Hot Deals offer applied so `price` is the discounted price).
+- **`prisma/seed-data.js`** the catalogue module (12 categories + 59 EcoBazar own-brand products, prices in Taka, image URL derived from slug). Consumed by BOTH `prisma/seed.js` (dev seed with test users) and `prisma/seed.prod.js` (production seed with env-var admin, optional `SEED_WIPE_EXISTING=true`). Also exports `ratingFor(slug)` deterministic star spread.
+- **`lib/data.js`** homepage decoration only (categories, avatar images). No product data.
 
 ## Orders & inventory
 
 `lib/order-actions.js` `placeOrderAction` is the critical path. It runs inside a single `prisma.$transaction`:
+
 - Prices/names are recomputed **from the DB**, never trusted from the client cart (anti-tampering).
 - Stock is decremented with a guarded `updateMany({ where: { id, stock: { gte: qty } } })`; `count === 0` means a race lost the stock and the whole transaction rolls back. Keep this guard when editing.
 - Coupon table is duplicated in three places that must stay in sync: `CartContext.COUPONS`, `order-actions` `COUPONS`, and any UI. Guest checkout is allowed (`userId` may be null).
+
+**Terminal statuses.** `DELIVERED` and `CANCELLED` (`lib/order-status.js` `TERMINAL_STATUSES`) reject any change through `updateOrderStatusAction`. The **one exception** is the customer's own return within 15 days of the `DELIVERED` timeline event that goes through `requestReturnAction` in `app/dashboard/orders/_customer-actions.js`, uses `lib/order-return.js` `canRequestReturn` for eligibility, flips the order to `CANCELLED`, and calls `restockCancelledOrder(tx, orderId)` in the same transaction.
+
+**Reviews.** `submitReviewAction` (same file) customer-callable, requires ownership + `DELIVERED` + product-in-order + no existing review by this user for this product. Creates an auto-approved `Review` row and recomputes `Product.rating` as the running average. No admin moderation UI yet.
+
+**Customer-callable actions** live in `_customer-actions.js` (guarded by `requireAuth`, not `requireRole`), separate from the admin/mod actions in `_actions.js` cleaner auth surface.
+
+**Guest orders → new account.** `lib/user-service.js` `claimGuestOrdersForUser(userId, email)` runs after every signup (credentials route + OAuth `createUser` event). Finds every order with matching email (case-insensitive) and `userId=null`, sets `userId=userId`. Never throws a failure here doesn't block the signup response.
 
 ## Cart / wishlist state
 
@@ -63,17 +73,27 @@ Access control is deliberately layered — do not rely on any single layer:
 ## MongoDB specifics (important gotchas)
 
 - Provider is **`mongodb`** in `prisma/schema.prisma`. Every model has an id mapped to Mongo's `_id`: `String @id @default(cuid()) @map("_id")` (cuid strings kept as `_id`, not ObjectId). No `@db.Text` (Mongo strings are unbounded).
-- **Money is stored as integer cents** — the Mongo connector has no `Decimal`. Convert only at the boundary via `lib/money.js` (`toCents`/`toDollars`/`formatMoney`). DB + server-side order math run in integer cents; the UI/cart work in dollars.
+- **Money is stored as integer poisha (BDT base minor units)** the Mongo connector has no `Decimal`. Convert only at the boundary via `lib/money.js` (`toCents(taka)` / `toDollars(cents)` / `formatMoney(cents)`). DB + server-side order math run in integer poisha; the UI/cart work in Taka.
+- **BDT-only** `lib/store-config.js` `getActiveCurrency()` unconditionally returns BDT. The multi-currency plumbing (USD/AED, `CurrencyProvider`, rate table) is dormant, not deleted one file flips it back on. The admin store-currency card was removed from `/dashboard/settings`.
+- **Prisma binaryTargets = ["native", "debian-openssl-3.0.x"]** so a laptop build ships a query engine the Ubuntu 24.04 production VPS can run (the VPS is too RAM-tight to run `prisma generate` locally; deploys build on GitHub Actions and rsync).
 - **Transactions need a replica set.** `lib/order-actions.js` `$transaction` (guarded stock decrement) throws on a standalone `mongod`.
-- Mongo `contains` is **case-sensitive** by default. Prisma's Mongo connector *does* support `mode: "insensitive"` (unlike the old MySQL collation approach), so product search opts into it — see `listProducts` and `/dashboard/products`.
+- Mongo `contains` is **case-sensitive** by default. Prisma's Mongo connector _does_ support `mode: "insensitive"` (unlike the old MySQL collation approach), so product search opts into it see `listProducts` and `/dashboard/products`.
 - Optional unique fields are a trap: a non-sparse unique index treats a missing field as `null` and allows only one such doc. `Product.sku` is therefore **not** `@unique`; uniqueness is enforced in `_actions.js` when a SKU is supplied.
 
 ## Image uploads
 
-`app/api/upload/route.js` (ADMIN/MODERATOR only) writes to `./public/uploads/products` (override via `UPLOAD_DIR` / `UPLOAD_URL_PREFIX` env) with a `Date.now()-<sha1>.<ext>` filename and returns `{ url }`. `next.config.mjs` sets `images.minimumCacheTTL: 0` so overwriting a same-named file in `/public/images` shows the new one on reload — retune for production.
+`app/api/upload/route.js` (ADMIN/MODERATOR only) writes to `./public/uploads/products` (override via `UPLOAD_DIR` / `UPLOAD_URL_PREFIX` env) with a `Date.now()-<sha1>.<ext>` filename and returns `{ url }`. `next.config.mjs` sets `images.minimumCacheTTL: 0` so overwriting a same-named file in `/public/images` shows the new one on reload retune for production.
+
+**Seed image convention.** Real product photos live at `public/uploads/products/<slug>.jpeg`. Both seed scripts probe that folder at run time and attach a `ProductImage` row for every slug that has a matching file. Multi-image galleries follow the `<slug>-2.jpeg`, `<slug>-3.jpeg`, … convention the seed picks them up automatically. Slugs without a file get no `ProductImage` row and the storefront `ProductCard` shows a placeholder.
+
+## Deploy
+
+The live site (`https://eco.shanto.dev/`) runs on a 1 GB Ubuntu 24.04 VPS with nginx + PM2 + local MongoDB replica set. Every push to `main` triggers `.github/workflows/deploy.yml` which builds on GitHub's runners (7 GB RAM, no OOM risk) and rsyncs `.next/` + `node_modules/` + `public/` + source to the VPS as the `ecobazar` user, then `pm2 restart ecobazar --update-env`. **Do NOT run `npm ci` or `next build` on the VPS directly** the OpenVZ container's `privvmpages` limit OOMs the fork. Full runbook in `DOCUMENTATION.md` §24.
 
 ## Conventions
 
 - File extensions signal component type: server components/pages are `.js`, client components are `.jsx`. `"use client"` and `"use server"` directives are load-bearing.
+- A `"use server"` file may export **only async functions**. `export const FOO = [...]` there compiles under `next build` (tree-shaken) but throws at render time in dev. Constants belong in a plain module see `lib/order-status.js`.
 - `auth.js` (root) and `middleware.js` are thin; the real NextAuth config is `lib/auth.js`.
 - Input validation uses **Zod** in server actions before any DB write.
+- **Already-signed-in check on auth pages.** `/login`, `/register`, and `/unauthorized` all read the server session and branch: signed-in users see a "you're already signed in as X" panel (or "you don't have access to this page" for wrong-role on /unauthorized), never the form. Only anonymous visitors see the log-in / create-account CTAs.

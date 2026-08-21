@@ -10,26 +10,30 @@ import { prisma } from "../../lib/prisma";
 import DashboardShell from "./_components/DashboardShell";
 
 export async function generateMetadata() {
-  const { t } = await getT();
-  return { title: t("meta.dashboardTitle") };
+    const { t } = await getT();
+    return { title: t("meta.dashboardTitle") };
 }
 
 export default async function DashboardLayout({ children }) {
-  // Defence-in-depth: middleware already redirects anonymous users, but if
-  // someone disables it, requireAuth still catches the request.
-  const user = await requireAuth();
+    // Defence-in-depth: middleware already redirects anonymous users, but if
+    // someone disables it, requireAuth still catches the request.
+    const user = await requireAuth();
 
-  // Pending profile-change requests power the sidebar badge. Only the admin can
-  // action them, so only the admin pays for the query — everyone else skips it.
-  const counts = {};
-  if (user.role === "ADMIN") {
-    const [pendingRequests, pendingApprovals] = await Promise.all([
-      prisma.profileChangeRequest.count({ where: { status: "PENDING" } }),
-      prisma.approvalRequest.count({ where: { status: "PENDING" } }),
-    ]);
-    counts.pendingRequests = pendingRequests;
-    counts.pendingApprovals = pendingApprovals;
-  }
+    // Pending profile-change requests power the sidebar badge. Only the admin can
+    // action them, so only the admin pays for the query   everyone else skips it.
+    const counts = {};
+    if (user.role === "ADMIN") {
+        const [pendingRequests, pendingApprovals] = await Promise.all([
+            prisma.profileChangeRequest.count({ where: { status: "PENDING" } }),
+            prisma.approvalRequest.count({ where: { status: "PENDING" } }),
+        ]);
+        counts.pendingRequests = pendingRequests;
+        counts.pendingApprovals = pendingApprovals;
+    }
 
-  return <DashboardShell user={user} counts={counts}>{children}</DashboardShell>;
+    return (
+        <DashboardShell user={user} counts={counts}>
+            {children}
+        </DashboardShell>
+    );
 }

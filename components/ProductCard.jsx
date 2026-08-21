@@ -1,6 +1,6 @@
 "use client";
 
-// components/ProductCard.jsx — product tile used across Home, Shop, Product Detail.
+// components/ProductCard.jsx   product tile used across Home, Shop, Product Detail.
 // Clicking the card navigates to the product page; clicking the bag icon
 // (Add to Cart) calls into CartContext without bubbling the click up.
 
@@ -12,84 +12,116 @@ import { useMoney } from "../lib/currency/CurrencyProvider";
 import Stars from "./Stars";
 
 export default function ProductCard({
-  slug, name, icon, image, price, oldPrice, badge, rating = 4, featured = false,
-  // Live Hot Deals offer ({ percentOff, endsAt }) when the product has one. Set
-  // by shape() in lib/products-db.js; `price` is already the discounted amount.
-  offer = null,
-  size = "md", // "md" = standard, "sm" = compact (hot deals strip)
+    slug,
+    name,
+    icon,
+    image,
+    price,
+    oldPrice,
+    badge,
+    rating = 4,
+    featured = false,
+    // Live Hot Deals offer ({ percentOff, endsAt }) when the product has one. Set
+    // by shape() in lib/products-db.js; `price` is already the discounted amount.
+    offer = null,
+    size = "md", // "md" = standard, "sm" = compact (hot deals strip)
 }) {
-  const { addItem, toggleWishlist, wishlist, hydrated } = useCart();
-  const t = useT();
-  const money = useMoney();
-  const inWishlist = hydrated && wishlist.includes(slug);
+    const { addItem, toggleWishlist, wishlist, hydrated } = useCart();
+    const t = useT();
+    const money = useMoney();
+    const inWishlist = hydrated && wishlist.includes(slug);
 
-  const imgClass = size === "sm" ? "h-32 text-6xl" : "h-40 text-7xl";
+    const imgClass = size === "sm" ? "h-32 text-6xl" : "h-40 text-7xl";
 
-  const product = { slug, name, icon, price };
+    const product = { slug, name, icon, price };
 
-  // A running offer takes the corner pill: its percentage is the more specific,
-  // time-bound claim, so it wins over the product's own manual badge.
-  const pill = offer ? t("hotDeals.salePercent", { percent: offer.percentOff }) : badge;
+    // A running offer takes the corner pill: its percentage is the more specific,
+    // time-bound claim, so it wins over the product's own manual badge.
+    const pill = offer
+        ? t("hotDeals.salePercent", { percent: offer.percentOff })
+        : badge;
 
-  return (
-    <div className={`product-card relative border rounded-md p-3 bg-white ${featured ? "border-eco-green" : "border-gray-200"}`}>
-      {pill && (
-        <span className="absolute top-3 left-3 bg-red-500 text-white text-xs px-2 py-1 rounded z-10">{pill}</span>
-      )}
+    return (
+        <div
+            className={`product-card relative border rounded-md p-3 bg-white ${featured ? "border-eco-green" : "border-gray-200"}`}
+        >
+            {pill && (
+                <span className="absolute top-3 left-3 bg-red-500 text-white text-xs px-2 py-1 rounded z-10">
+                    {pill}
+                </span>
+            )}
 
-      {/* Floating wishlist + quick-view buttons (visible on featured card) */}
-      {featured && (
-        <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
-          <button
-            type="button"
-            onClick={() => toggleWishlist(slug, name)}
-            className="w-8 h-8 rounded-full bg-white shadow grid place-items-center"
-            aria-label={t("productCard.addToWishlist")}
-          >
-            <i className={`${inWishlist ? "fa-solid text-red-500" : "fa-regular"} fa-heart text-xs`} />
-          </button>
+            {/* Floating wishlist + quick-view buttons (visible on featured card) */}
+            {featured && (
+                <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
+                    <button
+                        type="button"
+                        onClick={() => toggleWishlist(slug, name)}
+                        className="w-8 h-8 rounded-full bg-white shadow grid place-items-center"
+                        aria-label={t("productCard.addToWishlist")}
+                    >
+                        <i
+                            className={`${inWishlist ? "fa-solid text-red-500" : "fa-regular"} fa-heart text-xs`}
+                        />
+                    </button>
+                </div>
+            )}
+
+            <Link href={`/shop/${slug}`} className="block">
+                {image ? (
+                    <div className={`relative ${imgClass}`}>
+                        <Image
+                            src={image}
+                            alt={name}
+                            fill
+                            className="object-contain"
+                            sizes={
+                                size === "sm"
+                                    ? "(min-width:640px) 12vw, 40vw"
+                                    : "(min-width:1024px) 18vw, 45vw"
+                            }
+                        />
+                    </div>
+                ) : icon ? (
+                    <div className={`${imgClass} grid place-items-center`}>
+                        {icon}
+                    </div>
+                ) : (
+                    <div
+                        className={`${imgClass} grid place-items-center bg-gray-50 rounded text-gray-300`}
+                    >
+                        <i className="fa-regular fa-image text-4xl" />
+                    </div>
+                )}
+                <div
+                    className={`text-xs ${featured ? "text-eco-green font-medium" : "text-gray-500"}`}
+                >
+                    {name}
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                    <div>
+                        <span className="font-semibold">{money(price)}</span>
+                        {oldPrice && (
+                            <span className="text-xs text-gray-400 line-through ml-1">
+                                {money(oldPrice)}
+                            </span>
+                        )}
+                    </div>
+                </div>
+                <Stars value={rating} className="text-xs mt-1" />
+            </Link>
+
+            {/* Add-to-cart bag is OUTSIDE the Link so its click doesn't navigate. */}
+            <button
+                type="button"
+                onClick={() => addItem(product, 1)}
+                className={`absolute bottom-9 right-3 w-8 h-8 rounded-full grid place-items-center ${
+                    featured ? "bg-eco-green text-white" : "add-btn bg-gray-100"
+                }`}
+                aria-label={t("productCard.addToCartAria", { name })}
+            >
+                <i className="fa-solid fa-bag-shopping text-xs" />
+            </button>
         </div>
-      )}
-
-      <Link href={`/shop/${slug}`} className="block">
-        {image ? (
-          <div className={`relative ${imgClass}`}>
-            <Image
-              src={image}
-              alt={name}
-              fill
-              className="object-contain"
-              sizes={size === "sm" ? "(min-width:640px) 12vw, 40vw" : "(min-width:1024px) 18vw, 45vw"}
-            />
-          </div>
-        ) : icon ? (
-          <div className={`${imgClass} grid place-items-center`}>{icon}</div>
-        ) : (
-          <div className={`${imgClass} grid place-items-center bg-gray-50 rounded text-gray-300`}>
-            <i className="fa-regular fa-image text-4xl" />
-          </div>
-        )}
-        <div className={`text-xs ${featured ? "text-eco-green font-medium" : "text-gray-500"}`}>{name}</div>
-        <div className="flex items-center justify-between mt-1">
-          <div>
-            <span className="font-semibold">{money(price)}</span>
-            {oldPrice && <span className="text-xs text-gray-400 line-through ml-1">{money(oldPrice)}</span>}
-          </div>
-        </div>
-        <Stars value={rating} className="text-xs mt-1" />
-      </Link>
-
-      {/* Add-to-cart bag is OUTSIDE the Link so its click doesn't navigate. */}
-      <button
-        type="button"
-        onClick={() => addItem(product, 1)}
-        className={`absolute bottom-9 right-3 w-8 h-8 rounded-full grid place-items-center ${
-          featured ? "bg-eco-green text-white" : "add-btn bg-gray-100"
-        }`}
-        aria-label={t("productCard.addToCartAria", { name })}
-      >
-        <i className="fa-solid fa-bag-shopping text-xs" />
-      </button>
-    </div>
-  );
+    );
 }

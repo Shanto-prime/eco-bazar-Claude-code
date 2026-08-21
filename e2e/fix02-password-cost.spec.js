@@ -1,6 +1,6 @@
 // e2e/fix02-password-cost.spec.js
 //
-// FIX 2 — changing your password weakened its hash.
+// FIX 2   changing your password weakened its hash.
 //
 // dashboard/settings hashed at bcrypt cost 10 while signup, password reset and
 // admin-created accounts all used 12. So the act of changing your password made
@@ -24,62 +24,87 @@ const NEW_PASSWORD = "replacementPassword2";
 let prisma;
 
 async function hashOf() {
-  const u = await prisma.user.findFirst({ where: { username: USERNAME }, select: { passwordHash: true } });
-  return u?.passwordHash ?? null;
+    const u = await prisma.user.findFirst({
+        where: { username: USERNAME },
+        select: { passwordHash: true },
+    });
+    return u?.passwordHash ?? null;
 }
 
 // "$2a$12$..." / "$2b$12$..." → 12
 function costOf(hash) {
-  const m = /^\$2[aby]?\$(\d{2})\$/.exec(hash || "");
-  return m ? Number(m[1]) : null;
+    const m = /^\$2[aby]?\$(\d{2})\$/.exec(hash || "");
+    return m ? Number(m[1]) : null;
 }
 
 test.beforeAll(async () => {
-  prisma = newPrisma();
+    prisma = newPrisma();
 });
 
 test.beforeEach(async () => {
-  await prisma.user.deleteMany({ where: { username: USERNAME } });
+    await prisma.user.deleteMany({ where: { username: USERNAME } });
 });
 
 test.afterAll(async () => {
-  await prisma.user.deleteMany({ where: { username: USERNAME } });
-  await prisma.$disconnect();
+    await prisma.user.deleteMany({ where: { username: USERNAME } });
+    await prisma.$disconnect();
 });
 
-test.describe("Fix 2 — password hashing cost", () => {
-  test("signup hashes at cost 12", async ({ request }) => {
-    const res = await request.post("/api/auth/signup", {
-      data: { name: "Fix02", username: USERNAME, email: EMAIL, password: PASSWORD },
+test.describe("Fix 2   password hashing cost", () => {
+    test("signup hashes at cost 12", async ({ request }) => {
+        const res = await request.post("/api/auth/signup", {
+            data: {
+                name: "Fix02",
+                username: USERNAME,
+                email: EMAIL,
+                password: PASSWORD,
+            },
+        });
+        // The signup route is rate-limited to 5/hour per IP; a 429 here means an
+        // earlier run used the budget, not that the fix regressed.
+        test.skip(
+            res.status() === 429,
+            "signup rate limit reached   rerun in a few minutes",
+        );
+        expect(res.status()).toBe(200);
+
+        expect(costOf(await hashOf())).toBe(12);
     });
-    // The signup route is rate-limited to 5/hour per IP; a 429 here means an
-    // earlier run used the budget, not that the fix regressed.
-    test.skip(res.status() === 429, "signup rate limit reached — rerun in a few minutes");
-    expect(res.status()).toBe(200);
 
-    expect(costOf(await hashOf())).toBe(12);
-  });
+    test("changing the password keeps the cost at 12 (was silently 10)", async ({
+        page,
+        request,
+    }) => {
+        const res = await request.post("/api/auth/signup", {
+            data: {
+                name: "Fix02",
+                username: USERNAME,
+                email: EMAIL,
+                password: PASSWORD,
+            },
+        });
+        test.skip(
+            res.status() === 429,
+            "signup rate limit reached   rerun in a few minutes",
+        );
+        expect(res.status()).toBe(200);
 
-  test("changing the password keeps the cost at 12 (was silently 10)", async ({ page, request }) => {
-    const res = await request.post("/api/auth/signup", {
-      data: { name: "Fix02", username: USERNAME, email: EMAIL, password: PASSWORD },
+        const before = await hashOf();
+        expect(costOf(before)).toBe(12);
+
+        await login(page, USERNAME, PASSWORD);
+        await page.goto("/dashboard/settings", { waitUntil: "networkidle" });
+
+        await page.locator('input[name="currentPassword"]').fill(PASSWORD);
+        await page.locator('input[name="newPassword"]').fill(NEW_PASSWORD);
+        await page.locator('input[name="confirmPassword"]').fill(NEW_PASSWORD);
+        await page
+            .getByRole("button", { name: /change password|update password/i })
+            .first()
+            .click();
+
+        // Wait for the hash to actually change, then assert the new one's cost.
+        await expect.poll(hashOf, { timeout: 20_000 }).not.toBe(before);
+        expect(costOf(await hashOf())).toBe(12);
     });
-    test.skip(res.status() === 429, "signup rate limit reached — rerun in a few minutes");
-    expect(res.status()).toBe(200);
-
-    const before = await hashOf();
-    expect(costOf(before)).toBe(12);
-
-    await login(page, USERNAME, PASSWORD);
-    await page.goto("/dashboard/settings", { waitUntil: "networkidle" });
-
-    await page.locator('input[name="currentPassword"]').fill(PASSWORD);
-    await page.locator('input[name="newPassword"]').fill(NEW_PASSWORD);
-    await page.locator('input[name="confirmPassword"]').fill(NEW_PASSWORD);
-    await page.getByRole("button", { name: /change password|update password/i }).first().click();
-
-    // Wait for the hash to actually change, then assert the new one's cost.
-    await expect.poll(hashOf, { timeout: 20_000 }).not.toBe(before);
-    expect(costOf(await hashOf())).toBe(12);
-  });
 });

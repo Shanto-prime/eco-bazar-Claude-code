@@ -4,208 +4,208 @@ name: Deploy to eco.shanto.dev
 # manual button under Actions → "Deploy to eco.shanto.dev" → Run workflow, so
 # a bad deploy can be redone without a spurious commit.
 on:
-  push:
-    branches: [main]
-  workflow_dispatch: {}
+    push:
+        branches: [main]
+    workflow_dispatch: {}
 
-# Only one deploy at a time — a second push while one is in flight queues, does
+# Only one deploy at a time   a second push while one is in flight queues, does
 # not cancel. Cancelling mid-deploy could leave the VPS with a torn .next/ tree.
 concurrency:
-  group: deploy-production
-  cancel-in-progress: false
+    group: deploy-production
+    cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Build on runner, rsync to VPS
-    # Ubuntu 24.04 matches the VPS exactly, so the node_modules the runner builds
-    # against is layout-identical to what runs at runtime. This is what killed
-    # the previous Windows→Linux ship (Turbopack cache-busted @prisma/client to a
-    # hash that only matched the Windows install).
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    deploy:
+        name: Build on runner, rsync to VPS
+        # Ubuntu 24.04 matches the VPS exactly, so the node_modules the runner builds
+        # against is layout-identical to what runs at runtime. This is what killed
+        # the previous Windows→Linux ship (Turbopack cache-busted @prisma/client to a
+        # hash that only matched the Windows install).
+        runs-on: ubuntu-24.04
+        timeout-minutes: 20
 
-    steps:
-      - name: Checkout main
-        uses: actions/checkout@v4
+        steps:
+            - name: Checkout main
+              uses: actions/checkout@v4
 
-      - name: Setup Node 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          # Cache the ~/.npm store keyed on package-lock — makes subsequent
-          # deploys skip the download step and shave 30–60 s off wall time.
-          cache: npm
+            - name: Setup Node 22
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  # Cache the ~/.npm store keyed on package-lock   makes subsequent
+                  # deploys skip the download step and shave 30–60 s off wall time.
+                  cache: npm
 
-      - name: npm ci (full deps for build)
-        # next-auth beta.25 declares peer next@^14||^15 but works fine with
-        # next@16; --legacy-peer-deps accepts the noise without downgrading next.
-        run: npm ci --legacy-peer-deps --no-audit --no-fund --progress=false
+            - name: npm ci (full deps for build)
+              # next-auth beta.25 declares peer next@^14||^15 but works fine with
+              # next@16; --legacy-peer-deps accepts the noise without downgrading next.
+              run: npm ci --legacy-peer-deps --no-audit --no-fund --progress=false
 
-      - name: Build
-        env:
-          NEXT_TELEMETRY_DISABLED: '1'
-          # Runners have 7 GB RAM; no need to cap old-space here.
-          #
-          # The runner has no .env — but lib/prisma.js's assertDatabaseUrl()
-          # runs at module load time and throws when DATABASE_URL is missing
-          # or malformed. Every route is dynamic (ƒ in the routes manifest),
-          # so no DB call actually fires at build time, but the URL still has
-          # to pass the shape check. Same for NEXTAUTH_SECRET — Auth.js is
-          # imported by middleware.js which is analysed at build time.
-          #
-          # None of these values leak to runtime; the real values live in the
-          # VPS's /home/ecobazar/app/.env (unchanged, never rsync'd over).
-          DATABASE_URL: "mongodb://build.local:27017/build?replicaSet=rs0"
-          NEXTAUTH_SECRET: "build-time-placeholder-not-used-at-runtime"
-          NEXTAUTH_URL: "https://eco.shanto.dev"
-          AUTH_TRUST_HOST: "true"
-        run: npm run build
+            - name: Build
+              env:
+                  NEXT_TELEMETRY_DISABLED: "1"
+                  # Runners have 7 GB RAM; no need to cap old-space here.
+                  #
+                  # The runner has no .env   but lib/prisma.js's assertDatabaseUrl()
+                  # runs at module load time and throws when DATABASE_URL is missing
+                  # or malformed. Every route is dynamic (ƒ in the routes manifest),
+                  # so no DB call actually fires at build time, but the URL still has
+                  # to pass the shape check. Same for NEXTAUTH_SECRET   Auth.js is
+                  # imported by middleware.js which is analysed at build time.
+                  #
+                  # None of these values leak to runtime; the real values live in the
+                  # VPS's /home/ecobazar/app/.env (unchanged, never rsync'd over).
+                  DATABASE_URL: "mongodb://build.local:27017/build?replicaSet=rs0"
+                  NEXTAUTH_SECRET: "build-time-placeholder-not-used-at-runtime"
+                  NEXTAUTH_URL: "https://eco.shanto.dev"
+                  AUTH_TRUST_HOST: "true"
+              run: npm run build
 
-      - name: Prune to production deps (drops testing/lint/typescript toolchain)
-        # Runs AFTER build. Also --legacy-peer-deps to keep npm from re-erroring
-        # on the same next-auth peer.
-        run: npm prune --omit=dev --legacy-peer-deps --no-audit --no-fund
+            - name: Prune to production deps (drops testing/lint/typescript toolchain)
+              # Runs AFTER build. Also --legacy-peer-deps to keep npm from re-erroring
+              # on the same next-auth peer.
+              run: npm prune --omit=dev --legacy-peer-deps --no-audit --no-fund
 
-      - name: Install SSH deploy key + verify auth
-        env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: |
-          set -e
-          mkdir -p ~/.ssh
-          # tr -d '\r' scrubs CRLF that sneak in when secrets are pasted from
-          # Windows Notepad / PowerShell — a common cause of "Load key … invalid
-          # format" and exit 255. Same for known_hosts.
-          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
+            - name: Install SSH deploy key + verify auth
+              env:
+                  DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+                  DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+                  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+                  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+              run: |
+                  set -e
+                  mkdir -p ~/.ssh
+                  # tr -d '\r' scrubs CRLF that sneak in when secrets are pasted from
+                  # Windows Notepad / PowerShell   a common cause of "Load key … invalid
+                  # format" and exit 255. Same for known_hosts.
+                  printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+                  chmod 600 ~/.ssh/deploy_key
+                  printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+                  chmod 644 ~/.ssh/known_hosts
 
-          echo "=== Key file sanity ==="
-          echo "  size: $(wc -c < ~/.ssh/deploy_key) bytes"
-          echo "  first line: $(head -1 ~/.ssh/deploy_key)"
-          echo "  last line:  $(tail -1 ~/.ssh/deploy_key)"
-          echo "  fingerprint of installed key:"
-          ssh-keygen -y -f ~/.ssh/deploy_key | ssh-keygen -lf - || echo "    (couldn't read pubkey from priv)"
-          echo
-          echo "=== known_hosts sanity ==="
-          echo "  size: $(wc -c < ~/.ssh/known_hosts) bytes"
-          cat ~/.ssh/known_hosts | sed 's/^/    /'
+                  echo "=== Key file sanity ==="
+                  echo "  size: $(wc -c < ~/.ssh/deploy_key) bytes"
+                  echo "  first line: $(head -1 ~/.ssh/deploy_key)"
+                  echo "  last line:  $(tail -1 ~/.ssh/deploy_key)"
+                  echo "  fingerprint of installed key:"
+                  ssh-keygen -y -f ~/.ssh/deploy_key | ssh-keygen -lf - || echo "    (couldn't read pubkey from priv)"
+                  echo
+                  echo "=== known_hosts sanity ==="
+                  echo "  size: $(wc -c < ~/.ssh/known_hosts) bytes"
+                  cat ~/.ssh/known_hosts | sed 's/^/    /'
 
-          echo
-          echo "=== Diagnostic SSH: verbose auth to $DEPLOY_USER@$DEPLOY_HOST ==="
-          ssh -vv -o BatchMode=yes -o ConnectTimeout=10 \
-              -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts \
-              "$DEPLOY_USER@$DEPLOY_HOST" 'echo "auth-ok from runner, user=$(whoami)"' 2>&1 | \
-            tail -30 | sed 's/^/    /'
+                  echo
+                  echo "=== Diagnostic SSH: verbose auth to $DEPLOY_USER@$DEPLOY_HOST ==="
+                  ssh -vv -o BatchMode=yes -o ConnectTimeout=10 \
+                      -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts \
+                      "$DEPLOY_USER@$DEPLOY_HOST" 'echo "auth-ok from runner, user=$(whoami)"' 2>&1 | \
+                    tail -30 | sed 's/^/    /'
 
-      - name: Rsync .next, node_modules, public → VPS
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          # RSYNC_RSH tells rsync which command to spawn for the remote shell.
-          # Absolute paths — tilde doesn't expand inside rsync's -e argv, and
-          # earlier single-quoted `-e '…~…'` was resolved to a literal "~"
-          # string by ssh, making auth fail with exit 255.
-          # Same SSH flags as the diagnostic step that succeeded — importantly
-          # StrictHostKeyChecking=accept-new (not =yes), which auto-adds the
-          # host on first sight if a subtle known_hosts formatting issue would
-          # otherwise reject it. Diagnostic step proved the key + host resolve.
-          RSYNC_RSH: "ssh -i /home/runner/.ssh/deploy_key -o UserKnownHostsFile=/home/runner/.ssh/known_hosts -o StrictHostKeyChecking=accept-new -o BatchMode=yes"
-        run: |
-          # pipefail so `rsync | tail` propagates rsync's non-zero exit —
-          # without this, tail always succeeds and `set -e` misses the error.
-          # This was the reason a previous run reported rsync green while
-          # nothing actually transferred.
-          set -eo pipefail
-          REMOTE="$DEPLOY_USER@$DEPLOY_HOST:/home/ecobazar/app"
+            - name: Rsync .next, node_modules, public → VPS
+              env:
+                  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+                  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+                  # RSYNC_RSH tells rsync which command to spawn for the remote shell.
+                  # Absolute paths   tilde doesn't expand inside rsync's -e argv, and
+                  # earlier single-quoted `-e '…~…'` was resolved to a literal "~"
+                  # string by ssh, making auth fail with exit 255.
+                  # Same SSH flags as the diagnostic step that succeeded   importantly
+                  # StrictHostKeyChecking=accept-new (not =yes), which auto-adds the
+                  # host on first sight if a subtle known_hosts formatting issue would
+                  # otherwise reject it. Diagnostic step proved the key + host resolve.
+                  RSYNC_RSH: "ssh -i /home/runner/.ssh/deploy_key -o UserKnownHostsFile=/home/runner/.ssh/known_hosts -o StrictHostKeyChecking=accept-new -o BatchMode=yes"
+              run: |
+                  # pipefail so `rsync | tail` propagates rsync's non-zero exit  
+                  # without this, tail always succeeds and `set -e` misses the error.
+                  # This was the reason a previous run reported rsync green while
+                  # nothing actually transferred.
+                  set -eo pipefail
+                  REMOTE="$DEPLOY_USER@$DEPLOY_HOST:/home/ecobazar/app"
 
-          echo "=== Runner source sanity ==="
-          echo "  pwd: $(pwd)"
-          echo "  .next/BUILD_ID: $(cat .next/BUILD_ID 2>/dev/null || echo MISSING)"
-          echo "  .next size:     $(du -sh .next 2>/dev/null | cut -f1)"
-          # `|` as sed separator — replacement text contains `/`, which would
-          # break `s/.../.../` syntax with "unknown option to `s'".
-          ls -la node_modules/.bin/next 2>&1 | sed 's|^|  bin-next: |'
-          file node_modules/.bin/next 2>&1 | sed 's|^|  bin-next type: |'
-          echo
+                  echo "=== Runner source sanity ==="
+                  echo "  pwd: $(pwd)"
+                  echo "  .next/BUILD_ID: $(cat .next/BUILD_ID 2>/dev/null || echo MISSING)"
+                  echo "  .next size:     $(du -sh .next 2>/dev/null | cut -f1)"
+                  # `|` as sed separator   replacement text contains `/`, which would
+                  # break `s/.../.../` syntax with "unknown option to `s'".
+                  ls -la node_modules/.bin/next 2>&1 | sed 's|^|  bin-next: |'
+                  file node_modules/.bin/next 2>&1 | sed 's|^|  bin-next type: |'
+                  echo
 
-          # -v so transfers show; --stats prints totals per rsync so a
-          # silent skip is immediately obvious ("0 bytes transferred").
-          RSYNC_FLAGS="-avz --stats --delete-after"
+                  # -v so transfers show; --stats prints totals per rsync so a
+                  # silent skip is immediately obvious ("0 bytes transferred").
+                  RSYNC_FLAGS="-avz --stats --delete-after"
 
-          echo "=== 1/4 .next/ ==="
-          rsync $RSYNC_FLAGS --exclude '.next/cache' .next/ "$REMOTE/.next/"
+                  echo "=== 1/4 .next/ ==="
+                  rsync $RSYNC_FLAGS --exclude '.next/cache' .next/ "$REMOTE/.next/"
 
-          echo "=== 2/4 node_modules/ ==="
-          rsync $RSYNC_FLAGS node_modules/ "$REMOTE/node_modules/"
+                  echo "=== 2/4 node_modules/ ==="
+                  rsync $RSYNC_FLAGS node_modules/ "$REMOTE/node_modules/"
 
-          echo "=== 3/4 public/ (no --delete so admin uploads survive) ==="
-          rsync -avz --stats public/ "$REMOTE/public/"
+                  echo "=== 3/4 public/ (no --delete so admin uploads survive) ==="
+                  rsync -avz --stats public/ "$REMOTE/public/"
 
-          echo "=== 4/4 source tree ==="
-          rsync -avz --stats --delete \
-            --exclude '.next' --exclude 'node_modules' --exclude 'public' \
-            --exclude '.env' --exclude '.git' \
-            ./ "$REMOTE/"
+                  echo "=== 4/4 source tree ==="
+                  rsync -avz --stats --delete \
+                    --exclude '.next' --exclude 'node_modules' --exclude 'public' \
+                    --exclude '.env' --exclude '.git' \
+                    ./ "$REMOTE/"
 
-          echo
-          echo "=== Post-transfer verification on VPS ==="
-          # Same absolute-path SSH options as RSYNC_RSH above. The previous
-          # version's bare `ssh` here fell back to a nonexistent default key
-          # and returned 255, killing the whole step under set -eo pipefail
-          # even though the rsyncs above had actually succeeded.
-          ssh -i /home/runner/.ssh/deploy_key \
-              -o UserKnownHostsFile=/home/runner/.ssh/known_hosts \
-              -o StrictHostKeyChecking=accept-new \
-              -o BatchMode=yes \
-            "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<'REMOTE_VERIFY'
-            cd /home/ecobazar/app
-            echo "  VPS .next/BUILD_ID: $(cat .next/BUILD_ID)"
-            echo "  VPS .next size:     $(du -sh .next 2>/dev/null | cut -f1)"
-            echo "  VPS bin/next:       $(readlink -f node_modules/.bin/next || echo NOT_A_SYMLINK)"
-            echo "  VPS bin/next type:  $(file node_modules/.bin/next 2>&1)"
-          REMOTE_VERIFY
+                  echo
+                  echo "=== Post-transfer verification on VPS ==="
+                  # Same absolute-path SSH options as RSYNC_RSH above. The previous
+                  # version's bare `ssh` here fell back to a nonexistent default key
+                  # and returned 255, killing the whole step under set -eo pipefail
+                  # even though the rsyncs above had actually succeeded.
+                  ssh -i /home/runner/.ssh/deploy_key \
+                      -o UserKnownHostsFile=/home/runner/.ssh/known_hosts \
+                      -o StrictHostKeyChecking=accept-new \
+                      -o BatchMode=yes \
+                    "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<'REMOTE_VERIFY'
+                    cd /home/ecobazar/app
+                    echo "  VPS .next/BUILD_ID: $(cat .next/BUILD_ID)"
+                    echo "  VPS .next size:     $(du -sh .next 2>/dev/null | cut -f1)"
+                    echo "  VPS bin/next:       $(readlink -f node_modules/.bin/next || echo NOT_A_SYMLINK)"
+                    echo "  VPS bin/next type:  $(file node_modules/.bin/next 2>&1)"
+                  REMOTE_VERIFY
 
-      - name: Restart PM2 (or start if the process doesn't exist yet)
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: |
-          # Same absolute-path SSH options as the rsync step for consistency.
-          ssh -i /home/runner/.ssh/deploy_key \
-              -o UserKnownHostsFile=/home/runner/.ssh/known_hosts \
-              -o StrictHostKeyChecking=accept-new \
-              -o BatchMode=yes \
-            "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<'REMOTE'
-            set -e
-            cd /home/ecobazar/app
-            if pm2 describe ecobazar >/dev/null 2>&1; then
-              pm2 restart ecobazar --update-env
-            else
-              # First-ever start (or after a delete) — cap RAM at 500 MB so a
-              # runaway node process can't OOM-kill the 1 GB VPS.
-              pm2 start node_modules/.bin/next --name ecobazar \
-                --max-memory-restart 500M \
-                -- start -H 127.0.0.1 -p 3000
-            fi
-            pm2 save
-          REMOTE
+            - name: Restart PM2 (or start if the process doesn't exist yet)
+              env:
+                  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+                  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+              run: |
+                  # Same absolute-path SSH options as the rsync step for consistency.
+                  ssh -i /home/runner/.ssh/deploy_key \
+                      -o UserKnownHostsFile=/home/runner/.ssh/known_hosts \
+                      -o StrictHostKeyChecking=accept-new \
+                      -o BatchMode=yes \
+                    "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<'REMOTE'
+                    set -e
+                    cd /home/ecobazar/app
+                    if pm2 describe ecobazar >/dev/null 2>&1; then
+                      pm2 restart ecobazar --update-env
+                    else
+                      # First-ever start (or after a delete)   cap RAM at 500 MB so a
+                      # runaway node process can't OOM-kill the 1 GB VPS.
+                      pm2 start node_modules/.bin/next --name ecobazar \
+                        --max-memory-restart 500M \
+                        -- start -H 127.0.0.1 -p 3000
+                    fi
+                    pm2 save
+                  REMOTE
 
-      - name: Smoke test https://eco.shanto.dev/
-        run: |
-          # 5 attempts, 5 s apart — Next 16 cold start on the 1 GB VPS takes
-          # a few seconds. If the site still isn't 200 by then, fail the job.
-          for i in 1 2 3 4 5; do
-            code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 20 https://eco.shanto.dev/)
-            if [ "$code" = "200" ]; then
-              echo "✓ Deploy OK — HTTP 200 on attempt $i"
-              exit 0
-            fi
-            echo "attempt $i: HTTP $code, retrying in 5 s..."
-            sleep 5
-          done
-          echo "✗ Deploy verification failed — site still not 200 after 25 s"
-          exit 1
+            - name: Smoke test https://eco.shanto.dev/
+              run: |
+                  # 5 attempts, 5 s apart   Next 16 cold start on the 1 GB VPS takes
+                  # a few seconds. If the site still isn't 200 by then, fail the job.
+                  for i in 1 2 3 4 5; do
+                    code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 20 https://eco.shanto.dev/)
+                    if [ "$code" = "200" ]; then
+                      echo "✓ Deploy OK   HTTP 200 on attempt $i"
+                      exit 0
+                    fi
+                    echo "attempt $i: HTTP $code, retrying in 5 s..."
+                    sleep 5
+                  done
+                  echo "✗ Deploy verification failed   site still not 200 after 25 s"
+                  exit 1

@@ -3,7 +3,7 @@
 //
 // The suite drives the REAL app: Playwright boots `npm run dev` (webServer
 // below) and hits it at baseURL. That means these tests need the same runtime
-// dependencies the app needs — a seeded MongoDB replica set reachable via
+// dependencies the app needs   a seeded MongoDB replica set reachable via
 // DATABASE_URL. Run `npm run db:push && npm run db:seed` once before testing.
 //
 // Chromium only, headless, run serially-ish (workers:1) because several specs
@@ -15,44 +15,47 @@ const PORT = 3000;
 const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({
-  testDir: "./e2e",
-  // First run compiles routes on demand, which is slow; give assertions room.
-  timeout: 45_000,
-  expect: { timeout: 10_000 },
-  fullyParallel: false,
-  workers: 1,
-  retries: 0,
-  reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
+    testDir: "./e2e",
+    // First run compiles routes on demand, which is slow; give assertions room.
+    timeout: 45_000,
+    expect: { timeout: 10_000 },
+    fullyParallel: false,
+    workers: 1,
+    retries: 0,
+    reporter: [
+        ["list"],
+        ["html", { open: "never", outputFolder: "playwright-report" }],
+    ],
 
-  use: {
-    baseURL: BASE_URL,
-    trace: "retain-on-failure",
-    screenshot: "only-on-failure",
-    actionTimeout: 15_000,
-    navigationTimeout: 30_000,
-  },
-
-  projects: [
-    // Signs in once per account and writes the session to test-results/.auth.
-    // Everything else depends on it, so specs adopt a session with
-    // `test.use({ storageState: authFile("customer") })` instead of logging in
-    // per test — which would blow through the 10-logins-per-15-minutes limiter.
-    { name: "setup", testMatch: /.*\.setup\.js/ },
-    {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
-      dependencies: ["setup"],
+    use: {
+        baseURL: BASE_URL,
+        trace: "retain-on-failure",
+        screenshot: "only-on-failure",
+        actionTimeout: 15_000,
+        navigationTimeout: 30_000,
     },
-  ],
 
-  // Boot the app for the tests. reuseExistingServer lets you keep a dev server
-  // running locally and just re-run the specs against it.
-  webServer: {
-    command: "npm run dev",
-    url: BASE_URL,
-    timeout: 120_000,
-    reuseExistingServer: true,
-    stdout: "ignore",
-    stderr: "pipe",
-  },
+    projects: [
+        // Signs in once per account and writes the session to test-results/.auth.
+        // Everything else depends on it, so specs adopt a session with
+        // `test.use({ storageState: authFile("customer") })` instead of logging in
+        // per test   which would blow through the 10-logins-per-15-minutes limiter.
+        { name: "setup", testMatch: /.*\.setup\.js/ },
+        {
+            name: "chromium",
+            use: { ...devices["Desktop Chrome"] },
+            dependencies: ["setup"],
+        },
+    ],
+
+    // Boot the app for the tests. reuseExistingServer lets you keep a dev server
+    // running locally and just re-run the specs against it.
+    webServer: {
+        command: "npm run dev",
+        url: BASE_URL,
+        timeout: 120_000,
+        reuseExistingServer: true,
+        stdout: "ignore",
+        stderr: "pipe",
+    },
 });

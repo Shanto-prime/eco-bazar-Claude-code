@@ -1,4 +1,4 @@
-// app/dashboard/reviews/page.js — ADMIN + MODERATOR.
+// app/dashboard/reviews/page.js   ADMIN + MODERATOR.
 //
 // TODO: approve / reject server actions with audit-log writes; filter by
 // status; jump-to-product link from each row.
@@ -9,51 +9,81 @@ import { getT } from "../../../lib/i18n/server";
 import LocalTime from "../../../components/LocalTime";
 
 export default async function DashboardReviews() {
-  const { t } = await getT();
-  await requireRole(["ADMIN", "MODERATOR"], "/dashboard/reviews");
+    const { t } = await getT();
+    await requireRole(["ADMIN", "MODERATOR"], "/dashboard/reviews");
 
-  const reviews = await prisma.review.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    include: {
-      user:    { select: { name: true, email: true } },
-      product: { select: { name: true, slug: true } },
-    },
-  });
+    const reviews = await prisma.review.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        include: {
+            user: { select: { name: true, email: true } },
+            product: { select: { name: true, slug: true } },
+        },
+    });
 
-  return (
-    <div>
-      <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">{t("dashboard.reviews")}</h1>
-        <p className="text-sm text-gray-500 mt-1">{t("dashboard.reviewsSubtitle", { count: reviews.length })}</p>
-      </header>
+    return (
+        <div>
+            <header className="mb-6">
+                <h1 className="text-2xl sm:text-3xl font-bold">
+                    {t("dashboard.reviews")}
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                    {t("dashboard.reviewsSubtitle", { count: reviews.length })}
+                </p>
+            </header>
 
-      {reviews.length === 0 ? (
-        <div className="border border-dashed border-gray-300 rounded-lg p-10 text-center text-gray-500 bg-white">
-          {t("dashboard.noReviews")}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {reviews.map((r) => (
-            <article key={r.id} className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                <div>
-                  <div className="font-medium">{r.product.name} <span className="text-xs text-gray-400">/{r.product.slug}</span></div>
-                  <div className="text-xs text-gray-500">{t("dashboard.reviewBy")}{r.user.name || r.user.email} · <LocalTime value={r.createdAt} dateOnly /></div>
+            {reviews.length === 0 ? (
+                <div className="border border-dashed border-gray-300 rounded-lg p-10 text-center text-gray-500 bg-white">
+                    {t("dashboard.noReviews")}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-amber-500 text-sm">{"★".repeat(r.rating)}<span className="text-gray-300">{"★".repeat(5 - r.rating)}</span></span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${r.approved ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                    {r.approved ? t("dashboard.approved") : t("dashboard.pending")}
-                  </span>
+            ) : (
+                <div className="space-y-3">
+                    {reviews.map((r) => (
+                        <article
+                            key={r.id}
+                            className="bg-white border border-gray-200 rounded-lg p-4"
+                        >
+                            <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                                <div>
+                                    <div className="font-medium">
+                                        {r.product.name}{" "}
+                                        <span className="text-xs text-gray-400">
+                                            /{r.product.slug}
+                                        </span>
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                        {t("dashboard.reviewBy")}
+                                        {r.user.name || r.user.email} ·{" "}
+                                        <LocalTime
+                                            value={r.createdAt}
+                                            dateOnly
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-amber-500 text-sm">
+                                        {"★".repeat(r.rating)}
+                                        <span className="text-gray-300">
+                                            {"★".repeat(5 - r.rating)}
+                                        </span>
+                                    </span>
+                                    <span
+                                        className={`text-xs px-2 py-1 rounded-full ${r.approved ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
+                                    >
+                                        {r.approved
+                                            ? t("dashboard.approved")
+                                            : t("dashboard.pending")}
+                                    </span>
+                                </div>
+                            </div>
+                            <p className="text-sm text-gray-700 leading-relaxed">
+                                {r.body}
+                            </p>
+                            {/* TODO: approve / reject buttons calling server actions. */}
+                        </article>
+                    ))}
                 </div>
-              </div>
-              <p className="text-sm text-gray-700 leading-relaxed">{r.body}</p>
-              {/* TODO: approve / reject buttons calling server actions. */}
-            </article>
-          ))}
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 }

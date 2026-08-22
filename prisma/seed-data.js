@@ -1,16 +1,16 @@
 // prisma/seed-data.js
-// Shared catalogue definition — read by BOTH prisma/seed.js (dev) and
+// Shared catalogue definition   read by BOTH prisma/seed.js (dev) and
 // prisma/seed.prod.js (production). The two seed scripts differ only in
 // which users they create; the categories and products come from here.
 //
 // PRICING
 //   All prices are in TAKA. `toCents(taka)` turns them into integer POISHA
-//   (1/100 of a Taka), which is how the DB stores money — see lib/money.js
+//   (1/100 of a Taka), which is how the DB stores money   see lib/money.js
 //   and the header of prisma/schema.prisma. Base currency is BDT; nothing
 //   converts these numbers at insert time.
 //
 // BRANDING
-//   Every packaged product is EcoBazar own-brand — the seed sets `brand:
+//   Every packaged product is EcoBazar own-brand   the seed sets `brand:
 //   "EcoBazar"` on anything that ships in wrapping (snacks, tea, oils,
 //   flours, cleaning products, etc.). Fresh loose produce and butcher-cut
 //   meat/fish have no `brand` because they don't carry one on the shelf.
@@ -45,7 +45,7 @@ const toCents = (taka) => Math.round(Number(taka) * 100);
 const productImageUrl = (slug) => `/uploads/products/${slug}.jpeg`;
 
 // -----------------------------------------------------------------------------
-// Categories — 12 storefront categories. Order here becomes display order in
+// Categories   12 storefront categories. Order here becomes display order in
 // any UI that iterates this list.
 // -----------------------------------------------------------------------------
 const CATEGORIES = [
@@ -64,23 +64,23 @@ const CATEGORIES = [
 ];
 
 // -----------------------------------------------------------------------------
-// Products — Bangladeshi organic-grocery catalogue, EcoBazar own-brand.
+// Products   Bangladeshi organic-grocery catalogue, EcoBazar own-brand.
 //
 // Shape:
 //   slug         URL-safe id, unique across the whole catalogue
 //   name         Storefront-facing product name (English or transliterated Bangla)
 //   category     Category slug (must exist above)
 //   price        Selling price in TAKA (major units, not poisha)
-//   oldPrice     Optional strike-through original price in TAKA — set alongside
+//   oldPrice     Optional strike-through original price in TAKA   set alongside
 //                a "Sale X%" badge so the discount actually shows on the card
 //   badge        Optional short label (e.g. "Sale 20%", "Organic", "New")
 //   stock        Starting on-hand quantity
-//   brand        Optional brand string — "EcoBazar" for packaged goods, omitted
+//   brand        Optional brand string   "EcoBazar" for packaged goods, omitted
 //                for fresh loose produce and butcher cuts
-//   tags         Optional array — used by the promo landing pages and filters
+//   tags         Optional array   used by the promo landing pages and filters
 //   description  1–2 short sentences, product-specific
 //
-// Ratings come from the seed script's `ratingFor(slug)` — a spread from 1.5
+// Ratings come from the seed script's `ratingFor(slug)`   a spread from 1.5
 // to 5.0 in half-star steps that guarantees the storefront's star filter
 // has candidates at every level (5, 4, 3, 2, 1). See RATINGS note above.
 // -----------------------------------------------------------------------------
@@ -98,17 +98,17 @@ const PRODUCTS = [
     },
     {
         slug: "kagji-lebu",
-        name: "Kagji Lebu — Key Lime (1 kg)",
+        name: "Kagji Lebu   Key Lime (1 kg)",
         category: "fresh-fruit",
         price: 80,
         stock: 100,
         tags: ["fruit", "citrus"],
         description:
-            "Thin-skinned Kagji limes with a sharp, aromatic juice — the standard for daal, sherbet and marinades.",
+            "Thin-skinned Kagji limes with a sharp, aromatic juice   the standard for daal, sherbet and marinades.",
     },
     {
         slug: "kacha-pepe",
-        name: "Kacha Pepe — Green Papaya (each)",
+        name: "Kacha Pepe   Green Papaya (each)",
         category: "fresh-fruit",
         price: 60,
         stock: 80,
@@ -118,13 +118,13 @@ const PRODUCTS = [
     },
     {
         slug: "sagar-kola",
-        name: "Sagar Kola — Cavendish Banana (dozen)",
+        name: "Sagar Kola   Cavendish Banana (dozen)",
         category: "fresh-fruit",
         price: 120,
         stock: 150,
         tags: ["fruit", "everyday"],
         description:
-            "Sweet dessert bananas — twelve to a bunch, ripened naturally without carbide.",
+            "Sweet dessert bananas   twelve to a bunch, ripened naturally without carbide.",
     },
     {
         slug: "dragon-fruit",
@@ -135,33 +135,33 @@ const PRODUCTS = [
         badge: "New",
         tags: ["fruit", "premium"],
         description:
-            "Deshi-grown pink dragon fruit — mildly sweet, high in fibre, and ready to eat chilled.",
+            "Deshi-grown pink dragon fruit   mildly sweet, high in fibre, and ready to eat chilled.",
     },
 
     // ---------------------------- Fresh Vegetables ----------------------------
     {
         slug: "deshi-aloo",
-        name: "Deshi Aloo — Local Potato (1 kg)",
+        name: "Deshi Aloo   Local Potato (1 kg)",
         category: "fresh-vegetables",
         price: 45,
         stock: 300,
         tags: ["vegetable", "staple"],
         description:
-            "Small-to-medium local potatoes with thin skin — the everyday variety for bhaji, torkari and khichuri.",
+            "Small-to-medium local potatoes with thin skin   the everyday variety for bhaji, torkari and khichuri.",
     },
     {
         slug: "kacha-morich",
-        name: "Kacha Morich — Green Chili (250 g)",
+        name: "Kacha Morich   Green Chili (250 g)",
         category: "fresh-vegetables",
         price: 55,
         stock: 150,
         tags: ["vegetable", "spice"],
         description:
-            "Fresh Bangladeshi green chilies — medium heat, bright grassy aroma.",
+            "Fresh Bangladeshi green chilies   medium heat, bright grassy aroma.",
     },
     {
         slug: "begun",
-        name: "Begun — Long Eggplant (1 kg)",
+        name: "Begun   Long Eggplant (1 kg)",
         category: "fresh-vegetables",
         price: 80,
         stock: 100,
@@ -171,17 +171,17 @@ const PRODUCTS = [
     },
     {
         slug: "fulkopi",
-        name: "Fulkopi — Cauliflower (each)",
+        name: "Fulkopi   Cauliflower (each)",
         category: "fresh-vegetables",
         price: 50,
         stock: 80,
         tags: ["vegetable"],
         description:
-            "Tight-headed white cauliflower — trimmed and cleaned before packing.",
+            "Tight-headed white cauliflower   trimmed and cleaned before packing.",
     },
     {
         slug: "lal-shak",
-        name: "Lal Shak — Red Amaranth (500 g)",
+        name: "Lal Shak   Red Amaranth (500 g)",
         category: "fresh-vegetables",
         price: 30,
         stock: 120,
@@ -191,19 +191,19 @@ const PRODUCTS = [
     },
     {
         slug: "misti-kumra",
-        name: "Misti Kumra — Sweet Pumpkin (1 kg)",
+        name: "Misti Kumra   Sweet Pumpkin (1 kg)",
         category: "fresh-vegetables",
         price: 60,
         stock: 90,
         tags: ["vegetable"],
         description:
-            "Orange-flesh sweet pumpkin — good for kumra bhaji, khichuri and desserts.",
+            "Orange-flesh sweet pumpkin   good for kumra bhaji, khichuri and desserts.",
     },
 
     // -------------------------------- Meat & Fish -----------------------------
     {
         slug: "deshi-murgi",
-        name: "Deshi Murgi — Local Chicken (whole, ~1.2 kg)",
+        name: "Deshi Murgi   Local Chicken (whole, ~1.2 kg)",
         category: "meat-fish",
         price: 480,
         stock: 40,
@@ -219,11 +219,11 @@ const PRODUCTS = [
         stock: 60,
         tags: ["poultry", "halal"],
         description:
-            "Farm-raised broiler chicken — cleaned, ready to portion for curry or biryani.",
+            "Farm-raised broiler chicken   cleaned, ready to portion for curry or biryani.",
     },
     {
         slug: "rui-mach",
-        name: "Rui Mach — Rohu (1 kg, cut & cleaned)",
+        name: "Rui Mach   Rohu (1 kg, cut & cleaned)",
         category: "meat-fish",
         price: 380,
         oldPrice: 460,
@@ -231,11 +231,11 @@ const PRODUCTS = [
         stock: 50,
         tags: ["fish", "freshwater"],
         description:
-            "Fresh Rohu, scaled and cut into curry pieces — the Sunday-lunch fish of every Bangla household.",
+            "Fresh Rohu, scaled and cut into curry pieces   the Sunday-lunch fish of every Bangla household.",
     },
     {
         slug: "ilish-mach",
-        name: "Ilish Mach — Hilsa (700–900 g whole)",
+        name: "Ilish Mach   Hilsa (700–900 g whole)",
         category: "meat-fish",
         price: 1400,
         stock: 20,
@@ -246,26 +246,26 @@ const PRODUCTS = [
     },
     {
         slug: "khashir-mangsho",
-        name: "Khashir Mangsho — Mutton (1 kg, mixed cut)",
+        name: "Khashir Mangsho   Mutton (1 kg, mixed cut)",
         category: "meat-fish",
         price: 1150,
         stock: 25,
         tags: ["red-meat", "halal"],
         description:
-            "Halal mutton in a mixed curry cut — bone-in for maximum flavour.",
+            "Halal mutton in a mixed curry cut   bone-in for maximum flavour.",
     },
 
     // -------------------------------- Snacks ----------------------------------
     {
         slug: "chanachur-classic",
-        name: "EcoBazar Chanachur — Classic (300 g)",
+        name: "EcoBazar Chanachur   Classic (300 g)",
         category: "snacks",
         price: 110,
         stock: 200,
         brand: "EcoBazar",
         tags: ["snack", "spicy"],
         description:
-            "Classic Bangladeshi chanachur — crisp gram-flour ribbons, peanuts and lentils in a mild-spicy mix.",
+            "Classic Bangladeshi chanachur   crisp gram-flour ribbons, peanuts and lentils in a mild-spicy mix.",
     },
     {
         slug: "bhujia-sev",
@@ -298,7 +298,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["snack", "kit"],
         description:
-            "Everything but the tamarind for a fast street-style chotpoti — spiced boot with a tetul packet included.",
+            "Everything but the tamarind for a fast street-style chotpoti   spiced boot with a tetul packet included.",
     },
     {
         slug: "muri-chira-mix",
@@ -322,7 +322,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["tea", "organic"],
         description:
-            "Panchagarh-grown organic loose black tea — full-bodied, malty finish. Steep 4 minutes.",
+            "Panchagarh-grown organic loose black tea   full-bodied, malty finish. Steep 4 minutes.",
     },
     {
         slug: "black-tea",
@@ -333,7 +333,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["tea"],
         description:
-            "Everyday brisk black tea — strong and made for milky doodh cha.",
+            "Everyday brisk black tea   strong and made for milky doodh cha.",
     },
     {
         slug: "mango-juice",
@@ -378,7 +378,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["oil", "haircare", "skincare"],
         description:
-            "Pure cold-pressed neem oil for scalp massage and skin care. Strong-smelling on purpose — that's the active compound.",
+            "Pure cold-pressed neem oil for scalp massage and skin care. Strong-smelling on purpose   that's the active compound.",
     },
     {
         slug: "aloe-vera-gel",
@@ -424,13 +424,13 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["honey", "organic", "premium"],
         description:
-            "Wild raw honey collected from mangrove-forest hives — unheated, unfiltered, cloudy on purpose.",
+            "Wild raw honey collected from mangrove-forest hives   unheated, unfiltered, cloudy on purpose.",
     },
 
     // ----------------------------- Bread & Bakery -----------------------------
     {
         slug: "deshi-ruti",
-        name: "EcoBazar Deshi Ruti — Chapati (10-pack)",
+        name: "EcoBazar Deshi Ruti   Chapati (10-pack)",
         category: "bread-bakery",
         price: 80,
         stock: 100,
@@ -448,7 +448,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["frozen", "breakfast"],
         description:
-            "Layered flaky paratha, individually separated. Straight from freezer to hot pan — no thawing needed.",
+            "Layered flaky paratha, individually separated. Straight from freezer to hot pan   no thawing needed.",
     },
     {
         slug: "sliced-sandwich-bread",
@@ -476,7 +476,7 @@ const PRODUCTS = [
     // ------------------------------ Baking Needs ------------------------------
     {
         slug: "whole-wheat-flour",
-        name: "EcoBazar Whole Wheat Flour — Ata (2 kg)",
+        name: "EcoBazar Whole Wheat Flour   Ata (2 kg)",
         category: "baking-needs",
         price: 140,
         stock: 200,
@@ -487,7 +487,7 @@ const PRODUCTS = [
     },
     {
         slug: "refined-flour",
-        name: "EcoBazar Refined Flour — Maida (2 kg)",
+        name: "EcoBazar Refined Flour   Maida (2 kg)",
         category: "baking-needs",
         price: 150,
         stock: 200,
@@ -498,7 +498,7 @@ const PRODUCTS = [
     },
     {
         slug: "suji",
-        name: "EcoBazar Suji — Semolina (500 g)",
+        name: "EcoBazar Suji   Semolina (500 g)",
         category: "baking-needs",
         price: 75,
         stock: 150,
@@ -516,7 +516,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["baking"],
         description:
-            "Ten single-use sachets of instant yeast — one sachet raises a standard loaf.",
+            "Ten single-use sachets of instant yeast   one sachet raises a standard loaf.",
     },
     {
         slug: "cocoa-powder",
@@ -540,7 +540,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["rice", "aromatic", "biryani"],
         description:
-            "The tiny grain that defines Bangladeshi pulao and biryani — deeply aromatic when steamed.",
+            "The tiny grain that defines Bangladeshi pulao and biryani   deeply aromatic when steamed.",
     },
     {
         slug: "miniket-rice",
@@ -551,7 +551,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["rice", "staple"],
         description:
-            "Polished miniket for everyday plain rice — light, non-sticky, cooks up fluffy.",
+            "Polished miniket for everyday plain rice   light, non-sticky, cooks up fluffy.",
     },
     {
         slug: "kalijira-chal",
@@ -562,11 +562,11 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["rice", "aromatic", "premium"],
         description:
-            "Premium short-grain aromatic rice — the king of Bangladeshi biryani rice.",
+            "Premium short-grain aromatic rice   the king of Bangladeshi biryani rice.",
     },
     {
         slug: "motka-musur-daal",
-        name: "EcoBazar Motka Musur Daal — Red Lentil (1 kg)",
+        name: "EcoBazar Motka Musur Daal   Red Lentil (1 kg)",
         category: "cooking",
         price: 140,
         stock: 200,
@@ -577,14 +577,14 @@ const PRODUCTS = [
     },
     {
         slug: "kabuli-chola",
-        name: "EcoBazar Kabuli Chola — White Chickpea (500 g)",
+        name: "EcoBazar Kabuli Chola   White Chickpea (500 g)",
         category: "cooking",
         price: 120,
         stock: 150,
         brand: "EcoBazar",
         tags: ["legume", "iftar"],
         description:
-            "Plump white chickpeas — soak overnight for chola bhuna, hummus or salad.",
+            "Plump white chickpeas   soak overnight for chola bhuna, hummus or salad.",
     },
     {
         slug: "farm-eggs",
@@ -607,7 +607,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["breakfast", "diabetic-friendly", "high-fibre"],
         description:
-            "Whole rolled oats — low glycaemic, high fibre. Cook in milk or water for five minutes.",
+            "Whole rolled oats   low glycaemic, high fibre. Cook in milk or water for five minutes.",
     },
     {
         slug: "job-barley",
@@ -618,7 +618,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["grain", "diabetic-friendly"],
         description:
-            "Pearled barley — a low-GI substitute for white rice in daily meals.",
+            "Pearled barley   a low-GI substitute for white rice in daily meals.",
     },
     {
         slug: "chia-seeds",
@@ -630,7 +630,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["superfood", "organic", "high-fibre"],
         description:
-            "Whole black chia seeds — soak in water or milk for a fibre-rich pudding.",
+            "Whole black chia seeds   soak in water or milk for a fibre-rich pudding.",
     },
     {
         slug: "sugarfree-digestive-biscuits",
@@ -654,7 +654,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["cleaning", "kitchen"],
         description:
-            "The everyday dishwash bar — cuts grease fast, lasts a long time on a wet scrubber.",
+            "The everyday dishwash bar   cuts grease fast, lasts a long time on a wet scrubber.",
     },
     {
         slug: "dishwashing-liquid",
@@ -676,7 +676,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["cleaning", "kitchen"],
         description:
-            "Compact dishwash bar for small kitchens — hard formula, minimal residue.",
+            "Compact dishwash bar for small kitchens   hard formula, minimal residue.",
     },
     {
         slug: "laundry-detergent-powder",
@@ -702,7 +702,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["oil", "cooking", "staple"],
         description:
-            "The default household cooking oil — refined soybean oil, neutral flavour.",
+            "The default household cooking oil   refined soybean oil, neutral flavour.",
     },
     {
         slug: "soybean-oil-2l",
@@ -713,7 +713,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["oil", "cooking"],
         description:
-            "Refined soybean oil in a two-litre bottle — the everyday size.",
+            "Refined soybean oil in a two-litre bottle   the everyday size.",
     },
     {
         slug: "mustard-oil-1l",
@@ -724,7 +724,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["oil", "traditional"],
         description:
-            "Cold-pressed mustard oil — the sharp, pungent oil for bhorta, achar and fish.",
+            "Cold-pressed mustard oil   the sharp, pungent oil for bhorta, achar and fish.",
     },
     {
         slug: "sunflower-oil-1l",
@@ -746,7 +746,7 @@ const PRODUCTS = [
         brand: "EcoBazar",
         tags: ["oil", "haircare"],
         description:
-            "Extra-virgin cold-pressed coconut oil — good for baking, tempering, and hair care.",
+            "Extra-virgin cold-pressed coconut oil   good for baking, tempering, and hair care.",
     },
 ];
 
@@ -755,8 +755,8 @@ const PRODUCTS = [
 // the same slug always resolves to the same rating on every re-seed.
 function ratingFor(slug) {
     const buckets = [
-        5.0, 4.5, 4.5, 4.0, 4.0, 4.0, 4.0,
-        3.5, 3.5, 3.5, 3.0, 3.0, 2.5, 2.0, 1.5,
+        5.0, 4.5, 4.5, 4.0, 4.0, 4.0, 4.0, 3.5, 3.5, 3.5, 3.0, 3.0, 2.5, 2.0,
+        1.5,
     ];
     let h = 0;
     for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) | 0;

@@ -6,7 +6,7 @@
 //
 // It must NOT ship to production. On a hosted deployment (Vercel included) a
 // zero TTL means every request re-runs image optimization instead of serving a
-// cached variant — slower pages and, on metered plans, a bill for work that
+// cached variant   slower pages and, on metered plans, a bill for work that
 // should have been cached once. Applied in development only.
 const isDev = process.env.NODE_ENV === "development";
 

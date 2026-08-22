@@ -1,5 +1,5 @@
 // prisma/schema.prisma
-// Database schema for Ecobazar — MongoDB (via the Prisma `mongodb` connector).
+// Database schema for Ecobazar   MongoDB (via the Prisma `mongodb` connector).
 //
 // Migration notes (from the previous MySQL schema):
 //   • provider is now `mongodb`. Every model MUST have an `@id` mapped to
@@ -20,7 +20,7 @@
 //     `mongod` is not and will throw. DATABASE_URL must point at Atlas or a local
 //     replica set (…?replicaSet=rs0).
 //
-// After changing this file:  npm run db:push   (prisma db push — Mongo has no
+// After changing this file:  npm run db:push   (prisma db push   Mongo has no
 // migration history), then  npm run db:seed.
 
 generator client {
@@ -28,7 +28,7 @@ generator client {
   // "native" downloads a query engine for whatever OS runs `prisma generate`
   // (i.e. dev laptops); "debian-openssl-3.0.x" downloads the Linux engine used
   // by the Ubuntu 24.04 production VPS. Shipping both lets the same
-  // node_modules run on both hosts — critical because the VPS has too little
+  // node_modules run on both hosts   critical because the VPS has too little
   // RAM to run `next build` / `prisma generate` locally, so we build on the
   // developer laptop and rsync the tree over.
   binaryTargets = ["native", "debian-openssl-3.0.x"]
@@ -43,10 +43,10 @@ datasource db {
 // Users & roles
 // ---------------------------------------------------------------------------
 // Three roles in the system:
-//   CUSTOMER  — default; can browse, cart, order, review.
-//   MODERATOR — can create products. Edits/deletes are restricted to their
+//   CUSTOMER    default; can browse, cart, order, review.
+//   MODERATOR   can create products. Edits/deletes are restricted to their
 //               own creations. Tracked by Product.createdById.
-//   ADMIN     — full control: edit/delete any product, manage users & orders,
+//   ADMIN       full control: edit/delete any product, manage users & orders,
 //               view audit log.
 enum Role {
   CUSTOMER
@@ -71,10 +71,10 @@ model User {
   phone         String?    // optional contact number (collected at signup)
   image         String?    // profile photo URL (OAuth avatar or uploaded)
   emailVerified DateTime?
-  passwordHash  String?    // bcrypt — null for OAuth-only users
+  passwordHash  String?    // bcrypt   null for OAuth-only users
   role          Role       @default(CUSTOMER)
   // The very first user (the founding ADMIN). A "super admin" can never be
-  // demoted or deleted by anyone — see app/dashboard/users/_actions.js. Set by
+  // demoted or deleted by anyone   see app/dashboard/users/_actions.js. Set by
   // promoteIfFirstUser() and the seed.
   isSuperAdmin  Boolean    @default(false)
   lastLoginAt   DateTime?  // stamped on every successful sign-in; shown in settings
@@ -97,10 +97,10 @@ model User {
 }
 
 // ---------------------------------------------------------------------------
-// Approval queue — actions a MODERATOR is not allowed to perform directly go
+// Approval queue   actions a MODERATOR is not allowed to perform directly go
 // here as a PENDING request for an ADMIN to approve or reject. Currently:
-//   • PRODUCT_DELETE — a moderator asking to delete a product they created
-//   • ORDER_CANCEL   — a moderator asking to cancel an order
+//   • PRODUCT_DELETE   a moderator asking to delete a product they created
+//   • ORDER_CANCEL     a moderator asking to cancel an order
 // On approval the ADMIN performs the real action (delete / cancel) exactly as
 // if they had done it themselves. See app/dashboard/approvals/_actions.js.
 // ---------------------------------------------------------------------------
@@ -137,14 +137,14 @@ model ApprovalRequest {
 }
 
 // ---------------------------------------------------------------------------
-// Server-side cart — one row per user. Anonymous visitors keep their cart in
+// Server-side cart   one row per user. Anonymous visitors keep their cart in
 // localStorage only (see lib/CartContext.jsx); on login the guest cart is
 // merged into this row (lib/cart-actions.js `mergeCart`) and every subsequent
 // change is persisted here so the cart follows the user across devices.
 //
 // `items` is stored as a JSON array of the exact shape the client uses:
 //   [{ slug, name, icon, price, qty }]
-// Prices here are for display only — checkout always recomputes authoritative
+// Prices here are for display only   checkout always recomputes authoritative
 // prices from the Product table (see lib/order-actions.js).
 // ---------------------------------------------------------------------------
 model Cart {
@@ -153,13 +153,13 @@ model Cart {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     Json     // [{ slug, name, icon, price, qty }]
   coupon    Json?    // { code, type, value, label } | null
-  wishlist  Json?    // [slug, slug, ...] — per-user saved items (signed-in only)
+  wishlist  Json?    // [slug, slug, ...]   per-user saved items (signed-in only)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 // ---------------------------------------------------------------------------
-// Address book — saved shipping/billing addresses, managed from
+// Address book   saved shipping/billing addresses, managed from
 // /dashboard/settings. Checkout prefills from the default one but still writes
 // its own snapshot onto Order: an address edited (or deleted) later must never
 // retroactively change where a past order was shipped. Same snapshot rationale
@@ -169,13 +169,13 @@ model Address {
   id        String   @id @default(cuid()) @map("_id")
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  label     String?  // "Home", "Office" — user-facing nickname
+  label     String?  // "Home", "Office"   user-facing nickname
   firstName String
   lastName  String
   company   String?
   street    String
   // Bangladesh administrative hierarchy, matching the fields Order stores and
-  // the option sets lib/bd-geo.js provides — the checkout form prefills these,
+  // the option sets lib/bd-geo.js provides   the checkout form prefills these,
   // so the two must agree exactly:
   //   state = Division (বিভাগ), city = District (জেলা), thana = Thana/Upazila
   city      String?
@@ -199,7 +199,7 @@ model Address {
 // ---------------------------------------------------------------------------
 // Name / username / avatar edits apply instantly. Email and phone are the
 // account-recovery channels, so changing either would let a hijacked session
-// lock the real owner out — those go through a review queue instead
+// lock the real owner out   those go through a review queue instead
 // (/dashboard/profile-requests, ADMIN + MODERATOR).
 enum ProfileChangeField {
   EMAIL
@@ -227,13 +227,13 @@ model ProfileChangeRequest {
   createdAt    DateTime            @default(now())
   reviewedAt   DateTime?
 
-  // At most one PENDING row per (user, field) — enforced in _actions.js, since
+  // At most one PENDING row per (user, field)   enforced in _actions.js, since
   // a partial/filtered unique index isn't expressible here.
   @@index([userId])
   @@index([status])
 }
 
-// Auth.js OAuth links — one row per (user, provider).
+// Auth.js OAuth links   one row per (user, provider).
 model Account {
   id                String  @id @default(cuid()) @map("_id")
   userId            String
@@ -264,7 +264,7 @@ model Session {
 }
 
 // NextAuth verification/reset tokens. On MongoDB every model needs an `@id`
-// mapped to `_id`, so this model — which had no id under MySQL — gains one.
+// mapped to `_id`, so this model   which had no id under MySQL   gains one.
 model VerificationToken {
   id         String   @id @default(cuid()) @map("_id")
   identifier String
@@ -275,20 +275,20 @@ model VerificationToken {
 }
 
 // ---------------------------------------------------------------------------
-// Store-wide configuration — a single row (id "store"). Currently holds the
+// Store-wide configuration   a single row (id "store"). Currently holds the
 // active display currency + the admin-managed exchange rates (BASE=BDT per unit
 // of each currency). Set only from the ADMIN settings page. See lib/currency.js
 // and lib/store-config.js.
 // ---------------------------------------------------------------------------
 model StoreConfig {
-  id        String   @id @map("_id")     // fixed "store" — enforces a single row
+  id        String   @id @map("_id")     // fixed "store"   enforces a single row
   currency  String   @default("BDT")     // active display currency code
-  rates     Json?                        // { USD: 121, AED: 33 } — BDT per 1 unit
+  rates     Json?                        // { USD: 121, AED: 33 }   BDT per 1 unit
   updatedAt DateTime @updatedAt
 }
 
 // ---------------------------------------------------------------------------
-// Promotional banners — admin-managed images shown in the storefront's promo
+// Promotional banners   admin-managed images shown in the storefront's promo
 // areas (top announcement, the ad below the product list, and hot deals). Each
 // banner is a clickable Canva-designed image that links to /deals/<slug>, a
 // landing page listing the products the promo applies to (matched by
@@ -297,7 +297,7 @@ model StoreConfig {
 enum BannerPlacement {
   TOP          // top announcement / discount banner
   BELOW_LIST   // advertisement below the product list
-  // LEGACY: the Hot Deals area no longer takes an uploaded image banner — it is
+  // LEGACY: the Hot Deals area no longer takes an uploaded image banner   it is
   // driven by ProductOffer rows instead (see below). The value is retained so
   // Prisma can still read banner rows created before that change; it is absent
   // from lib/banners PLACEMENTS, so the admin can no longer pick it and the
@@ -316,7 +316,7 @@ model PromoBanner {
   targetTag   String          // matches product.badge OR product.tags → applicable products
   active      Boolean         @default(true)
   sort        Int             @default(0)
-  createdById String          // actor id (no relation — kept simple, like an audit stamp)
+  createdById String          // actor id (no relation   kept simple, like an audit stamp)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
@@ -324,7 +324,7 @@ model PromoBanner {
 }
 
 // ---------------------------------------------------------------------------
-// Hot Deals offers — a timed percentage discount on ONE product.
+// Hot Deals offers   a timed percentage discount on ONE product.
 // ---------------------------------------------------------------------------
 // This is what fills the storefront's Hot Deals area: the admin searches the
 // catalogue, picks a product, sets a percentage and an end time. The offer with
@@ -332,7 +332,7 @@ model PromoBanner {
 // and when no offer is live the whole featured card is hidden.
 //
 // The discount is REAL, not decoration: while an offer is live it becomes the
-// product's selling price everywhere (shop grid, product page, cart, checkout —
+// product's selling price everywhere (shop grid, product page, cart, checkout  
 // see lib/offers.js + the shape() in lib/products-db.js, and the price recompute
 // in lib/order-actions.js). `Product.price` is never rewritten, so expiry needs
 // no cleanup job: once `endsAt` passes, the offer stops being live and the
@@ -346,11 +346,11 @@ model ProductOffer {
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   // Whole percent off the product's price, 1..90 (see OFFER_MAX_PERCENT).
   percentOff  Int
-  // The countdown target. Required — a Hot Deals offer without an end date has
+  // The countdown target. Required   a Hot Deals offer without an end date has
   // nothing to count down to and could never be sorted against its siblings.
   endsAt      DateTime
   active      Boolean  @default(true)
-  createdById String   // actor id (audit stamp, no relation — same as PromoBanner)
+  createdById String   // actor id (audit stamp, no relation   same as PromoBanner)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -381,7 +381,7 @@ model Product {
                         // the struck-through original.
   badge       String?   // e.g. "Sale 50%"
   rating      Float     @default(0)
-  // Inventory — `stock` is the source of truth for "is this in stock?"
+  // Inventory   `stock` is the source of truth for "is this in stock?"
   stock       Int       @default(0)
 
   // Merchandising / catalog metadata.
@@ -491,7 +491,7 @@ model Order {
 }
 
 // Append-only timeline of every status transition on an order. `Order.updatedAt`
-// can't serve this purpose — it moves on ANY write to the row — so each change
+// can't serve this purpose   it moves on ANY write to the row   so each change
 // gets its own row with the moment it happened and who made it. The order's
 // creation is itself recorded as the first event (PENDING), so the timeline is
 // complete without special-casing the first entry.
@@ -546,7 +546,7 @@ model Review {
 }
 
 // ---------------------------------------------------------------------------
-// Audit log — every privileged write logs here.
+// Audit log   every privileged write logs here.
 // Lets the admin see exactly who did what and when.
 // ---------------------------------------------------------------------------
 model AuditLog {

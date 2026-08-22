@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { useT } from "../../../../lib/i18n/LanguageProvider";
 import { createUserAction } from "../_actions";
 
-const EMPTY = { name: "", email: "", username: "", password: "", role: "MODERATOR" };
+const EMPTY = { name: "", email: "", username: "", password: "", role: "CUSTOMER" };
 
 export default function CreateUserForm() {
   const t = useT();
@@ -72,6 +72,7 @@ export default function CreateUserForm() {
         </label>
         <label className="text-xs text-gray-500">{t("dashboard.fieldRole")}
           <select value={form.role} onChange={set("role")} className="eco-input mt-1">
+            <option value="CUSTOMER">{t("dashboard.roleCustomer")}</option>
             <option value="MODERATOR">{t("dashboard.roleModerator")}</option>
             <option value="ADMIN">{t("dashboard.roleAdmin")}</option>
           </select>

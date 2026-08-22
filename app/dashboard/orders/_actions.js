@@ -1,12 +1,12 @@
 "use server";
 
-// app/dashboard/orders/_actions.js — ADMIN-only order mutations.
+// app/dashboard/orders/_actions.js   ADMIN-only order mutations.
 // Same shape as users/_actions.js: re-check role (defence in depth, even though
 // the page is already gated), Zod-validate, mutate + AuditLog, revalidate.
 
 // NOTE: this file may export ONLY async functions. A `export const FOO = [...]`
 // here compiles under `next build` (tree-shaken) but throws at render time in
-// dev — "A 'use server' file can only export async functions, found object" —
+// dev   "A 'use server' file can only export async functions, found object"
 // taking the whole orders page down with it. Shared constants belong in
 // lib/order-status.js.
 
@@ -16,10 +16,11 @@ import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
 import { ORDER_STATUSES, isTerminal } from "../../../lib/order-status";
 import { restockCancelledOrder } from "../../../lib/inventory";
+import { assertNotDemo } from "../../../lib/demo-accounts";
 
 const StatusSchema = z.object({
-  orderId: z.string().min(1),
-  status:  z.enum(ORDER_STATUSES),
+    orderId: z.string().min(1),
+    status: z.enum(ORDER_STATUSES),
 });
 
 // Change an order's fulfilment status. Writes three things atomically:
@@ -27,73 +28,107 @@ const StatusSchema = z.object({
 // reads), and the AuditLog row every privileged write owes.
 //
 // ADMIN and MODERATOR may both move orders through their lifecycle. The one
-// exception: a MODERATOR cannot CANCEL an order directly — that files an
+// exception: a MODERATOR cannot CANCEL an order directly   that files an
 // ApprovalRequest (ORDER_CANCEL) for an admin to approve instead.
 export async function updateOrderStatusAction(input) {
-  const actor = await requireRole(["ADMIN", "MODERATOR"], "/dashboard/orders");
+    const actor = await requireRole(
+        ["ADMIN", "MODERATOR"],
+        "/dashboard/orders",
+    );
+    const blocked = assertNotDemo(actor);
+    if (blocked) return blocked;
 
-  let data;
-  try { data = StatusSchema.parse(input); }
-  catch { return { ok: false, error: "Invalid input." }; }
-
-  const order = await prisma.order.findUnique({
-    where:  { id: data.orderId },
-    select: { id: true, status: true, number: true },
-  });
-  if (!order) return { ok: false, error: "Order not found." };
-  if (order.status === data.status) return { ok: true }; // no-op, no history noise
-
-  // A cancelled or delivered order is terminal — reopening it would let stock
-  // and payment state drift apart from the fulfilment state with no way back.
-  if (isTerminal(order.status)) {
-    return { ok: false, error: `Order is ${order.status.toLowerCase()} and can't be changed.` };
-  }
-
-  // Moderator cancellation → approval request, not an immediate cancel.
-  if (data.status === "CANCELLED" && actor.role !== "ADMIN") {
-    const existing = await prisma.approvalRequest.findFirst({
-      where: { type: "ORDER_CANCEL", entityId: order.id, status: "PENDING" },
-      select: { id: true },
-    });
-    if (!existing) {
-      await prisma.approvalRequest.create({
-        data: { type: "ORDER_CANCEL", requesterId: actor.id, entityId: order.id, entityLabel: order.number },
-      });
-      await prisma.auditLog.create({
-        data: { actorId: actor.id, action: "order.cancel.request", entity: "Order", entityId: order.id, metadata: { number: order.number } },
-      });
+    let data;
+    try {
+        data = StatusSchema.parse(input);
+    } catch {
+        return { ok: false, error: "Invalid input." };
     }
+
+    const order = await prisma.order.findUnique({
+        where: { id: data.orderId },
+        select: { id: true, status: true, number: true },
+    });
+    if (!order) return { ok: false, error: "Order not found." };
+    if (order.status === data.status) return { ok: true }; // no-op, no history noise
+
+    // A cancelled or delivered order is terminal   reopening it would let stock
+    // and payment state drift apart from the fulfilment state with no way back.
+    if (isTerminal(order.status)) {
+        return {
+            ok: false,
+            error: `Order is ${order.status.toLowerCase()} and can't be changed.`,
+        };
+    }
+
+    // Moderator cancellation → approval request, not an immediate cancel.
+    if (data.status === "CANCELLED" && actor.role !== "ADMIN") {
+        const existing = await prisma.approvalRequest.findFirst({
+            where: {
+                type: "ORDER_CANCEL",
+                entityId: order.id,
+                status: "PENDING",
+            },
+            select: { id: true },
+        });
+        if (!existing) {
+            await prisma.approvalRequest.create({
+                data: {
+                    type: "ORDER_CANCEL",
+                    requesterId: actor.id,
+                    entityId: order.id,
+                    entityLabel: order.number,
+                },
+            });
+            await prisma.auditLog.create({
+                data: {
+                    actorId: actor.id,
+                    action: "order.cancel.request",
+                    entity: "Order",
+                    entityId: order.id,
+                    metadata: { number: order.number },
+                },
+            });
+        }
+        revalidatePath("/dashboard/orders");
+        return { ok: true, requested: true };
+    }
+
+    await prisma.$transaction(async (tx) => {
+        await tx.order.update({
+            where: { id: data.orderId },
+            data: { status: data.status },
+        });
+        // Cancelling releases the stock checkout reserved for this order. Same
+        // transaction as the status flip so the two can never disagree. CANCELLED is
+        // terminal and the no-op check above returns early, so an order can only
+        // reach this branch once   no double-crediting.
+        if (data.status === "CANCELLED") {
+            await restockCancelledOrder(tx, data.orderId);
+        }
+        await tx.orderStatusEvent.create({
+            data: {
+                orderId: data.orderId,
+                status: data.status,
+                actorId: actor.id,
+            },
+        });
+        await tx.auditLog.create({
+            data: {
+                actorId: actor.id,
+                action: "order.status.update",
+                entity: "Order",
+                entityId: data.orderId,
+                metadata: {
+                    number: order.number,
+                    from: order.status,
+                    to: data.status,
+                },
+            },
+        });
+    });
+
     revalidatePath("/dashboard/orders");
-    return { ok: true, requested: true };
-  }
-
-  await prisma.$transaction(async (tx) => {
-    await tx.order.update({
-      where: { id: data.orderId },
-      data:  { status: data.status },
-    });
-    // Cancelling releases the stock checkout reserved for this order. Same
-    // transaction as the status flip so the two can never disagree. CANCELLED is
-    // terminal and the no-op check above returns early, so an order can only
-    // reach this branch once — no double-crediting.
-    if (data.status === "CANCELLED") {
-      await restockCancelledOrder(tx, data.orderId);
-    }
-    await tx.orderStatusEvent.create({
-      data: { orderId: data.orderId, status: data.status, actorId: actor.id },
-    });
-    await tx.auditLog.create({
-      data: {
-        actorId:  actor.id,
-        action:   "order.status.update",
-        entity:   "Order",
-        entityId: data.orderId,
-        metadata: { number: order.number, from: order.status, to: data.status },
-      },
-    });
-  });
-
-  revalidatePath("/dashboard/orders");
-  revalidatePath("/dashboard");
-  return { ok: true };
+    revalidatePath("/dashboard");
+    return { ok: true };
 }

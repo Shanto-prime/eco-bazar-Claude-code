@@ -46,3 +46,9 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Personal draft files   never committed. Includes the Hashnode blog draft.
+BLOG-POST.md
+NOTES.md
+DRAFT-*.md
+scratch/

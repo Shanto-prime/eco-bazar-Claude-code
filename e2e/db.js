@@ -1,4 +1,4 @@
-// e2e/db.js — direct DB access for test setup/teardown.
+// e2e/db.js   direct DB access for test setup/teardown.
 //
 // The mutating specs (order placement, currency switch) need to reset the
 // database afterwards so the suite is repeatable and doesn't leak state into
@@ -9,5 +9,5 @@
 import { PrismaClient } from "@prisma/client";
 
 export function newPrisma() {
-  return new PrismaClient();
+    return new PrismaClient();
 }

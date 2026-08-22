@@ -1,8 +1,8 @@
-// components/TopBar.jsx — site-wide top utility bar.
+// components/TopBar.jsx   site-wide top utility bar.
 // On small screens, hide the location selector to save space.
 //
 // Server component: reads the NextAuth session so the right-hand links reflect
-// auth state — Log In / Sign Up when signed out; the user avatar (which links
+// auth state   Log In / Sign Up when signed out; the user avatar (which links
 // to /dashboard and carries the greeting as a tooltip) + Log Out when signed
 // in. (This opts the layout into dynamic rendering, which is expected for a
 // session-aware navbar.)
@@ -19,62 +19,80 @@ import ThemeToggle from "./ThemeToggle";
 import UserAvatar from "./UserAvatar";
 
 export default async function TopBar() {
-  const session = await auth();
-  let user = session?.user || null;
-  const { t } = await getT();
+    const session = await auth();
+    let user = session?.user || null;
+    const { t } = await getT();
 
-  // The JWT only refreshes its cached name/avatar on a TTL (see lib/auth.js), so
-  // a just-changed photo/name in settings wouldn't show here until then. Read
-  // the current values straight from the DB so the avatar + greeting update
-  // immediately after a profile edit.
-  if (user?.id) {
-    const fresh = await prisma.user.findUnique({
-      where:  { id: user.id },
-      select: { image: true, name: true },
-    });
-    if (fresh) user = { ...user, image: fresh.image, name: fresh.name ?? user.name };
-  }
+    // The JWT only refreshes its cached name/avatar on a TTL (see lib/auth.js), so
+    // a just-changed photo/name in settings wouldn't show here until then. Read
+    // the current values straight from the DB so the avatar + greeting update
+    // immediately after a profile edit.
+    if (user?.id) {
+        const fresh = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { image: true, name: true },
+        });
+        if (fresh)
+            user = {
+                ...user,
+                image: fresh.image,
+                name: fresh.name ?? user.name,
+            };
+    }
 
-  return (
-    <div className="topbar">
-      <div className="max-w-[1320px] mx-auto px-4 sm:px-6 flex items-center justify-between">
-        <div className="hidden sm:flex items-center gap-2">
-          <i className="fa-solid fa-location-dot text-eco-green" />
-          <span className="truncate">{t("topbar.storeLocation")}</span>
-        </div>
-        <div className="sm:hidden">
-          <i className="fa-solid fa-location-dot text-eco-green mr-1" />
-          <span>{t("topbar.cityShort")}</span>
-        </div>
-        <div className="flex items-center gap-3 sm:gap-4">
-          <ThemeToggle />
+    return (
+        <div className="topbar">
+            <div className="max-w-[1320px] mx-auto px-4 sm:px-6 flex items-center justify-between">
+                <div className="hidden sm:flex items-center gap-2">
+                    <i className="fa-solid fa-location-dot text-eco-green" />
+                    <span className="truncate">
+                        {t("topbar.storeLocation")}
+                    </span>
+                </div>
+                <div className="sm:hidden">
+                    <i className="fa-solid fa-location-dot text-eco-green mr-1" />
+                    <span>{t("topbar.cityShort")}</span>
+                </div>
+                <div className="flex items-center gap-3 sm:gap-4">
+                    <ThemeToggle />
 
-          {user ? (
-            <>
-              {/* The avatar itself links to /dashboard — no separate button. */}
-              <UserAvatar
-                user={user}
-                href="/dashboard"
-                label={t("topbar.hi", { name: user.name || user.email })}
-              />
-              <form
-                action={async () => {
-                  "use server";
-                  await signOut({ redirectTo: "/" });
-                }}
-              >
-                <button type="submit" className="hover:text-white">{t("topbar.logout")}</button>
-              </form>
-            </>
-          ) : (
-            <>
-              <Link href="/login" className="hover:text-white">{t("topbar.login")}</Link>
-              <span>/</span>
-              <Link href="/register" className="hover:text-white">{t("topbar.signup")}</Link>
-            </>
-          )}
+                    {user ? (
+                        <>
+                            {/* The avatar itself links to /dashboard   no separate button. */}
+                            <UserAvatar
+                                user={user}
+                                href="/dashboard"
+                                label={t("topbar.hi", {
+                                    name: user.name || user.email,
+                                })}
+                            />
+                            <form
+                                action={async () => {
+                                    "use server";
+                                    await signOut({ redirectTo: "/" });
+                                }}
+                            >
+                                <button
+                                    type="submit"
+                                    className="hover:text-white"
+                                >
+                                    {t("topbar.logout")}
+                                </button>
+                            </form>
+                        </>
+                    ) : (
+                        <>
+                            <Link href="/login" className="hover:text-white">
+                                {t("topbar.login")}
+                            </Link>
+                            <span>/</span>
+                            <Link href="/register" className="hover:text-white">
+                                {t("topbar.signup")}
+                            </Link>
+                        </>
+                    )}
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }

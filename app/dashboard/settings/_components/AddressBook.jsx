@@ -1,6 +1,6 @@
 "use client";
 
-// Saved addresses. One is flagged default and prefills checkout — see
+// Saved addresses. One is flagged default and prefills checkout   see
 // app/checkout/page.js.
 //
 // Geography is the SAME Bangladesh hierarchy checkout uses (lib/bd-geo.js):
@@ -11,220 +11,390 @@
 //
 // This is where the edit + delete pattern genuinely applies: addresses are a
 // list, so each row carries Edit and Delete (and "Make default" when it isn't
-// the default). Deleting the last address is allowed — unlike email, an account
+// the default). Deleting the last address is allowed   unlike email, an account
 // can have zero addresses.
 
 import { useState, useTransition } from "react";
 import { useT } from "../../../../lib/i18n/LanguageProvider";
-import { divisions, districtsOf, thanasOf, geoLabel } from "../../../../lib/bd-geo";
 import {
-  createAddressAction, updateAddressAction,
-  deleteAddressAction, setDefaultAddressAction,
+    divisions,
+    districtsOf,
+    thanasOf,
+    geoLabel,
+} from "../../../../lib/bd-geo";
+import {
+    createAddressAction,
+    updateAddressAction,
+    deleteAddressAction,
+    setDefaultAddressAction,
 } from "../_actions";
 import { Card, Field, Notice, SubmitButton, GhostButton } from "./ui";
 
 const EMPTY = {
-  id: null, label: "", firstName: "", lastName: "", company: "",
-  street: "", state: "", city: "", thana: "", zip: "", phone: "", isDefault: false,
+    id: null,
+    label: "",
+    firstName: "",
+    lastName: "",
+    company: "",
+    street: "",
+    state: "",
+    city: "",
+    thana: "",
+    zip: "",
+    phone: "",
+    isDefault: false,
 };
 
 function AddressForm({ value, onCancel, onSubmit, pending, t }) {
-  const editing = !!value.id;
+    const editing = !!value.id;
 
-  // Controlled so choosing a division can reset the levels below it. Seeded from
-  // the address being edited, which is why the parent remounts on target change.
-  const [division, setDivision] = useState(value.state || "");
-  const [district, setDistrict] = useState(value.city  || "");
-  const [thana,    setThana]    = useState(value.thana || "");
+    // Controlled so choosing a division can reset the levels below it. Seeded from
+    // the address being edited, which is why the parent remounts on target change.
+    const [division, setDivision] = useState(value.state || "");
+    const [district, setDistrict] = useState(value.city || "");
+    const [thana, setThana] = useState(value.thana || "");
 
-  const districtOptions = division ? districtsOf(division) : [];
-  const thanaOptions    = division && district ? thanasOf(division, district) : [];
+    const districtOptions = division ? districtsOf(division) : [];
+    const thanaOptions =
+        division && district ? thanasOf(division, district) : [];
 
-  return (
-    <form onSubmit={onSubmit} className="rounded-xl border border-gray-200 p-4 mt-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label={t("settings.addrLabel")} hint={t("settings.addrLabelHint")}>
-          <input name="label" className="eco-input rounded-xl" defaultValue={value.label || ""} maxLength={40} />
-        </Field>
-        <Field label={t("settings.phone")}>
-          <input name="phone" type="tel" className="eco-input rounded-xl" defaultValue={value.phone || ""} maxLength={40} />
-        </Field>
-        <Field label={t("checkout.firstName")} required>
-          <input name="firstName" className="eco-input rounded-xl" defaultValue={value.firstName} required maxLength={80} />
-        </Field>
-        <Field label={t("checkout.lastName")} required>
-          <input name="lastName" className="eco-input rounded-xl" defaultValue={value.lastName} required maxLength={80} />
-        </Field>
-        <Field label={t("checkout.company")} wide>
-          <input name="company" className="eco-input rounded-xl" defaultValue={value.company || ""} maxLength={120} />
-        </Field>
-        <Field label={t("checkout.street")} required wide>
-          <input name="street" className="eco-input rounded-xl" defaultValue={value.street} required maxLength={200} />
-        </Field>
-        {/* Division → District → Thana. Changing a level clears the ones below
+    return (
+        <form
+            onSubmit={onSubmit}
+            className="rounded-xl border border-gray-200 p-4 mt-3"
+        >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field
+                    label={t("settings.addrLabel")}
+                    hint={t("settings.addrLabelHint")}
+                >
+                    <input
+                        name="label"
+                        className="eco-input rounded-xl"
+                        defaultValue={value.label || ""}
+                        maxLength={40}
+                    />
+                </Field>
+                <Field label={t("settings.phone")}>
+                    <input
+                        name="phone"
+                        type="tel"
+                        className="eco-input rounded-xl"
+                        defaultValue={value.phone || ""}
+                        maxLength={40}
+                    />
+                </Field>
+                <Field label={t("checkout.firstName")} required>
+                    <input
+                        name="firstName"
+                        className="eco-input rounded-xl"
+                        defaultValue={value.firstName}
+                        required
+                        maxLength={80}
+                    />
+                </Field>
+                <Field label={t("checkout.lastName")} required>
+                    <input
+                        name="lastName"
+                        className="eco-input rounded-xl"
+                        defaultValue={value.lastName}
+                        required
+                        maxLength={80}
+                    />
+                </Field>
+                <Field label={t("checkout.company")} wide>
+                    <input
+                        name="company"
+                        className="eco-input rounded-xl"
+                        defaultValue={value.company || ""}
+                        maxLength={120}
+                    />
+                </Field>
+                <Field label={t("checkout.street")} required wide>
+                    <input
+                        name="street"
+                        className="eco-input rounded-xl"
+                        defaultValue={value.street}
+                        required
+                        maxLength={200}
+                    />
+                </Field>
+                {/* Division → District → Thana. Changing a level clears the ones below
             it, so a stale child value can never be submitted with a new parent
             (the server action rejects that combination anyway). */}
-        <Field label={t("checkout.division")}>
-          <select
-            name="state" className="eco-input rounded-xl"
-            value={division}
-            onChange={(e) => { setDivision(e.target.value); setDistrict(""); setThana(""); }}
-          >
-            <option value="">{t("checkout.selectDivision")}</option>
-            {divisions().map((d) => <option key={d.name} value={d.name}>{geoLabel(d)}</option>)}
-          </select>
-        </Field>
-        <Field label={t("checkout.district")}>
-          <select
-            name="city" className="eco-input rounded-xl"
-            value={district} disabled={!division}
-            onChange={(e) => { setDistrict(e.target.value); setThana(""); }}
-          >
-            <option value="">{division ? t("checkout.selectDistrict") : t("checkout.selectDistrictFirst")}</option>
-            {districtOptions.map((d) => <option key={d.name} value={d.name}>{geoLabel(d)}</option>)}
-          </select>
-        </Field>
-        <Field label={t("checkout.thana")}>
-          <select
-            name="thana" className="eco-input rounded-xl"
-            value={thana} disabled={!district}
-            onChange={(e) => setThana(e.target.value)}
-          >
-            <option value="">{district ? t("checkout.selectThana") : t("checkout.selectThanaFirst")}</option>
-            {thanaOptions.map((tItem) => <option key={tItem.name} value={tItem.name}>{geoLabel(tItem)}</option>)}
-          </select>
-        </Field>
-        <Field label={t("checkout.zip")}>
-          <input name="zip" className="eco-input rounded-xl" defaultValue={value.zip || ""} maxLength={20} />
-        </Field>
-      </div>
+                <Field label={t("checkout.division")}>
+                    <select
+                        name="state"
+                        className="eco-input rounded-xl"
+                        value={division}
+                        onChange={(e) => {
+                            setDivision(e.target.value);
+                            setDistrict("");
+                            setThana("");
+                        }}
+                    >
+                        <option value="">{t("checkout.selectDivision")}</option>
+                        {divisions().map((d) => (
+                            <option key={d.name} value={d.name}>
+                                {geoLabel(d)}
+                            </option>
+                        ))}
+                    </select>
+                </Field>
+                <Field label={t("checkout.district")}>
+                    <select
+                        name="city"
+                        className="eco-input rounded-xl"
+                        value={district}
+                        disabled={!division}
+                        onChange={(e) => {
+                            setDistrict(e.target.value);
+                            setThana("");
+                        }}
+                    >
+                        <option value="">
+                            {division
+                                ? t("checkout.selectDistrict")
+                                : t("checkout.selectDistrictFirst")}
+                        </option>
+                        {districtOptions.map((d) => (
+                            <option key={d.name} value={d.name}>
+                                {geoLabel(d)}
+                            </option>
+                        ))}
+                    </select>
+                </Field>
+                <Field label={t("checkout.thana")}>
+                    <select
+                        name="thana"
+                        className="eco-input rounded-xl"
+                        value={thana}
+                        disabled={!district}
+                        onChange={(e) => setThana(e.target.value)}
+                    >
+                        <option value="">
+                            {district
+                                ? t("checkout.selectThana")
+                                : t("checkout.selectThanaFirst")}
+                        </option>
+                        {thanaOptions.map((tItem) => (
+                            <option key={tItem.name} value={tItem.name}>
+                                {geoLabel(tItem)}
+                            </option>
+                        ))}
+                    </select>
+                </Field>
+                <Field label={t("checkout.zip")}>
+                    <input
+                        name="zip"
+                        className="eco-input rounded-xl"
+                        defaultValue={value.zip || ""}
+                        maxLength={20}
+                    />
+                </Field>
+            </div>
 
-      <label className="flex items-center gap-2 text-sm mt-4 cursor-pointer">
-        <input type="checkbox" name="isDefault" className="eco-check" defaultChecked={value.isDefault} />
-        {t("settings.makeDefault")}
-      </label>
+            <label className="flex items-center gap-2 text-sm mt-4 cursor-pointer">
+                <input
+                    type="checkbox"
+                    name="isDefault"
+                    className="eco-check"
+                    defaultChecked={value.isDefault}
+                />
+                {t("settings.makeDefault")}
+            </label>
 
-      <div className="flex flex-wrap gap-2 mt-4">
-        <SubmitButton pending={pending}>
-          {editing ? t("settings.saveAddress") : t("settings.addAddress")}
-        </SubmitButton>
-        <GhostButton onClick={onCancel}>{t("settings.cancel")}</GhostButton>
-      </div>
-    </form>
-  );
+            <div className="flex flex-wrap gap-2 mt-4">
+                <SubmitButton pending={pending}>
+                    {editing
+                        ? t("settings.saveAddress")
+                        : t("settings.addAddress")}
+                </SubmitButton>
+                <GhostButton onClick={onCancel}>
+                    {t("settings.cancel")}
+                </GhostButton>
+            </div>
+        </form>
+    );
 }
 
 export default function AddressBook({ addresses }) {
-  const t = useT();
-  const [editing, setEditing] = useState(null); // null | EMPTY (new) | address (edit)
-  const [result, setResult]   = useState(null);
-  const [pending, start]      = useTransition();
+    const t = useT();
+    const [editing, setEditing] = useState(null); // null | EMPTY (new) | address (edit)
+    const [result, setResult] = useState(null);
+    const [pending, start] = useTransition();
 
-  const run = (fn) => start(async () => {
-    const res = await fn();
-    setResult(res);
-    if (res.ok) setEditing(null);
-  });
+    const run = (fn) =>
+        start(async () => {
+            const res = await fn();
+            setResult(res);
+            if (res.ok) setEditing(null);
+        });
 
-  const onSubmit = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    run(() => (editing.id ? updateAddressAction(editing.id, formData) : createAddressAction(formData)));
-  };
+    const onSubmit = (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        run(() =>
+            editing.id
+                ? updateAddressAction(editing.id, formData)
+                : createAddressAction(formData),
+        );
+    };
 
-  const empty = addresses.length === 0;
+    const empty = addresses.length === 0;
 
-  return (
-    <Card id="addresses" title={t("settings.addresses")} description={t("settings.addressesHelp")}>
-      {empty && !editing ? (
-        <div className="rounded-xl border-2 border-dashed border-gray-200 p-8 text-center">
-          <span className="mx-auto inline-flex items-center justify-center w-11 h-11 rounded-full bg-eco-green/10 text-eco-green">
-            <i className="fa-solid fa-location-dot" />
-          </span>
-          <p className="mt-3 text-sm font-medium">{t("settings.noAddresses")}</p>
-          <p className="mt-0.5 text-xs text-gray-400">{t("settings.noAddressesHint")}</p>
-          <GhostButton onClick={() => { setResult(null); setEditing(EMPTY); }} className="mt-4 text-eco-green">
-            <i className="fa-solid fa-plus text-xs" />{t("settings.addAddress")}
-          </GhostButton>
-        </div>
-      ) : (
-        <>
-          <ul className="space-y-3">
-            {addresses.map((a) => (
-              <li key={a.id} className="rounded-xl border border-gray-200 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium">{a.firstName} {a.lastName}</span>
-                      {a.label && <span className="text-xs text-gray-500">({a.label})</span>}
-                      {a.isDefault && (
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-eco-green text-white">
-                          {t("settings.default")}
-                        </span>
-                      )}
-                    </div>
-                    {/* Narrowest → widest, the order a Bangladeshi address reads in. */}
-                    <p className="text-sm text-gray-500 mt-1">
-                      {[a.street, a.thana, a.city, a.state, a.zip, a.country].filter(Boolean).join(", ")}
+    return (
+        <Card
+            id="addresses"
+            title={t("settings.addresses")}
+            description={t("settings.addressesHelp")}
+        >
+            {empty && !editing ? (
+                <div className="rounded-xl border-2 border-dashed border-gray-200 p-8 text-center">
+                    <span className="mx-auto inline-flex items-center justify-center w-11 h-11 rounded-full bg-eco-green/10 text-eco-green">
+                        <i className="fa-solid fa-location-dot" />
+                    </span>
+                    <p className="mt-3 text-sm font-medium">
+                        {t("settings.noAddresses")}
                     </p>
-                    {a.phone && <p className="text-sm text-gray-500">{a.phone}</p>}
-                  </div>
-                  <div className="flex items-center gap-3 text-xs shrink-0">
-                    {!a.isDefault && (
-                      <button
-                        type="button"
-                        onClick={() => run(() => setDefaultAddressAction(a.id))}
-                        disabled={pending}
-                        className="text-eco-green hover:underline disabled:opacity-50"
-                      >
-                        {t("settings.makeDefault")}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => { setResult(null); setEditing(a); }}
-                      className="text-gray-500 hover:underline"
+                    <p className="mt-0.5 text-xs text-gray-400">
+                        {t("settings.noAddressesHint")}
+                    </p>
+                    <GhostButton
+                        onClick={() => {
+                            setResult(null);
+                            setEditing(EMPTY);
+                        }}
+                        className="mt-4 text-eco-green"
                     >
-                      {t("settings.edit")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm(t("settings.confirmDeleteAddress"))) run(() => deleteAddressAction(a.id));
-                      }}
-                      disabled={pending}
-                      className="text-red-500 hover:underline disabled:opacity-50"
-                    >
-                      {t("settings.delete")}
-                    </button>
-                  </div>
+                        <i className="fa-solid fa-plus text-xs" />
+                        {t("settings.addAddress")}
+                    </GhostButton>
                 </div>
-              </li>
-            ))}
-          </ul>
+            ) : (
+                <>
+                    <ul className="space-y-3">
+                        {addresses.map((a) => (
+                            <li
+                                key={a.id}
+                                className="rounded-xl border border-gray-200 p-4"
+                            >
+                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-medium">
+                                                {a.firstName} {a.lastName}
+                                            </span>
+                                            {a.label && (
+                                                <span className="text-xs text-gray-500">
+                                                    ({a.label})
+                                                </span>
+                                            )}
+                                            {a.isDefault && (
+                                                <span className="text-[11px] px-2 py-0.5 rounded-full bg-eco-green text-white">
+                                                    {t("settings.default")}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {/* Narrowest → widest, the order a Bangladeshi address reads in. */}
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            {[
+                                                a.street,
+                                                a.thana,
+                                                a.city,
+                                                a.state,
+                                                a.zip,
+                                                a.country,
+                                            ]
+                                                .filter(Boolean)
+                                                .join(", ")}
+                                        </p>
+                                        {a.phone && (
+                                            <p className="text-sm text-gray-500">
+                                                {a.phone}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs shrink-0">
+                                        {!a.isDefault && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    run(() =>
+                                                        setDefaultAddressAction(
+                                                            a.id,
+                                                        ),
+                                                    )
+                                                }
+                                                disabled={pending}
+                                                className="text-eco-green hover:underline disabled:opacity-50"
+                                            >
+                                                {t("settings.makeDefault")}
+                                            </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setResult(null);
+                                                setEditing(a);
+                                            }}
+                                            className="text-gray-500 hover:underline"
+                                        >
+                                            {t("settings.edit")}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (
+                                                    confirm(
+                                                        t(
+                                                            "settings.confirmDeleteAddress",
+                                                        ),
+                                                    )
+                                                )
+                                                    run(() =>
+                                                        deleteAddressAction(
+                                                            a.id,
+                                                        ),
+                                                    );
+                                            }}
+                                            disabled={pending}
+                                            className="text-red-500 hover:underline disabled:opacity-50"
+                                        >
+                                            {t("settings.delete")}
+                                        </button>
+                                    </div>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
 
-          {editing ? (
-            <AddressForm
-              // Remount on target change so defaultValue picks up the new address.
-              key={editing.id || "new"}
-              value={editing}
-              onCancel={() => setEditing(null)}
-              onSubmit={onSubmit}
-              pending={pending}
-              t={t}
-            />
-          ) : (
-            <GhostButton
-              onClick={() => { setResult(null); setEditing(EMPTY); }}
-              className="mt-3 text-eco-green"
-            >
-              <i className="fa-solid fa-plus text-xs" />{t("settings.addAddress")}
-            </GhostButton>
-          )}
-        </>
-      )}
+                    {editing ? (
+                        <AddressForm
+                            // Remount on target change so defaultValue picks up the new address.
+                            key={editing.id || "new"}
+                            value={editing}
+                            onCancel={() => setEditing(null)}
+                            onSubmit={onSubmit}
+                            pending={pending}
+                            t={t}
+                        />
+                    ) : (
+                        <GhostButton
+                            onClick={() => {
+                                setResult(null);
+                                setEditing(EMPTY);
+                            }}
+                            className="mt-3 text-eco-green"
+                        >
+                            <i className="fa-solid fa-plus text-xs" />
+                            {t("settings.addAddress")}
+                        </GhostButton>
+                    )}
+                </>
+            )}
 
-      <Notice result={result} />
-    </Card>
-  );
+            <Notice result={result} />
+        </Card>
+    );
 }

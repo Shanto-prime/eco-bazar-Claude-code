@@ -15,7 +15,13 @@ export default function LoginForm({ hasGoogle, hasFacebook }) {
     const router = useRouter();
     const sp = useSearchParams();
     const t = useT();
-    const next = sp.get("next") || "/dashboard";
+    // Default to home when no ?next= was passed. Middleware sets `?next=<path>`
+    // when it redirects a specific protected page (e.g. /wishlist), so that
+    // flow still returns the user to their intended destination; only "walked
+    // to /login from a nav link" defaults to home. Sending everyone to
+    // /dashboard by default sent every signed-in customer into the dashboard
+    // router even when they were browsing the storefront.
+    const next = sp.get("next") || "/";
 
     const okNotice =
         sp.get("reset") === "ok"
@@ -49,22 +55,21 @@ export default function LoginForm({ hasGoogle, hasFacebook }) {
         router.refresh();
     };
 
-    const isDev = process.env.NODE_ENV !== "production";
-
-    // ── DEV TEST HELPERS   remove before deployment ──────────────────────────
-    // Quick-fill buttons for the seeded test accounts. Clicking one just fills
-    // the username + password fields; you still press Login to sign in.
-    const TEST_ACCOUNTS = [
-        { label: "Admin",     username: "test-user", password: "test-user" },
-        { label: "Moderator", username: "tester",    password: "tester123" },
-        { label: "Customer",  username: "customer",  password: "customer"  },
+    // Public demo-account quick-fill. These accounts exist in every
+    // environment (local + VPS) and are read-only: every mutating server
+    // action returns a "this is a demo account" error via
+    // lib/demo-accounts.js. Safe to expose to any visitor.
+    const DEMO_ACCOUNTS = [
+        { label: "Admin",       username: "test-admin", password: "test-admin" },
+        { label: "Moderator",   username: "mod",        password: "moderator"  },
+        { label: "Customer",    username: "customer",   password: "customer"   },
+        { label: "Customer 2",  username: "customer-2", password: "customer-2" },
     ];
     const fillAccount = (acc) => {
         setUsername(acc.username);
         setPassword(acc.password);
         setError(null);
     };
-    // ─────────────────────────────────────────────────────────────────────────
 
     return (
         <section className="min-h-[70vh] grid place-items-center px-4 sm:px-6 py-10 sm:py-16 bg-eco-bg">
@@ -83,30 +88,27 @@ export default function LoginForm({ hasGoogle, hasFacebook }) {
                     {t("auth.loginSub")}
                 </p>
 
-                {/* DEV TEST HELPERS   remove before deployment. */}
-                {isDev && (
-                    <div className="mb-4 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-4 py-3">
-                        <div className="font-semibold mb-2">
-                            {t("auth.devAccounts")}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            {TEST_ACCOUNTS.map((acc) => (
-                                <button
-                                    key={acc.username}
-                                    type="button"
-                                    onClick={() => fillAccount(acc)}
-                                    className="py-2 rounded-md bg-eco-green text-white font-medium hover:bg-emerald-600 transition min-h-[36px]"
-                                >
-                                    {acc.label}
-                                </button>
-                            ))}
-                        </div>
-                        <p className="mt-2 text-[11px] text-emerald-700">
-                            Click to auto-fill, then press{" "}
-                            {t("auth.loginHeading")}.
-                        </p>
+                <div className="mb-4 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-4 py-3">
+                    <div className="font-semibold mb-2">
+                        {t("auth.demoAccounts")}
                     </div>
-                )}
+                    <div className="grid grid-cols-2 gap-2">
+                        {DEMO_ACCOUNTS.map((acc) => (
+                            <button
+                                key={acc.username}
+                                type="button"
+                                onClick={() => fillAccount(acc)}
+                                className="py-2 rounded-md bg-eco-green text-white font-medium hover:bg-emerald-600 transition min-h-[36px]"
+                            >
+                                {acc.label}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="mt-2 text-[11px] text-emerald-700">
+                        Click to auto-fill, then press{" "}
+                        {t("auth.loginHeading")}.
+                    </p>
+                </div>
 
                 {okNotice && (
                     <div className="mb-4 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-4 py-3">

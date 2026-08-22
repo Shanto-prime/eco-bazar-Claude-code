@@ -16,6 +16,7 @@ import { prisma } from "../../../lib/prisma";
 import { requireAuth } from "../../../lib/auth-helpers";
 import { canRequestReturn } from "../../../lib/order-return";
 import { restockCancelledOrder } from "../../../lib/inventory";
+import { assertNotDemo } from "../../../lib/demo-accounts";
 
 const Schema = z.object({ orderId: z.string().min(1) });
 
@@ -32,6 +33,8 @@ const ReviewSchema = z.object({
 
 export async function requestReturnAction(input) {
     const user = await requireAuth("/dashboard/orders");
+    const blocked = assertNotDemo(user);
+    if (blocked) return blocked;
 
     let data;
     try {
@@ -120,6 +123,8 @@ export async function requestReturnAction(input) {
 // Auto-approved for now   there's no moderation UI wired up yet.
 export async function submitReviewAction(input) {
     const user = await requireAuth("/dashboard/orders");
+    const blocked = assertNotDemo(user);
+    if (blocked) return blocked;
 
     let data;
     try {

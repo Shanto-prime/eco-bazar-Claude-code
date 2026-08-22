@@ -10,6 +10,7 @@ import { z } from "zod";
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
 import { PLACEMENT_KEYS, dealsHref } from "../../../lib/banners";
+import { assertNotDemo } from "../../../lib/demo-accounts";
 
 const ok = (message) => ({ ok: true, message });
 const fail = (error) => ({ ok: false, error });
@@ -93,6 +94,8 @@ function revalidate(slug) {
 
 export async function createBannerAction(formData) {
     const admin = await requireRole("ADMIN", "/dashboard/banners");
+    const blocked = assertNotDemo(admin);
+    if (blocked) return blocked;
 
     let d;
     try {
@@ -126,6 +129,8 @@ export async function createBannerAction(formData) {
 
 export async function updateBannerAction(bannerId, formData) {
     const admin = await requireRole("ADMIN", "/dashboard/banners");
+    const blocked = assertNotDemo(admin);
+    if (blocked) return blocked;
 
     const existing = await prisma.promoBanner.findUnique({
         where: { id: String(bannerId) },
@@ -166,6 +171,8 @@ export async function updateBannerAction(bannerId, formData) {
 
 export async function deleteBannerAction(bannerId) {
     const admin = await requireRole("ADMIN", "/dashboard/banners");
+    const blocked = assertNotDemo(admin);
+    if (blocked) return blocked;
 
     const existing = await prisma.promoBanner.findUnique({
         where: { id: String(bannerId) },
@@ -190,6 +197,8 @@ export async function deleteBannerAction(bannerId) {
 // Quick toggle from the list without opening the form.
 export async function toggleBannerAction(bannerId) {
     const admin = await requireRole("ADMIN", "/dashboard/banners");
+    const blocked = assertNotDemo(admin);
+    if (blocked) return blocked;
     const existing = await prisma.promoBanner.findUnique({
         where: { id: String(bannerId) },
         select: { id: true, active: true, slug: true },

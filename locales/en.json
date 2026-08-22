@@ -417,7 +417,7 @@
         "noAccount": "Don't have an account?",
         "createOne": "Create one",
         "brand": "Ecobazar",
-        "devAccounts": "Dev test accounts (username / password):",
+        "demoAccounts": "Demo accounts — click to auto-fill (read-only, no edits saved):",
         "passwordUpdated": "Your password was updated   you can log in now.",
         "emailVerified": "Email verified   thanks!",
         "verifyInvalid": "That verification link was invalid or has expired.",

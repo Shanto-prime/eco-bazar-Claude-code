@@ -20,7 +20,8 @@ export default function RegisterForm() {
     const router = useRouter();
     const sp = useSearchParams();
     const t = useT();
-    const next = sp.get("next") || "/dashboard";
+    // Default to home when no ?next= was passed — same rationale as LoginForm.
+    const next = sp.get("next") || "/";
 
     const [form, setForm] = useState({
         name: "",

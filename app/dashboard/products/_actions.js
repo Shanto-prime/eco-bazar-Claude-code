@@ -10,6 +10,7 @@ import { z } from "zod";
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
 import { toCents } from "../../../lib/money";
+import { assertNotDemo, DEMO_BLOCK_MESSAGE } from "../../../lib/demo-accounts";
 
 const ProductSchema = z.object({
     slug: z
@@ -87,6 +88,8 @@ export async function createProductAction(formData) {
         ["ADMIN", "MODERATOR"],
         "/dashboard/products/new",
     );
+    const blocked = assertNotDemo(user);
+    if (blocked) throw new Error(DEMO_BLOCK_MESSAGE);
     const data = parseProduct(formData);
     await assertSkuUnique(data.sku);
 
@@ -130,6 +133,8 @@ export async function updateProductAction(productId, formData) {
         ["ADMIN", "MODERATOR"],
         `/dashboard/products/${productId}/edit`,
     );
+    const blocked = assertNotDemo(user);
+    if (blocked) throw new Error(DEMO_BLOCK_MESSAGE);
     const existing = await prisma.product.findUnique({
         where: { id: productId },
         include: { images: true },
@@ -198,6 +203,8 @@ export async function deleteProductAction(productId) {
         ["ADMIN", "MODERATOR"],
         `/dashboard/products/${productId}/edit`,
     );
+    const blocked = assertNotDemo(user);
+    if (blocked) throw new Error(DEMO_BLOCK_MESSAGE);
     const existing = await prisma.product.findUnique({
         where: { id: productId },
     });

@@ -20,6 +20,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "../../../lib/prisma";
 import { requireAuth, requireRole } from "../../../lib/auth-helpers";
+import { assertNotDemo } from "../../../lib/demo-accounts";
 import { BCRYPT_COST } from "../../../lib/password";
 import { isSafeImageUrl } from "../../../lib/upload";
 import {
@@ -77,6 +78,8 @@ const ProfileSchema = z.object({
 
 export async function updateProfileAction(formData) {
     const session = await requireAuth("/dashboard/settings");
+    const _demoBlocked = assertNotDemo(session);
+    if (_demoBlocked) return _demoBlocked;
 
     let data;
     try {
@@ -120,6 +123,8 @@ export async function updateProfileAction(formData) {
 // full URL (uploaded avatars are relative paths like /uploads/avatars/…).
 export async function updateAvatarAction(imageUrl) {
     const session = await requireAuth("/dashboard/settings");
+    const _demoBlocked = assertNotDemo(session);
+    if (_demoBlocked) return _demoBlocked;
     const raw = typeof imageUrl === "string" ? imageUrl.trim() : "";
 
     // "" clears the avatar; anything else must pass the same check the profile form
@@ -148,6 +153,8 @@ const ContactSchema = z.object({
 
 export async function requestContactChangeAction(formData) {
     const session = await requireAuth("/dashboard/settings");
+    const _demoBlocked = assertNotDemo(session);
+    if (_demoBlocked) return _demoBlocked;
 
     let data;
     try {
@@ -286,6 +293,8 @@ export async function requestContactChangeAction(formData) {
 
 export async function cancelContactChangeAction(requestId) {
     const session = await requireAuth("/dashboard/settings");
+    const _demoBlocked = assertNotDemo(session);
+    if (_demoBlocked) return _demoBlocked;
 
     // Scope the update by userId as well as id: a guessed request id from another
     // account matches zero rows instead of cancelling someone else's request.
@@ -319,6 +328,8 @@ const PasswordSchema = z
 
 export async function changePasswordAction(formData) {
     const session = await requireAuth("/dashboard/settings");
+    const _demoBlocked = assertNotDemo(session);
+    if (_demoBlocked) return _demoBlocked;
 
     let data;
     try {
@@ -499,6 +510,8 @@ async function clearOtherDefaults(tx, userId, exceptId = null) {
 
 export async function createAddressAction(formData) {
     const session = await requireAuth("/dashboard/settings");
+    const _demoBlocked = assertNotDemo(session);
+    if (_demoBlocked) return _demoBlocked;
 
     let data;
     try {
@@ -526,6 +539,8 @@ export async function createAddressAction(formData) {
 
 export async function updateAddressAction(addressId, formData) {
     const session = await requireAuth("/dashboard/settings");
+    const _demoBlocked = assertNotDemo(session);
+    if (_demoBlocked) return _demoBlocked;
 
     let data;
     try {
@@ -558,6 +573,8 @@ export async function updateAddressAction(addressId, formData) {
 
 export async function deleteAddressAction(addressId) {
     const session = await requireAuth("/dashboard/settings");
+    const _demoBlocked = assertNotDemo(session);
+    if (_demoBlocked) return _demoBlocked;
 
     const existing = await prisma.address.findFirst({
         where: { id: String(addressId), userId: session.id },
@@ -589,6 +606,8 @@ export async function deleteAddressAction(addressId) {
 
 export async function setDefaultAddressAction(addressId) {
     const session = await requireAuth("/dashboard/settings");
+    const _demoBlocked = assertNotDemo(session);
+    if (_demoBlocked) return _demoBlocked;
 
     const existing = await prisma.address.findFirst({
         where: { id: String(addressId), userId: session.id },
@@ -616,6 +635,8 @@ export async function setDefaultAddressAction(addressId) {
 // ---------------------------------------------------------------------------
 export async function updateStoreCurrencyAction(formData) {
     const admin = await requireRole("ADMIN", "/dashboard/settings");
+    const _demoBlocked = assertNotDemo(admin);
+    if (_demoBlocked) return _demoBlocked;
 
     const currency = String(formData.get("currency") || "").toUpperCase();
     if (!isValidCurrency(currency)) return fail("Unknown currency.");

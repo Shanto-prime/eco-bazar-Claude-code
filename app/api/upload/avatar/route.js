@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../../auth";
 import { validateImageUpload } from "../../../../lib/upload";
 import { storeImage } from "../../../../lib/upload-store";
+import { isDemoAccount, DEMO_BLOCK_MESSAGE } from "../../../../lib/demo-accounts";
 
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB   avatars render at 28px
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -26,6 +27,9 @@ export async function POST(req) {
             { error: "Sign in required" },
             { status: 401 },
         );
+    }
+    if (isDemoAccount(session.user)) {
+        return NextResponse.json({ error: DEMO_BLOCK_MESSAGE }, { status: 403 });
     }
 
     const form = await req.formData();

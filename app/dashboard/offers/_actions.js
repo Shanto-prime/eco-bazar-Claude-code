@@ -12,6 +12,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
+import { assertNotDemo } from "../../../lib/demo-accounts";
 import { OFFER_MIN_PERCENT, OFFER_MAX_PERCENT } from "../../../lib/offers";
 
 const ok = (message) => ({ ok: true, message });
@@ -88,6 +89,8 @@ function revalidate(productSlug) {
 
 export async function createOfferAction(formData) {
     const admin = await requireRole("ADMIN", "/dashboard/banners");
+    const blocked = assertNotDemo(admin);
+    if (blocked) return blocked;
 
     let d;
     try {
@@ -140,6 +143,8 @@ export async function createOfferAction(formData) {
 
 export async function updateOfferAction(offerId, formData) {
     const admin = await requireRole("ADMIN", "/dashboard/banners");
+    const blocked = assertNotDemo(admin);
+    if (blocked) return blocked;
 
     const existing = await prisma.productOffer.findUnique({
         where: { id: String(offerId) },
@@ -202,6 +207,8 @@ export async function updateOfferAction(offerId, formData) {
 
 export async function deleteOfferAction(offerId) {
     const admin = await requireRole("ADMIN", "/dashboard/banners");
+    const blocked = assertNotDemo(admin);
+    if (blocked) return blocked;
 
     const existing = await prisma.productOffer.findUnique({
         where: { id: String(offerId) },
@@ -230,6 +237,8 @@ export async function deleteOfferAction(offerId) {
 // Quick on/off from the list without opening the form.
 export async function toggleOfferAction(offerId) {
     const admin = await requireRole("ADMIN", "/dashboard/banners");
+    const blocked = assertNotDemo(admin);
+    if (blocked) return blocked;
 
     const existing = await prisma.productOffer.findUnique({
         where: { id: String(offerId) },

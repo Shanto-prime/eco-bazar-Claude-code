@@ -36,17 +36,55 @@ migration history for this connector. Always use `npm run db:push`.
 
 ### Test accounts
 
-Sign in at `/login` with **either the username or the email**, plus the password:
+Sign in at `/login` with **either the username or the email**, plus the password. The login form
+renders quick-fill buttons for these four accounts so you don't have to type them:
 
-| Name | Email |Username | Password | Role
-| test-admin | `test-admin@shanto.dev` | `test-admin` | `test-admin` | ADMIN
-| test-mod | `test-mod@dhanto.dev` | `mod` | `moderator` | MODERATOR
-| customer-1 | `customer@shanto.dev` | `customer` | `customer` | CUSTOMER
-| customer-2 | `customer0@shanto.dev` | `customer0` | `customer` | CUSTOMER
+| Name | Email | Username | Password | Role |
+|---|---|---|---|---|
+| test-admin | `test-admin@shanto.dev` | `test-admin` | `test-admin` | ADMIN |
+| test-mod | `test-mod@dhanto.dev` | `mod` | `moderator` | MODERATOR |
+| customer | `customer@shanto.dev` | `customer` | `customer` | CUSTOMER |
+| customer-2 | `customer2@shanto.dev` | `customer-2` | `customer-2` | CUSTOMER |
 
 `test-admin` is seeded as the **super admin** (`User.isSuperAdmin`) and can never be
-demoted or deleted by anyone. Outside production the login form renders
-quick-fill buttons for these accounts so you don't have to type them.
+demoted or deleted by anyone.
+
+**All four of these are DEMO accounts** — they can browse, sign in, view the dashboard, and place
+orders, but every mutating action (edit product, change order status, approve/reject request,
+upload image, change profile, submit review, request return, …) is blocked with a friendly
+`"This is a demo account. Editing is disabled — sign up for your own account to try changes."`
+error. Newly-signed-up users, and any user created by super-admin from `/dashboard/users`, are
+**not** demo — they can do everything their role normally allows. The demo whitelist is a fixed
+set of emails in `lib/demo-accounts.js` (`DEMO_EMAILS`); adding another demo account = adding its
+email to that set.
+
+### Real super admin (private — not in the four demo accounts)
+
+The four demo accounts above have `isSuperAdmin=false` and can't mutate anything, so somebody has
+to actually run the store. That person is **the real super admin**, provisioned from env vars
+so the credentials never enter the repo:
+
+```
+# .env.local  (gitignored — never committed)
+SEED_ADMIN_EMAIL="you@yourdomain.example"
+SEED_ADMIN_PASSWORD="<a-long-strong-password>"
+SEED_ADMIN_USERNAME="youradmin"    # optional — defaults to the email's local part
+SEED_ADMIN_NAME="Your Name"        # optional — defaults to "Super Admin"
+```
+
+Then `npm run db:seed` upserts that user as ADMIN with `isSuperAdmin=true`, demotes any prior
+super admin so exactly one exists, and refuses to promote an email that appears in
+`DEMO_EMAILS` (which would immediately block itself). Skipped silently when the vars aren't set,
+so a fresh clone can seed and boot without a super admin (add one later, or promote via
+mongosh). Same variables work for production — set them on the VPS's runtime `.env` and run
+`npm run db:seed:prod`.
+
+**What each account can do:**
+- **Real super admin** — everything. Undeletable, undemotable, exempt from every guard.
+- **Any user the super admin creates from `/dashboard/users`** (including CUSTOMERs, which is
+  new — the dropdown now offers all three roles) — full permissions for that role. Not demo.
+- **The four demo accounts** — sign in, browse, place orders. Every other mutation returns the
+  demo-account error. Safe to share with recruiters or paying customers evaluating the app.
 
 Identity model: `username` is a unique login handle and is **nullable** (OAuth
 users have none); `email` is unique and required, and is what password reset and

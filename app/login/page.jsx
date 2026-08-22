@@ -23,10 +23,13 @@ export async function generateMetadata() {
 export default async function LoginPage({ searchParams }) {
     const { t } = await getT();
     const sp = (await searchParams) || {};
+    // Signed-in visitors get the "you're already signed in" panel; the
+    // "Continue to …" button follows whatever `?next=` said (a protected page
+    // middleware bounced them from), else home.
     const next =
         typeof sp.next === "string" && sp.next.startsWith("/")
             ? sp.next
-            : "/dashboard";
+            : "/";
     const user = await getCurrentUser();
 
     if (user) {

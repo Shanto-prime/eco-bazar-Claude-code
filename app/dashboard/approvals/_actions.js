@@ -10,11 +10,14 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
+import { assertNotDemo } from "../../../lib/demo-accounts";
 import { isTerminal } from "../../../lib/order-status";
 import { restockCancelledOrder } from "../../../lib/inventory";
 
 export async function approveRequest(input) {
     const admin = await requireRole("ADMIN", "/dashboard/approvals");
+    const blocked = assertNotDemo(admin);
+    if (blocked) return blocked;
     const requestId = typeof input === "string" ? input : input?.requestId;
     if (!requestId) return { ok: false, error: "Invalid input." };
 
@@ -118,6 +121,8 @@ const RejectSchema = z.object({
 
 export async function rejectRequest(input) {
     const admin = await requireRole("ADMIN", "/dashboard/approvals");
+    const blocked = assertNotDemo(admin);
+    if (blocked) return blocked;
 
     let data;
     try {

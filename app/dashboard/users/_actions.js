@@ -15,6 +15,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "../../../lib/prisma";
 import { BCRYPT_COST } from "../../../lib/password";
 import { requireRole } from "../../../lib/auth-helpers";
+import { assertNotDemo } from "../../../lib/demo-accounts";
 
 const RoleSchema = z.object({
     userId: z.string().min(1),
@@ -25,6 +26,8 @@ const RoleSchema = z.object({
 // surface a message and roll its optimistic <select> back.
 export async function updateUserRoleAction(input) {
     const actor = await requireRole("ADMIN", "/dashboard/users");
+    const blocked = assertNotDemo(actor);
+    if (blocked) return blocked;
 
     let data;
     try {
@@ -99,14 +102,19 @@ const CreateUserSchema = z.object({
         .optional()
         .or(z.literal("").transform(() => undefined)),
     password: z.string().min(8).max(128),
-    // Admins create staff accounts only. Customers self-register.
-    role: z.enum(["MODERATOR", "ADMIN"]),
+    // Admins can create staff accounts AND customer accounts from the
+    // dashboard. Self-registration (via /register) is still a separate flow
+    // and always makes CUSTOMER.
+    role: z.enum(["CUSTOMER", "MODERATOR", "ADMIN"]),
 });
 
-// Create a brand-new staff account (ADMIN or MODERATOR). Admin-only. New admins
-// are never super admins   that flag belongs to the founding account alone.
+// Create a brand-new account (CUSTOMER / MODERATOR / ADMIN). Admin-only. New
+// admins are never super admins — that flag belongs to the founding account
+// alone.
 export async function createUserAction(input) {
     const actor = await requireRole("ADMIN", "/dashboard/users");
+    const blocked = assertNotDemo(actor);
+    if (blocked) return blocked;
 
     let data;
     try {
@@ -171,6 +179,8 @@ export async function createUserAction(input) {
 // the actor link).
 export async function deleteUserAction(input) {
     const actor = await requireRole("ADMIN", "/dashboard/users");
+    const blocked = assertNotDemo(actor);
+    if (blocked) return blocked;
 
     const userId = typeof input === "string" ? input : input?.userId;
     if (!userId || typeof userId !== "string")

@@ -16,6 +16,7 @@ import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
 import { ORDER_STATUSES, isTerminal } from "../../../lib/order-status";
 import { restockCancelledOrder } from "../../../lib/inventory";
+import { assertNotDemo } from "../../../lib/demo-accounts";
 
 const StatusSchema = z.object({
     orderId: z.string().min(1),
@@ -34,6 +35,8 @@ export async function updateOrderStatusAction(input) {
         ["ADMIN", "MODERATOR"],
         "/dashboard/orders",
     );
+    const blocked = assertNotDemo(actor);
+    if (blocked) return blocked;
 
     let data;
     try {

@@ -16,6 +16,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "../../../lib/prisma";
 import { requireRole } from "../../../lib/auth-helpers";
+import { assertNotDemo } from "../../../lib/demo-accounts";
 import {
     applyContactChange,
     notifyContactChange,
@@ -26,6 +27,8 @@ const fail = (error) => ({ ok: false, error });
 
 export async function approveChangeAction(requestId, note) {
     const reviewer = await requireRole("ADMIN", "/dashboard/profile-requests");
+    const blocked = assertNotDemo(reviewer);
+    if (blocked) return blocked;
 
     const req = await prisma.profileChangeRequest.findUnique({
         where: { id: String(requestId) },
@@ -95,6 +98,8 @@ export async function approveChangeAction(requestId, note) {
 
 export async function rejectChangeAction(requestId, note) {
     const reviewer = await requireRole("ADMIN", "/dashboard/profile-requests");
+    const blocked = assertNotDemo(reviewer);
+    if (blocked) return blocked;
 
     const req = await prisma.profileChangeRequest.findUnique({
         where: { id: String(requestId) },

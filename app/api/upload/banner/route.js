@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../../auth";
 import { validateImageUpload } from "../../../../lib/upload";
 import { storeImage } from "../../../../lib/upload-store";
+import { isDemoAccount, DEMO_BLOCK_MESSAGE } from "../../../../lib/demo-accounts";
 
 const MAX_BYTES = 6 * 1024 * 1024; // 6 MB   full-width banner art
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -25,6 +26,9 @@ export async function POST(req) {
     }
     if (session.user.role !== "ADMIN") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (isDemoAccount(session.user)) {
+        return NextResponse.json({ error: DEMO_BLOCK_MESSAGE }, { status: 403 });
     }
 
     const form = await req.formData();
